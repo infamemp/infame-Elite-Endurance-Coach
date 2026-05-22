@@ -1,0 +1,18 @@
+# Archivos del sistema operativo (Basura que crean Windows y Mac)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Respaldos o archivos temporales de editores de texto
+*.tmp
+*.bak
+*.swp
+~*
+
+# Carpetas privadas (Por si en el futuro guardas datos sensibles de atletas)
+# Si creas una carpeta llamada 'privado', Git la ignorará por completo
+privado/
+datos_personales/
