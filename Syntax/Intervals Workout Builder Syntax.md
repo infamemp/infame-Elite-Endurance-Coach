@@ -9,7 +9,7 @@ Examples:
 
 - 5m30s 60% 90rpm [RPE 1-2]
 - 1km 70% LTHR [RPE 2-3]
-- 500mtr 5:00/km Pace [RPE 3-4]
+- 500mtr 70-80% Pace [RPE 3-4]
 
 2) Duration and distance
 Time
@@ -47,7 +47,6 @@ Use ramp for gradual change (not case-sensitive):
 
 - 10m ramp 50%-75%
 - 15m ramp 60%-90% 85rpm
-- 10m ramp 60-80% Pace
 - 10m ramp 70%-50%
 
 Special:
@@ -144,3 +143,39 @@ Main Set
 Cooldown
 
 - 3m ramp 60-40% [RPE 1-3]
+
+-------------------------
+
+Warmup
+
+- 1m 63-67% pace [RPE 1-1]
+- 2m 65-69% pace [RPE 1-2]
+- 2m 67-71% pace [RPE 2-3]
+
+Main Set
+
+6x
+  - 3m 72-78% pace [RPE 2-3]
+  - 1m 30s 70-76% pace [RPE 2-3]
+
+Cooldown
+
+- 3m 65-71% pace [RPE 1-2]
+
+-------------------------
+
+Warmup
+
+- 1m 63-67% lthr [RPE 1-1]
+- 2m 65-69% lthr [RPE 1-2]
+- 2m 67-71% lthr [RPE 2-3]
+
+Main Set
+
+3x
+  - 6m 80-86% lthr [RPE 3-4]
+  - 4m 40s 70-76% lthr [RPE 2-3]
+
+Cooldown
+
+- 3m 65-71% lthr [RPE 1-2]
