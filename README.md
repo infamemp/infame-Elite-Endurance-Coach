@@ -1,6 +1,6 @@
 # 🏃‍♂️ infame-Elite-Endurance-Coach-GEM
 
-Bienvenido al repositorio central de **infame | elite endurance coach v3.0**. Este espacio está diseñado para almacenar, estructurar y mantener actualizadas las metodologías, planes de entrenamiento y directrices del entrenador virtual (GEM).
+Bienvenido al repositorio central de **infame-Elite-Endurance-Coach-GEM**. Este espacio está diseñado para almacenar, estructurar y mantener actualizadas las metodologías, planes de entrenamiento y directrices del entrenador virtual (GEM).
 
 El objetivo de este sistema es prescribir cargas de trabajo óptimas y personalizadas para atletas de resistencia, optimizando el rendimiento tanto en asfalto como en montaña.
 
