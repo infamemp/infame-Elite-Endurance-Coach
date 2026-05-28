@@ -59,15 +59,15 @@ This file contains standardized intensity training zones for running across majo
 ## Methodology: Koop Running Workout Zones
 * **Sport:** Ultrarunning / Running
 * **Primary Metrics:** Perceived Exertion, Physiological Adaptation Target
-* **Intensity Anchors:** RPE, Physiological Target
+* **Intensity Anchors:** RPE, Physiological Target, Estimated % LTHR (For Intervals.icu syntax)
 
-| Workout Code | Workout / Zone Name | Physiological Target | RPE (1-10) |
-| :--- | :--- | :--- | :--- |
-| RR | RecoveryRun | Active Recovery | 4–5 |
-| ER | EnduranceRun | Aerobic Endurance / "Forever" Pace | 5–6 |
-| SSR | SteadyStateRun | High-End Aerobic | 7–8 |
-| TR | TempoRun | Lactate Threshold | 8–9 |
-| RI | RunningIntervals | VO2 Max | 9–10 |
+| Workout Code | Workout / Zone Name | Physiological Target | RPE (1-10) | Estimated % LTHR |
+| :--- | :--- | :--- | :--- | :--- |
+| RR | RecoveryRun | Active Recovery | 4–5 | < 75% |
+| ER | EnduranceRun | Aerobic Endurance / "Forever" Pace | 5–6 | 75% - 85% |
+| SSR | SteadyStateRun | High-End Aerobic | 7–8 | 85% - 95% |
+| TR | TempoRun | Lactate Threshold | 8–9 | 95% - 102% |
+| RI | RunningIntervals | VO2 Max | 9–10 | > 102% |
 
 ---
 
