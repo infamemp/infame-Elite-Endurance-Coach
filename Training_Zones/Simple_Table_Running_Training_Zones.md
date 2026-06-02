@@ -6,6 +6,10 @@ This file contains standardized intensity training zones for running across majo
 
 ## Methodology: Daniels Running Zones
 * **Sport:** Running
+* **Default Metric:** % LT Pace
+* **Available Metrics:** % LT Pace, % LTHR (Estimated cross-reference — not Daniels' native metric)
+* **Trail Pace Valid:** No
+* **Dual-Layer Required:** No
 * **Primary Metrics:** Lactate Threshold (LT) Pace, Lactate Threshold Heart Rate (LTHR)
 * **Intensity Anchors:** % LT Pace, % LTHR
 
@@ -21,6 +25,10 @@ This file contains standardized intensity training zones for running across majo
 
 ## Methodology: Palladino Running Power/Pace Zones
 * **Sport:** Running
+* **Default Metric:** % FTP/CP
+* **Available Metrics:** % FTP/CP, % LT Pace (Estimated), % LTHR (Estimated)
+* **Trail Pace Valid:** No
+* **Dual-Layer Required:** No
 * **Primary Metrics:** Functional Threshold Power (FTP) / Critical Power (CP), LT Pace, LTHR
 * **Intensity Anchors:** % FTP/CP, % LT Pace, % LTHR
 
@@ -41,6 +49,10 @@ This file contains standardized intensity training zones for running across majo
 
 ## Methodology: Friel Running Zones
 * **Sport:** Running
+* **Default Metric:** % LT Pace
+* **Available Metrics:** % LT Pace, % LTHR
+* **Trail Pace Valid:** No
+* **Dual-Layer Required:** No
 * **Primary Metrics:** Lactate Threshold (LT) Pace, Lactate Threshold Heart Rate (LTHR)
 * **Intensity Anchors:** % LT Pace, % LTHR
 
@@ -58,6 +70,13 @@ This file contains standardized intensity training zones for running across majo
 
 ## Methodology: Koop Running Workout Zones
 * **Sport:** Ultrarunning / Running
+* **Default Metric:** RPE (workout-code specific)
+* **Available Metrics:** RPE (native), % LTHR (Intervals.icu syntax anchor only)
+* **Trail Pace Valid:** No
+* **Dual-Layer Required:** Yes
+* **Dual-Layer Engine:** Estimated % LTHR column — feeds Intervals.icu load calculation
+* **Dual-Layer Steering:** RPE per Koop workout code — athlete reads on device
+* **RPE Scale:** Koop 1–10, workout-type specific: RR 4–5 | ER 5–6 | SSR 7–8 | TR 8–9 | RI 9–10
 * **Primary Metrics:** Perceived Exertion, Physiological Adaptation Target
 * **Intensity Anchors:** RPE, Physiological Target, Estimated % LTHR (For Intervals.icu syntax)
 
@@ -73,6 +92,11 @@ This file contains standardized intensity training zones for running across majo
 
 ## Methodology: Olbrich Running Zones
 * **Sport:** Running
+* **Default Metric:** % LTHR (Estimated)
+* **Available Metrics:** % LTHR (Estimated)
+* **Trail Pace Valid:** No
+* **Dual-Layer Required:** No
+* **Note:** Native metric is % HRmax but Intervals.icu syntax MUST use Estimated % LTHR per Olbrich Exception. Never output % HRmax in syntax.
 * **Primary Metrics:** Maximum Heart Rate (HRmax), Estimated LTHR
 * **Intensity Anchors:** % HRmax, % LTHR (Estimated)
 
