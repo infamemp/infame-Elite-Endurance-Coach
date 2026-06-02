@@ -6,6 +6,10 @@ This file contains standardized intensity training zones for cycling across majo
 
 ## Methodology: Friel Cycling Zones
 * **Sport:** Cycling
+* **Default Metric:** % FTP
+* **Available Metrics:** % FTP, % FTHR (= % LTHR)
+* **Dual-Layer Required:** No
+* **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (FTHR)
 * **Intensity Anchors:** % FTP, % FTHR
 
@@ -23,6 +27,10 @@ This file contains standardized intensity training zones for cycling across majo
 
 ## Methodology: Coggan Cycling Levels
 * **Sport:** Cycling
+* **Default Metric:** % FTP
+* **Available Metrics:** % FTP, % FTHR (= % LTHR)
+* **Dual-Layer Required:** No
+* **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (FTHR/LTHR)
 * **Intensity Anchors:** % FTP, % FTHR
 
@@ -40,6 +48,10 @@ This file contains standardized intensity training zones for cycling across majo
 
 ## Methodology: Carmichael / CTS Cycling Zones
 * **Sport:** Cycling
+* **Default Metric:** % FTP
+* **Available Metrics:** % FTP, % LTHR
+* **Dual-Layer Required:** No
+* **Note:** Use the athlete's provided FTP. If FTP is missing and athlete uses Carmichael methodology, suggest the CTS field test protocol from the Carmichael KB file.
 * **Primary Metrics:** CTS Field Test Power, CTS Field Test Heart Rate (LTHR)
 * **Intensity Anchors:** % CTS FTP, % CTS LTHR
 
