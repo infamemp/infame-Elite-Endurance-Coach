@@ -526,8 +526,7 @@ def main():
     SESSION = make_session()
 
     try:
-        sum_params = {"date": date.today().isoformat()}
-        summary_list = get("/athlete/0/athlete-summary.json", params=sum_params)
+        summary_list = get("/athlete/0/athlete-summary.json")
     except Exception as e:
         print(f"❌ Handshake error: {e}")
         sys.exit(1)
@@ -535,6 +534,19 @@ def main():
     if not summary_list:
         print("❌ No athletes found.")
         sys.exit(1)
+
+    # Deduplicate by athlete_id — API can return duplicate entries
+    seen_ids = set()
+    deduped = []
+    for s in summary_list:
+        aid = s.get("athlete_id")
+        if aid and aid not in seen_ids:
+            seen_ids.add(aid)
+            deduped.append(s)
+        elif aid in seen_ids:
+            print(f"  ⚠️  Duplicate entry for {s.get('athlete_name')} ({aid}) — skipped")
+    summary_list = deduped
+    print(f"   ✓ {len(summary_list)} unique athletes after dedup")
 
     print("📥 Indexing profiles...")
     try: 
