@@ -491,10 +491,11 @@ def build_athlete_sheet(wb, aid, name, summary_row, master_profile):
             ws.cell(row=row, column=4,  value=fmt_sec(mov_time))
             ws.cell(row=row, column=5,  value=round(dist/1000, 2) if dist else "—")
             ws.cell(row=row, column=6,  value=v(t_load))
-            ws.cell(row=row, column=7,  value=round(intf, 2) if intf else "—")
+            ws.cell(row=row, column=7,  value=round(intf / 100, 2) if intf else "—")
             ws.cell(row=row, column=8,  value=v(avg_w))
             ws.cell(row=row, column=9,  value=v(act.get("average_heartrate")))
-            ws.cell(row=row, column=10, value=v(act.get("total_elevation_gain")))
+            elev = act.get("total_elevation_gain")
+            ws.cell(row=row, column=10, value=round(elev) if elev else "—")
             ws.cell(row=row, column=11, value=f"{spd*3.6:.1f} km/h" if spd else "—")
             
             drow(ws, row, len(act_hdrs), alt=(i % 2 == 1))
@@ -535,18 +536,17 @@ def main():
         print("❌ No athletes found.")
         sys.exit(1)
 
-    # Deduplicate by athlete_id — API can return duplicate entries
-    seen_ids = set()
-    deduped = []
+    # Deduplicate by athlete_id
+    seen_ids, deduped = set(), []
     for s in summary_list:
         aid = s.get("athlete_id")
         if aid and aid not in seen_ids:
             seen_ids.add(aid)
             deduped.append(s)
         elif aid in seen_ids:
-            print(f"  ⚠️  Duplicate entry for {s.get('athlete_name')} ({aid}) — skipped")
+            print(f"  ⚠️  Duplicate skipped: {s.get('athlete_name')} ({aid})")
     summary_list = deduped
-    print(f"   ✓ {len(summary_list)} unique athletes after dedup")
+    print(f"   ✓ {len(summary_list)} unique athletes")
 
     print("📥 Indexing profiles...")
     try: 

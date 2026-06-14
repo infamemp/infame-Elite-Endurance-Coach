@@ -9,7 +9,7 @@ Req:    pip install pandas openpyxl
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, date
 
 try:
     import pandas as pd
@@ -17,17 +17,13 @@ except ImportError:
     print("❌ Missing dependency: pip install pandas openpyxl")
     sys.exit(1)
 
-# Sheet name to skip (summary is for humans, not AI context)
-SUMMARY_SHEET = "Athletes Summary"
-
-# Minimum filled columns to treat a row as a table row
+SUMMARY_SHEET       = "Athletes Summary"
 TABLE_COL_THRESHOLD = 3
 
 
 # ─── Value helpers ────────────────────────────────────────────────────────────
 
 def clean_value(val):
-    """Return clean string or empty string for nan/None/—."""
     try:
         if pd.isna(val):
             return ""
@@ -38,38 +34,39 @@ def clean_value(val):
 
 
 def row_values(row):
-    """All cell values in a row as clean strings."""
     return [clean_value(row.iloc[i]) for i in range(len(row))]
 
 
 def filled_count(vals):
-    """Number of non-empty values in a list."""
     return sum(1 for v in vals if v)
 
 
-# ─── Block detection ─────────────────────────────────────────────────────────
+# ─── Row classification ───────────────────────────────────────────────────────
 
 def is_empty_row(vals):
     return not any(vals)
 
 
-def is_separator(key):
-    return key.startswith("===") or key.startswith("---")
+def is_separator_val(v):
+    return v.startswith("===") or v.startswith("---")
 
 
-def is_section_header(vals):
-    """A section title: single non-empty cell that spans (rest empty)."""
-    key = vals[0] if vals else ""
-    rest_empty = filled_count(vals[1:]) == 0
-    return rest_empty and key and not key.startswith("#")
+def is_separator_row(vals):
+    """True if any cell looks like a visual separator (===, ---)."""
+    return any(is_separator_val(v) for v in vals if v)
 
 
 def is_md_header(key):
-    return key.startswith("# ") or key.startswith("## ") or key in ("# ", "## ")
+    return key.startswith("# ") or key.startswith("## ") or key in ("#", "##")
+
+
+def is_section_header(vals):
+    """Single non-empty cell, rest empty — treated as section title."""
+    key = vals[0] if vals else ""
+    return bool(key) and filled_count(vals[1:]) == 0 and not is_md_header(key)
 
 
 def is_kv_row(vals):
-    """Key in col0, value in col1, rest empty."""
     return (
         len(vals) >= 2
         and vals[0]
@@ -79,57 +76,182 @@ def is_kv_row(vals):
 
 
 def is_table_row(vals):
-    """3+ filled cells across the row."""
     return filled_count(vals) >= TABLE_COL_THRESHOLD
 
 
 # ─── Table rendering ─────────────────────────────────────────────────────────
 
 def render_table(rows):
-    """
-    Given a list of rows (list of string lists), render as markdown table.
-    First row is treated as header.
-    Columns are determined by the widest row.
-    """
     if not rows:
         return ""
-
-    ncols = max(len(r) for r in rows)
-
-    # Pad all rows to same width
-    padded = [r + [""] * (ncols - len(r)) for r in rows]
-
-    # Column widths
-    widths = [max(len(str(padded[i][c])) for i in range(len(padded))) for c in range(ncols)]
-    widths = [max(w, 3) for w in widths]
+    ncols   = max(len(r) for r in rows)
+    padded  = [r + [""] * (ncols - len(r)) for r in rows]
+    widths  = [max(len(str(padded[i][c])) for i in range(len(padded))) for c in range(ncols)]
+    widths  = [max(w, 3) for w in widths]
 
     def fmt_row(r):
         cells = [str(r[c]).ljust(widths[c]) for c in range(ncols)]
         return "| " + " | ".join(cells) + " |"
 
-    lines = []
-    lines.append(fmt_row(padded[0]))                          # header
-    lines.append("| " + " | ".join("-" * w for w in widths) + " |")  # separator
+    lines = [fmt_row(padded[0]),
+             "| " + " | ".join("-" * w for w in widths) + " |"]
     for r in padded[1:]:
         lines.append(fmt_row(r))
+    return "\n".join(lines)
+
+
+# ─── Context Snapshot ─────────────────────────────────────────────────────────
+
+def parse_duration_to_hours(dur_str):
+    """Parse '1h 30m' or '45m 10s' to float hours."""
+    if not dur_str or dur_str == "—":
+        return 0.0
+    try:
+        total = 0.0
+        if "h" in dur_str:
+            parts = dur_str.split("h")
+            total += float(parts[0].strip())
+            dur_str = parts[1]
+        if "m" in dur_str:
+            parts = dur_str.split("m")
+            total += float(parts[0].strip()) / 60
+        return total
+    except Exception:
+        return 0.0
+
+
+def build_context_snapshot(df):
+    """
+    Scan the dataframe for race calendar and recent activities to compute:
+    - Days to next A-race
+    - Avg weekly TSS (4w)
+    - Avg weekly hours (4w)
+    - Sport distribution (4w)
+    """
+    today = date.today()
+    lines = ["\n## CONTEXT SNAPSHOT"]
+
+    # ── Next A-race ──
+    in_race_table = False
+    next_a = None
+    for i in range(len(df)):
+        vals = row_values(df.iloc[i])
+        key  = vals[0] if vals else ""
+
+        if "RACE CALENDAR" in key.upper() or "SCHEDULED RACES" in key.upper():
+            in_race_table = True
+            continue
+
+        if in_race_table and is_table_row(vals) and not is_separator_row(vals):
+            # Skip header row (first row of table, contains "Date", "Event Name" etc.)
+            if vals[0].lower() in ("date", "fecha"):
+                continue
+            # Check if this is a data row with a date and priority A
+            raw_date = vals[0].strip()
+            priority = vals[5].strip() if len(vals) > 5 else ""
+            if priority.upper() == "A" and raw_date and not raw_date.startswith("="):
+                try:
+                    race_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+                    if race_date >= today:
+                        if next_a is None or race_date < next_a[0]:
+                            race_name = vals[1].strip() if len(vals) > 1 else "?"
+                            next_a = (race_date, race_name)
+                except Exception:
+                    pass
+
+        # Stop at next major section
+        if in_race_table and key.startswith("# ") and "RACE" not in key.upper():
+            in_race_table = False
+
+    if next_a:
+        days = (next_a[0] - today).days
+        lines.append(f"**Next A-race:** {next_a[1]} — {next_a[0].isoformat()} ({days} days away)")
+    else:
+        lines.append("**Next A-race:** None scheduled")
+
+    # ── Activity stats (4w) ──
+    in_act_table  = False
+    total_tss     = 0.0
+    total_hours   = 0.0
+    sport_counts  = {}
+    act_count     = 0
+
+    for i in range(len(df)):
+        vals = row_values(df.iloc[i])
+        key  = vals[0] if vals else ""
+
+        if "RECENT ACTIVITIES" in key.upper() or "LAST 4 WEEKS" in key.upper():
+            in_act_table = True
+            continue
+
+        if in_act_table and is_table_row(vals) and not is_separator_row(vals):
+            if vals[0].lower() in ("date", "fecha"):
+                continue
+            if vals[0].startswith("="):
+                continue
+            try:
+                sport    = vals[2].strip() if len(vals) > 2 else ""
+                dur_str  = vals[3].strip() if len(vals) > 3 else ""
+                tss_str  = vals[5].strip() if len(vals) > 5 else ""
+
+                hours = parse_duration_to_hours(dur_str)
+                tss   = float(tss_str) if tss_str and tss_str != "—" else 0.0
+
+                total_hours  += hours
+                total_tss    += tss
+                act_count    += 1
+
+                if sport:
+                    # Normalize sport names
+                    s = sport.lower()
+                    if "run" in s or "trail" in s:
+                        cat = "Running"
+                    elif "ride" in s or "bike" in s or "gravel" in s or "mountain" in s:
+                        cat = "Cycling"
+                    elif "swim" in s:
+                        cat = "Swimming"
+                    else:
+                        cat = sport
+                    sport_counts[cat] = sport_counts.get(cat, 0) + 1
+            except Exception:
+                pass
+
+    if act_count > 0:
+        weeks = 4
+        avg_tss   = total_tss   / weeks
+        avg_hours = total_hours / weeks
+        lines.append(f"**Avg weekly TSS (4w):** {avg_tss:.0f}")
+        lines.append(f"**Avg weekly hours (4w):** {avg_hours:.1f} h")
+
+        total_acts = sum(sport_counts.values())
+        if total_acts > 0:
+            dist_parts = [
+                f"{cat} {round(cnt/total_acts*100)}%"
+                for cat, cnt in sorted(sport_counts.items(), key=lambda x: -x[1])
+            ]
+            lines.append(f"**Sport distribution (4w):** {' · '.join(dist_parts)}")
+    else:
+        lines.append("**Avg weekly TSS (4w):** No activity data")
 
     return "\n".join(lines)
 
 
-# ─── Sheet conversion ─────────────────────────────────────────────────────────
+# ─── Section-aware conversion ─────────────────────────────────────────────────
 
 def convert_sheet(df, sheet_name):
     """
-    Convert a DataFrame to markdown string.
-    Detects blocks: section headers, key-value pairs, and tables.
+    Convert DataFrame to markdown.
+    - Skips separator rows inside tables (=== rows)
+    - Skips entirely empty sections
+    - Renders multi-column blocks as markdown tables
+    - Appends computed Context Snapshot
     """
-    lines = []
-
-    # Collect all rows as value lists
-    all_rows = [row_values(df.iloc[i]) for i in range(len(df))]
+    lines      = []
+    all_rows   = [row_values(df.iloc[i]) for i in range(len(df))]
+    n          = len(all_rows)
 
     i = 0
-    while i < len(all_rows):
+    while i < n:
         vals = all_rows[i]
         key  = vals[0] if vals else ""
 
@@ -140,8 +262,8 @@ def convert_sheet(df, sheet_name):
             i += 1
             continue
 
-        # ── Separator ──
-        if is_separator(key):
+        # ── Separator row (anywhere) ──
+        if is_separator_row(vals):
             i += 1
             continue
 
@@ -151,15 +273,40 @@ def convert_sheet(df, sheet_name):
             i += 1
             continue
 
-        # ── Table block: collect consecutive table rows ──
+        # ── Section header (single cell) — check if section is empty ──
+        if is_section_header(vals):
+            # Look ahead: collect lines until next section header or EOF
+            j = i + 1
+            section_content = []
+            while j < n:
+                ahead = all_rows[j]
+                ahead_key = ahead[0] if ahead else ""
+                if is_section_header(ahead) or is_md_header(ahead_key):
+                    break
+                if not is_empty_row(ahead) and not is_separator_row(ahead):
+                    section_content.append(ahead)
+                j += 1
+
+            # Only emit section header if it has content
+            if section_content:
+                lines.append(f"\n## {key}")
+            i += 1
+            continue
+
+        # ── Table block ──
         if is_table_row(vals):
             table_rows = []
-            while i < len(all_rows) and is_table_row(all_rows[i]):
-                # Trim trailing empty cells
+            while i < n:
                 r = all_rows[i]
-                while r and not r[-1]:
-                    r = r[:-1]
-                table_rows.append(r)
+                if is_separator_row(r):       # skip === rows inside table
+                    i += 1
+                    continue
+                if not is_table_row(r):
+                    break
+                trimmed = r[:]
+                while trimmed and not trimmed[-1]:
+                    trimmed.pop()
+                table_rows.append(trimmed)
                 i += 1
             if table_rows:
                 if lines and lines[-1] != "":
@@ -168,24 +315,22 @@ def convert_sheet(df, sheet_name):
                 lines.append("")
             continue
 
-        # ── Section title (single cell, no value) ──
-        if is_section_header(vals):
-            lines.append(f"\n## {key}")
-            i += 1
-            continue
-
-        # ── Key: Value pair ──
+        # ── Key: Value ──
         if is_kv_row(vals):
             lines.append(f"**{key}:** {vals[1]}")
             i += 1
             continue
 
-        # ── Fallback: key only ──
+        # ── Fallback ──
         if key:
             lines.append(key)
         i += 1
 
-    return "\n".join(lines).strip()
+    body = "\n".join(lines).strip()
+
+    # Append computed snapshot
+    snapshot = build_context_snapshot(df)
+    return body + "\n" + snapshot
 
 
 # ─── Output helpers ───────────────────────────────────────────────────────────
@@ -201,7 +346,6 @@ def yaml_frontmatter(sheet_name, source_file):
 
 
 def safe_filename(name):
-    """Convert sheet name to safe filename."""
     safe = name.replace(" ", "_")
     for ch in r'\/*?:<>|"':
         safe = safe.replace(ch, "-")
@@ -209,7 +353,6 @@ def safe_filename(name):
 
 
 def resolve_sheets(all_sheets, choice):
-    """Resolve user sheet choice to list of sheet names. Raises ValueError if invalid."""
     if choice.lower() == "all":
         return [s for s in all_sheets if s != SUMMARY_SHEET]
     if choice.isdigit():
@@ -225,7 +368,6 @@ def resolve_sheets(all_sheets, choice):
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    # ── File input ──
     input_file = input("Excel filename (e.g., athletes_report_production.xlsx): ").strip()
     if not input_file.endswith(".xlsx"):
         input_file += ".xlsx"
@@ -234,17 +376,15 @@ def main():
         print(f"\n❌ File not found: '{input_file}'")
         sys.exit(1)
 
-    # ── Load workbook ──
     try:
         xl = pd.ExcelFile(input_file, engine="openpyxl")
     except Exception as e:
         print(f"\n❌ Cannot open file: {e}")
         sys.exit(1)
 
-    all_sheets = xl.sheet_names
+    all_sheets     = xl.sheet_names
     athlete_sheets = [s for s in all_sheets if s != SUMMARY_SHEET]
 
-    # ── Sheet selection ──
     if len(all_sheets) == 1:
         sheets_to_convert = all_sheets
     else:
@@ -263,11 +403,9 @@ def main():
             print(f"\n❌ {e}")
             sys.exit(1)
 
-    # ── Output folder ──
     out_dir = "athlete_docs"
     os.makedirs(out_dir, exist_ok=True)
 
-    # ── Convert ──
     print()
     converted = []
     for sheet_name in sheets_to_convert:
@@ -275,16 +413,15 @@ def main():
             df = pd.read_excel(
                 input_file, sheet_name=sheet_name, header=None, engine="openpyxl"
             )
-            content   = convert_sheet(df, sheet_name)
-            frontmatter = yaml_frontmatter(sheet_name, input_file)
+            content      = convert_sheet(df, sheet_name)
+            frontmatter  = yaml_frontmatter(sheet_name, input_file)
             full_content = frontmatter + "\n" + content + "\n"
 
             out_filename = safe_filename(sheet_name) + ".md"
             out_path     = os.path.join(out_dir, out_filename)
 
-            # Warn before overwrite
             if os.path.exists(out_path):
-                print(f"  ⚠️  Overwriting existing: {out_filename}")
+                print(f"  ⚠️  Overwriting: {out_filename}")
 
             with open(out_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(full_content)
