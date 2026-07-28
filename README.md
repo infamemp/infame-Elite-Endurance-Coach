@@ -1,47 +1,100 @@
-# 🏃‍♂️ infame-Elite-Endurance-Coach
+# 🏃 Infame Elite Endurance Coach
 
-Bienvenido al repositorio central de **infame-Elite-Endurance-Coach**. Este espacio está diseñado para almacenar, estructurar y mantener actualizadas las metodologías, planes de entrenamiento y directrices del entrenador virtual.
+A methodology-agnostic coaching engine that turns athlete data into structured,
+platform-ready training prescriptions for cycling and running. It pairs a
+reasoning-driven system prompt with a standardized knowledge base and an
+Intervals.icu data pipeline.
 
-El objetivo de este sistema es prescribir cargas de trabajo óptimas y personalizadas para atletas de resistencia, optimizando el rendimiento tanto en asfalto como en montaña.
-
----
-
-## 🗺️ Estructura del Repositorio
-
-Para mantener el orden y facilitar la actualización del GEM, los archivos `.md` se organizan de la siguiente manera:
-
-*   📂 `metodologias/`: Bases teóricas, umbrales y principios de entrenamiento.
-*   📂 `planes/`: Estructuras de entrenamiento por disciplina (Trail Running, Ruta, etc.).
-*   📂 `atletas/`: (Opcional/Privado) Plantillas de seguimiento o perfiles.
+The engine prescribes individualized training load — optimizing performance on
+road and mountain alike — by reasoning per athlete, per block, and per session
+rather than filling templates.
 
 ---
 
-## 📑 Principios de Prescripción Básicos
+## 🧩 Engine Components
 
-Para garantizar la coherencia en las respuestas del GEM, toda la prescripción de entrenamientos debe seguir estas reglas por defecto:
+- **System prompt** (`Prompt/`) — a gated state machine spanning intake →
+  strategy → macrocycle → block execution → recalibration → close (Phases 0–6).
+  Enforces hard output-format constraints for reliable Intervals.icu import
+  while leaving every load, structure, and timing decision to coaching judgment.
+- **Standardized training-zone KB** — cycling (Friel, Coggan, Carmichael) and
+  running (Daniels, Palladino, Friel, Koop, Olbrich) under one metadata and
+  column schema, with formal Schema Extension Rules for adding authors,
+  dual-layer (engine/steering) support, and special-output-rule handling.
+- **Intervals.icu syntax reference** — the workout-builder grammar the engine
+  targets when generating code blocks.
+- **Book-derived methodology KBs** — structured extractions from the source
+  texts backing each methodology (zones, field tests, taper design, nutrition).
+- **Athlete data pipeline** (`Athlete Template/`, `Excel to MD Converter/`) —
+  Python tooling that pulls PMC and activity data from the Intervals.icu API and
+  converts it into coach-ready Markdown context.
+
+---
+
+## 📑 Prescription Principles
+
+Defaults that keep the engine's output consistent and portable:
+
+- **Percentages only.** Every intensity target is expressed as a percentage tied
+  to the athlete's threshold values — never raw watts, pace, or bpm.
+- **Load by zone class.** Session TSS is estimated from each interval's
+  physiological zone class (per the KB), not from the raw percentage number —
+  keeping HR- and pace-based sessions accurate.
+- **KB first.** The knowledge base is the first source of truth; verified web
+  research complements it and never replaces it.
 
 ### 🌲 Trail Running
-*   **Métrica Principal:** Por defecto, los entrenamientos se deben prescribir siempre en **%LTHR** (Lactate Threshold Heart Rate).
-*   **Métrica Secundaria:** Seguidos estrictamente por **RPE** (Rate of Perceived Exertion / Escala de Esfuerzo Percibido) para gestionar la variabilidad del terreno.
-*   *Excepción:* Esta regla solo se rompe si el corredor cuenta específicamente con un **potenciómetro para correr** (vatios), en cuyo caso se priorizará la potencia.
+- **Primary metric:** `% LTHR` by default.
+- **Secondary:** `RPE`, to manage terrain variability.
+- **Exception:** overridden only when the runner has a running power meter, in
+  which case power takes priority. Pace is prohibited on trail terrain.
 
-### 🚴‍♂️ Ciclismo / Multisport (Ruta y Virtual)
-*   Uso de potencia y zonas de frecuencia cardíaca estructuradas según la disponibilidad de hardware del atleta.
-
----
-
-## 🔄 Control de Cambios (Versionado)
-
-*   **v3.0 (Actual):** Migración del sistema a repositorio Git. Organización de archivos Markdown por categorías para facilitar la actualización continua del GEM.
-*   **Próximos pasos:** Integración de prompts estructurados y automatización de plantillas de feedback semanal.
+### 🚴 Cycling / Multisport
+- Power and structured heart-rate zones, selected per the athlete's available
+  hardware.
+- Ramp targets are valid only for indoor / trainer cycling.
 
 ---
 
-## 🛠️ Cómo Actualizar el GEM
+## 🗂️ Repository Structure
 
-Cada vez que agregues un nuevo plan o modifiques una metodología en tus archivos locales, ejecuta el flujo estándar en tu terminal:
+> Adjust these paths to match your actual tree.
+
+- `Prompt/` — the coach system prompt.
+- `Athlete Template/` — athlete report templates and generated exports.
+- `Excel to MD Converter/` — Excel-to-Markdown conversion for athlete intake docs.
+- KB assets — standardized zone tables, the Intervals.icu syntax reference, and
+  book-derived methodology files.
+
+---
+
+## 🔄 Changelog
+
+**Coach prompt — v5.1 (current)**
+- TSS assigned by the KB zone's physiological class instead of the raw % number,
+  fixing load overestimation on pace- and HR-based intervals.
+- Special Output Rule generalized (native metric ≠ syntax output), replacing the
+  hardcoded Olbrich exception.
+
+**Coach prompt — v5.0**
+- Two-class rule hierarchy: inviolable output-format constraints vs. overridable
+  coaching defaults.
+- Self-sufficient `#SESSION` continuation header carrying macrocycle-immutable
+  state.
+- New terminal Phase 6 (Macrocycle Close / Race Debrief).
+- File-availability checks before code generation.
+
+**Infrastructure**
+- Migrated to Git; Markdown assets organized by category for continuous updates.
+
+---
+
+## 🛠️ Updating the Engine
+
+After adding a plan or modifying a methodology locally, run:
 
 ```bash
 git add .
-git commit -m "Actualización: [Breve descripción del cambio]"
+git commit -m "Update: [short description of the change]"
 git push origin main
+```
