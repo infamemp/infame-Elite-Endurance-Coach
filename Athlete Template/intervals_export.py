@@ -20,7 +20,9 @@ except ImportError as e:
     sys.exit(1)
 
 # ─────────────────────────────────────────────
-API_KEY     = "881bv7ax3qmta5rowcsy2p9f"
+API_KEY = os.getenv("ICU_API_KEY")
+if not API_KEY:
+    sys.exit("❌ Falta la variable de entorno ICU_API_KEY (ejecuta: setx ICU_API_KEY \"tu_key\")")
 OUTPUT_FILE = "athletes_report_production.xlsx"
 # ─────────────────────────────────────────────
 
