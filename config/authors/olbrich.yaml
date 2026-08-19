@@ -1,0 +1,75 @@
+# Olbrich Running Zones
+# Conforms to config/schema/author.schema.json
+# Migrated from Training_Zones/Simple_Table_Running_Training_Zones.md (v5.1)
+
+id: olbrich
+name: Olbrich Running Zones
+sport: running
+
+zone_identifier_style: Descriptive name (no native code; codes below derived for schema consistency)
+
+default_metric: lthr
+available_metrics: [lthr, hrmax]
+primary_metrics:
+  - Maximum Heart Rate (HRmax)
+  - Estimated LTHR
+intensity_anchors: ["% LTHR", "% HRmax"]
+
+metric_status:
+  lthr: estimated
+  hrmax: native
+
+special_output_rule:
+  native_metric: hrmax
+  output_metric: lthr
+  rationale: per Olbrich Exception
+
+zones:
+  - key: LRJ
+    name: Long recovery jog
+    physiological_class: recovery
+    ranges:
+      lthr:  {min: null, max: 80}
+      hrmax: {min: null, max: 70}
+    rpe: {min: 1, max: 2}
+
+  - key: EER
+    name: Extensive endurance run
+    physiological_class: endurance
+    ranges:
+      lthr:  {min: 85, max: 90}
+      hrmax: {min: 75, max: 80}
+    rpe: {min: 2, max: 3}
+
+  - key: IER
+    name: Intensive endurance run
+    physiological_class: sub_threshold
+    ranges:
+      lthr:  {min: 90, max: 95}
+      hrmax: {min: 80, max: 85}
+    rpe: {min: 4, max: 5}
+
+  - key: TER
+    name: Tempo endurance run
+    physiological_class: threshold
+    ranges:
+      lthr:  {min: 95, max: 100}
+      hrmax: {min: 85, max: 90}
+    rpe: {min: 6, max: 7}
+
+  - key: INT
+    name: Interval
+    physiological_class: supra
+    ranges:
+      lthr:  {min: 100, max: null}
+      hrmax: {min: 90, max: null}
+    rpe: {min: 8, max: 10}
+
+  - key: FAR
+    name: Fartlek
+    physiological_class: endurance
+    ranges:
+      lthr:  {min: 80, max: 100}
+      hrmax: {min: 70, max: 90}
+    rpe: {min: 2, max: 7}
+    note: Variable effort by design

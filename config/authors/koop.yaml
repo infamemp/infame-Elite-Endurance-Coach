@@ -1,0 +1,69 @@
+# Koop Running Workout Zones
+# Conforms to config/schema/author.schema.json
+# Migrated from Training_Zones/Simple_Table_Running_Training_Zones.md (v5.1)
+
+id: koop
+name: Koop Running Workout Zones
+sport: running
+sport_note: Ultrarunning / Running
+
+zone_identifier_style: Letter code (workout code)
+
+default_metric: rpe
+default_metric_label: RPE (workout-code specific)
+available_metrics: [rpe, lthr]
+primary_metrics:
+  - Perceived Exertion
+  - Physiological Adaptation Target
+intensity_anchors: ["RPE", "% LTHR"]
+
+metric_status:
+  lthr: estimated
+
+dual_layer:
+  required: true
+  engine_metric: lthr
+  steering_metric: rpe
+  steering_label: RPE per workout code
+  note: RPE per workout code is what the athlete reads on the device; % LTHR feeds the platform load calculation.
+
+zones:
+  - key: RR
+    name: RecoveryRun
+    physiological_class: recovery
+    ranges:
+      lthr: {min: null, max: 75}
+    rpe: {min: 4, max: 5}
+    note: "Physiological target: Active Recovery"
+
+  - key: ER
+    name: EnduranceRun
+    physiological_class: endurance
+    ranges:
+      lthr: {min: 75, max: 85}
+    rpe: {min: 5, max: 6}
+    note: "Physiological target: Aerobic Endurance / \"Forever\" Pace"
+
+  - key: SSR
+    name: SteadyStateRun
+    physiological_class: sub_threshold
+    ranges:
+      lthr: {min: 85, max: 95}
+    rpe: {min: 7, max: 8}
+    note: "Physiological target: High-End Aerobic"
+
+  - key: TR
+    name: TempoRun
+    physiological_class: threshold
+    ranges:
+      lthr: {min: 95, max: 102}
+    rpe: {min: 8, max: 9}
+    note: "Physiological target: Lactate Threshold"
+
+  - key: RI
+    name: RunningIntervals
+    physiological_class: supra
+    ranges:
+      lthr: {min: 102, max: null}
+    rpe: {min: 9, max: 10}
+    note: "Physiological target: VO2 Max"

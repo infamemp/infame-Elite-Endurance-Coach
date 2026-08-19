@@ -1,0 +1,95 @@
+# TEMPLATE — copy this file to config/authors/<your_id>.yaml and fill it in.
+# Files starting with "_" are skipped by the loader.
+# After editing: python build_zone_tables.py validate  →  python build_zone_tables.py build
+#
+# Full field reference: config/schema/author.schema.json
+
+# Machine identifier. Lowercase, digits and underscores only.
+# MUST match the filename stem exactly. Never change it once in use.
+id: your_id
+
+# Display name, as it appears in the generated Markdown heading.
+name: Author Name Zones
+
+# cycling | running
+sport: cycling
+
+# Optional. Use when the sport label alone is imprecise, e.g. "Ultrarunning / Running".
+# sport_note: Ultrarunning / Running
+
+# How this author names zones, in their own vocabulary.
+zone_identifier_style: Zone N
+
+# Metric used when the athlete declares no preference.
+# One of: power | lthr | pace | hrmax | rpe
+default_metric: power
+
+# Every metric this author defines. A zone may only carry ranges for metrics listed here.
+available_metrics: [power, lthr]
+
+# Human-readable physiological references shown in the generated header.
+primary_metrics:
+  - Power
+  - Lactate Threshold Heart Rate (LTHR)
+
+# Optional. How anchors are displayed. Defaults to available_metrics when omitted.
+# intensity_anchors: ["% FTP", "% LTHR"]
+
+# Whether each metric is native to the author or a cross-referenced estimate.
+metric_status:
+  power: native
+  lthr: native
+
+# NOTE: ramp eligibility is NOT an author property. It depends on discipline and
+# metric, and lives in config/decision_thresholds.yaml under `ramps`.
+
+# ── Optional: dual-layer ──────────────────────────────────────────
+# Use ONLY when the athlete-facing cue metric differs from the engine-facing load metric.
+# Worked example: Koop (engine = % LTHR for platform load, steering = RPE per workout code).
+# dual_layer:
+#   required: true
+#   engine_metric: lthr
+#   steering_metric: rpe
+
+# ── Optional: special output rule ─────────────────────────────────
+# Use ONLY when the native intensity metric must NOT be the metric emitted in syntax.
+# Worked example: Olbrich (native % HRmax, output forced to estimated % LTHR).
+# special_output_rule:
+#   native_metric: hrmax
+#   output_metric: lthr
+#   rationale: Per the Olbrich Exception.
+
+# Author-level notes. Rendered as bullet lines. Use for deliberate zone gaps,
+# metric equivalences, or field-test pointers.
+notes:
+  - Replace or delete this line.
+
+# ── Zones ─────────────────────────────────────────────────────────
+# List in ascending intensity order.
+#
+# physiological_class is the ONLY valid bridge between methodologies. It drives TSS cost.
+#   recovery | endurance | tempo | threshold | supra
+# Never use RPE to compare across authors — RPE reflects each author's own calibration.
+#
+# Range notation:
+#   {min: 55, max: 74}     → 55–74%
+#   {min: null, max: 55}   → < 55%
+#   {min: 150, max: null}  → > 150%
+#   omit the metric entirely → renders as N/A
+zones:
+  - key: Zone 1
+    name: Active Recovery
+    physiological_class: recovery
+    ranges:
+      power: {min: null, max: 55}
+      lthr:  {min: null, max: 81}
+    rpe: {min: 1, max: 2}
+
+  - key: Zone 2
+    name: Endurance
+    physiological_class: endurance
+    ranges:
+      power: {min: 55, max: 74}
+      lthr:  {min: 82, max: 89}
+    rpe: {min: 3, max: 4}
+    note: Row-level notes are optional.

@@ -1,0 +1,77 @@
+# Coggan Cycling Levels
+# Conforms to config/schema/author.schema.json
+# Migrated from Training_Zones/Simple_Table_Cycling_Training_Zones.md (v5.1)
+
+id: coggan
+name: Coggan Cycling Levels
+sport: cycling
+
+zone_identifier_style: Level N
+
+default_metric: power
+available_metrics: [power, lthr]
+primary_metrics:
+  - Power
+  - Functional Threshold Heart Rate (LTHR)
+intensity_anchors: ["% FTP", "% LTHR"]
+
+metric_status:
+  power: native
+  lthr: native
+
+notes:
+  - FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
+
+zones:
+  - key: Level 1
+    name: Active Recovery
+    physiological_class: recovery
+    ranges:
+      power: {min: null, max: 55}
+      lthr:  {min: null, max: 68}
+    rpe: {min: null, max: 2}
+
+  - key: Level 2
+    name: Endurance
+    physiological_class: endurance
+    ranges:
+      power: {min: 56, max: 75}
+      lthr:  {min: 69, max: 83}
+    rpe: {min: 2, max: 3}
+
+  - key: Level 3
+    name: Tempo
+    physiological_class: tempo
+    ranges:
+      power: {min: 76, max: 90}
+      lthr:  {min: 84, max: 94}
+    rpe: {min: 3, max: 4}
+
+  - key: Level 4
+    name: Lactate Threshold
+    physiological_class: threshold
+    ranges:
+      power: {min: 91, max: 105}
+      lthr:  {min: 95, max: 105}
+    rpe: {min: 4, max: 5}
+
+  - key: Level 5
+    name: VO2max
+    physiological_class: supra
+    ranges:
+      power: {min: 106, max: 120}
+      lthr:  {min: 106, max: null}
+    rpe: {min: 6, max: 7}
+
+  - key: Level 6
+    name: Anaerobic Capacity
+    physiological_class: supra
+    ranges:
+      power: {min: 121, max: 150}
+    rpe: {min: 7, max: null}
+
+  - key: Level 7
+    name: Neuromuscular Power
+    physiological_class: supra
+    ranges: {}
+    rpe: {label: Maximal}

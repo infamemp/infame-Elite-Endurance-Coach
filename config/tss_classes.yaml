@@ -1,0 +1,109 @@
+# TSS Classes — Infame Elite Endurance Coach v6
+#
+# The physiological class of a zone determines its training-load cost per minute.
+# Class is assigned per zone in config/authors/*.yaml and is the ONLY valid bridge
+# between methodologies — RPE is never comparable across authors.
+#
+# Rationale: neither % pace nor % LTHR scales with metabolic cost the way % FTP does.
+# Daniels Easy at 75–85% pace is aerobic base, not tempo. A numeric cut-point applied
+# across metrics would misclassify cost, so cost is assigned by the class the author's
+# own zone table already names.
+
+classes:
+  recovery:
+    label: Recovery
+    tss_per_min: 0.5
+    tss_per_hour: 30
+    description: Active recovery. Below the aerobic training stimulus.
+    examples: [Friel Z1, Coggan Level 1, Koop RR, Palladino 1A, Olbrich LRJ]
+
+  endurance:
+    label: Endurance
+    tss_per_min: 1.0
+    tss_per_hour: 60
+    description: Aerobic base and long-duration work.
+    examples: [Friel Z2, Coggan Level 2, Koop ER, Daniels E, Olbrich EER, Carmichael EM]
+
+  tempo:
+    label: Tempo
+    tss_per_min: 1.2
+    tss_per_hour: 72
+    description: >
+      Just above LT1/VT1. Ventilation rises but stays controlled; lactate remains
+      stable and low (2.0-3.0 mmol/L). Aerobic efficiency and long-duration muscular
+      endurance. Conversation possible in short phrases.
+    examples: [Friel Cycling Z3, Coggan Level 3, Daniels M, Carmichael T]
+
+  sub_threshold:
+    label: Sub-threshold
+    tss_per_min: 1.35
+    tss_per_hour: 81
+    description: >
+      Sweet spot. Deliberately a few watts or beats below MLSS/LT2. Lactate
+      stabilizes around 3.0-3.5 mmol/L. Delivers roughly 90-95% of the adaptation
+      of strict threshold work at a materially lower neuromuscular and autonomic
+      cost, which is what makes high-quality volume sustainable.
+    examples: [Carmichael SS, Palladino 3A, Koop SSR, Olbrich IER]
+
+  threshold:
+    label: Threshold
+    tss_per_min: 1.5
+    tss_per_hour: 90
+    description: >
+      MLSS/LT2. The highest intensity at which lactate clearance still matches
+      production (3.5-4.5 mmol/L, ~4.0 average). Above it, H+ and lactate accumulate
+      exponentially. Buffering capacity and rightward shift of the lactate curve.
+    examples: [Friel Z4, Coggan Level 4, Daniels T, Koop TR, Palladino 3B, Olbrich TER, Carmichael CR]
+
+  supra:
+    label: Supra-threshold
+    tss_per_min: 1.8
+    tss_per_hour: 108
+    description: >
+      Everything above threshold — VO2max, anaerobic capacity, neuromuscular power,
+      interval and repetition work.
+    examples: [Friel Z5+, Coggan Level 5+, Daniels I and R, Koop RI, Olbrich INT, Palladino 4+]
+
+# Universal anchor tying the metrics together at threshold.
+universal_anchor:
+  statement: >
+    100% FTP (power) = 100% LTHR (heart rate) = 100% threshold pace
+    = Daniels T-Pace = Friel LT (Z4/Z5a threshold).
+  note: >
+    Session TSS is the sum of each interval's physiological cost.
+    Do not use IF-squared formulas.
+
+# ══════════════════════════════════════════════════════════════════
+# PHYSIOLOGICAL BAND REFERENCE
+# ══════════════════════════════════════════════════════════════════
+# The criterion used to assign physiological_class to each author zone.
+# A zone is classified by where its range midpoint falls in these bands.
+# Descriptive: bands overlap at the edges because the underlying physiology is
+# continuous. The deterministic classifier resolves boundaries via
+# classification_cutpoints below, which are disjoint by construction.
+
+band_reference:
+  tempo:
+    power: {min: 76, max: 90}
+    pace: {min: 85, max: 90}
+    lthr: {min: 84, max: 90}
+    hrmax: {min: 75, max: 85}
+    lactate_mmol: {min: 2.0, max: 3.0}
+    rpe: {min: 3, max: 4}
+    max_sustainable: 1 to 3 hours
+  sub_threshold:
+    power: {min: 88, max: 94}
+    pace: {min: 91, max: 96}
+    lthr: {min: 90, max: 94}
+    hrmax: {min: 85, max: 88}
+    lactate_mmol: {min: 3.0, max: 3.5}
+    rpe: {min: 4, max: 5}
+    max_sustainable: 45 to 75 minutes
+  threshold:
+    power: {min: 91, max: 105}
+    pace: {min: 98, max: 102}
+    lthr: {min: 95, max: 105}
+    hrmax: {min: 88, max: 93}
+    lactate_mmol: {min: 3.5, max: 4.5}
+    rpe: {min: 6, max: 7}
+    max_sustainable: 30 to 60 minutes (maximal effort)
