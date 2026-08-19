@@ -200,7 +200,9 @@
               "tempo",
               "sub_threshold",
               "threshold",
-              "supra"
+              "vo2max",
+              "anaerobic",
+              "neuromuscular"
             ],
             "description": "Cross-author physiological class. Drives TSS cost via config/tss_classes.yaml. This is the only valid bridge between methodologies — never RPE (Schema Extension Rule 4)."
           },

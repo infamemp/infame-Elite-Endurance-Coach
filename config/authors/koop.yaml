@@ -62,7 +62,7 @@ zones:
 
   - key: RI
     name: RunningIntervals
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       lthr: {min: 102, max: null}
     rpe: {min: 9, max: 10}

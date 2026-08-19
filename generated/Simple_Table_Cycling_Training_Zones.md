@@ -48,7 +48,7 @@ The table columns below are documentation of where each zone lies. What is emitt
 | SS | SteadyState | 86–90% | 92–94% | 7 | Sub-threshold |  |
 | CR | ClimbingRepeat | 95–100% | 95–97% | 8 | Threshold |  |
 | OU | OverUnder | N/A | N/A | 9 | Threshold | Structured as alternating Under (86–90% FTP / 92–94% LTHR) and Over (95–100% FTP / 95–97% LTHR) intervals |
-| PI | PowerInterval | > 100% | > 100% | 10 | Supra-threshold | Max effort; no defined upper bound |
+| PI | PowerInterval | > 100% | > 100% | 10 | VO2max | Max effort; no defined upper bound |
 
 ---
 
@@ -69,9 +69,9 @@ The table columns below are documentation of where each zone lies. What is emitt
 | Level 2 | Endurance | 56–75% | 69–83% | 2–3 | Endurance |  |
 | Level 3 | Tempo | 76–90% | 84–94% | 3–4 | Tempo |  |
 | Level 4 | Lactate Threshold | 91–105% | 95–105% | 4–5 | Threshold |  |
-| Level 5 | VO2max | 106–120% | > 106% | 6–7 | Supra-threshold |  |
-| Level 6 | Anaerobic Capacity | 121–150% | N/A | > 7 | Supra-threshold |  |
-| Level 7 | Neuromuscular Power | N/A | N/A | Maximal | Supra-threshold |  |
+| Level 5 | VO2max | 106–120% | > 106% | 6–7 | VO2max |  |
+| Level 6 | Anaerobic Capacity | 121–150% | N/A | > 7 | Anaerobic |  |
+| Level 7 | Neuromuscular Power | N/A | N/A | Maximal | Neuromuscular |  |
 
 ---
 
@@ -92,6 +92,6 @@ The table columns below are documentation of where each zone lies. What is emitt
 | Zone 2 | Endurance | 55–74% | 82–89% | 3–4 | Endurance |  |
 | Zone 3 | Tempo | 75–89% | 90–93% | 5–6 | Tempo |  |
 | Zone 4 | Lactate Threshold | 90–104% | 94–99% | 7 | Threshold |  |
-| Zone 5 / 5a | VO2max / Threshold Aerobic | 105–120% | 100–102% | 8 | Supra-threshold |  |
-| Zone 6 / 5b | Anaerobic Capacity | 121–150% | 103–106% | 9 | Supra-threshold |  |
-| Zone 7 / 5c | Neuromuscular Power | > 150% | > 107% | 10 | Supra-threshold |  |
+| Zone 5 / 5a | VO2max / Threshold Aerobic | 105–120% | 100–102% | 8 | VO2max |  |
+| Zone 6 / 5b | Anaerobic Capacity | 121–150% | 103–106% | 9 | Anaerobic |  |
+| Zone 7 / 5c | Neuromuscular Power | > 150% | > 107% | 10 | Neuromuscular |  |

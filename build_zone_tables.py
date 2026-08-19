@@ -66,7 +66,9 @@ CLASS_LABELS = {
     "tempo": "Tempo",
     "sub_threshold": "Sub-threshold",
     "threshold": "Threshold",
-    "supra": "Supra-threshold",
+    "vo2max": "VO2max",
+    "anaerobic": "Anaerobic",
+    "neuromuscular": "Neuromuscular",
 }
 
 SPORT_TITLES = {

@@ -55,14 +55,39 @@ classes:
       exponentially. Buffering capacity and rightward shift of the lactate curve.
     examples: [Friel Z4, Coggan Level 4, Daniels T, Koop TR, Palladino 3B, Olbrich TER, Carmichael CR]
 
-  supra:
-    label: Supra-threshold
+  vo2max:
+    label: VO2max
     tss_per_min: 1.8
     tss_per_hour: 108
     description: >
-      Everything above threshold — VO2max, anaerobic capacity, neuromuscular power,
-      interval and repetition work.
-    examples: [Friel Z5+, Coggan Level 5+, Daniels I and R, Koop RI, Olbrich INT, Palladino 4+]
+      Maximal aerobic power. Intervals long enough to drive oxygen uptake toward
+      its ceiling, typically 2-8 minutes. Predominantly aerobic with a substantial
+      glycolytic contribution.
+    examples: [Coggan Level 5, Friel Z5/5a and 5b, Daniels I, Koop RI, Olbrich INT, Palladino 4 and 5, Carmichael PI]
+
+  anaerobic:
+    label: Anaerobic
+    tss_per_min: 2.1
+    tss_per_hour: 126
+    description: >
+      Anaerobic capacity. Glycolytic work of roughly 30 seconds to 2 minutes,
+      driving buffering capacity and lactate tolerance. Metabolic cost per minute
+      exceeds VO2max work.
+    examples: [Coggan Level 6, Friel Cycling Z6/5b, Friel Running Z5c, Daniels R, Palladino 6]
+
+  neuromuscular:
+    label: Neuromuscular
+    tss_per_min: 2.4
+    tss_per_hour: 144
+    description: >
+      Maximal neuromuscular power. Sprints of a few seconds, largely alactic and
+      neural rather than metabolic.
+    caveat: >
+      TSS measures metabolic load and captures sprint work poorly. Ten 15-second
+      sprints generate little metabolic load but substantial neural fatigue. This
+      multiplier acknowledges intensity; it does not measure neural cost, which
+      must be tracked separately.
+    examples: [Coggan Level 7, Friel Cycling Z7/5c, Palladino 7]
 
 # Universal anchor tying the metrics together at threshold.
 universal_anchor:

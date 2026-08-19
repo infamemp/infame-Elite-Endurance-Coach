@@ -81,7 +81,7 @@ zones:
 
   - key: "4"
     name: Supra Threshold
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       power: {min: 101, max: 106}
       pace:  {min: 101, max: 106}
@@ -90,7 +90,7 @@ zones:
 
   - key: "5"
     name: Maximal Aerobic Power
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       power: {min: 106, max: 116}
       pace:  {min: 106, max: 116}
@@ -99,7 +99,7 @@ zones:
 
   - key: "6"
     name: Anaerobic Power
-    physiological_class: supra
+    physiological_class: anaerobic
     ranges:
       power: {min: 116, max: 150}
       pace:  {min: 116, max: 150}
@@ -107,7 +107,7 @@ zones:
 
   - key: "7"
     name: Sprint / Maximal Power
-    physiological_class: supra
+    physiological_class: neuromuscular
     ranges:
       power: {min: 150, max: null}
       pace:  {min: 150, max: null}

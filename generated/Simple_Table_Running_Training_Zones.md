@@ -45,8 +45,8 @@ The table columns below are documentation of where each zone lies. What is emitt
 | E | Easy | 75–85% | 72–88% | 1–3 | Endurance |  |
 | M | Marathon | 85–95% | 89–99% | 3–4 | Tempo |  |
 | T | Threshold | 100% | 100% | 4–5 | Threshold |  |
-| I | Interval | 105–115% | > 100% | 6–8 | Supra-threshold |  |
-| R | Repetition | 115–125% | N/A | 9–10 | Supra-threshold |  |
+| I | Interval | 105–115% | > 100% | 6–8 | VO2max |  |
+| R | Repetition | 115–125% | N/A | 9–10 | Anaerobic |  |
 
 ---
 
@@ -67,9 +67,9 @@ The table columns below are documentation of where each zone lies. What is emitt
 | Zone 2 | Endurance | 78–88% | 85–89% | 2–3 | Endurance |  |
 | Zone 3 | Tempo | 88–94% | 90–94% | 4–5 | Tempo |  |
 | Zone 4 | Lactate Threshold | 95–101% | 95–99% | 6–7 | Threshold |  |
-| Zone 5a | Sub-Aerobic Threshold | 100–103% | 100–102% | 8 | Supra-threshold |  |
-| Zone 5b | Aerobic Capacity / VO2max | 104–111% | 103–106% | 9 | Supra-threshold |  |
-| Zone 5c | Anaerobic Capacity | > 111% | N/A | 10 | Supra-threshold |  |
+| Zone 5a | Sub-Aerobic Threshold | 100–103% | 100–102% | 8 | VO2max |  |
+| Zone 5b | Aerobic Capacity / VO2max | 104–111% | 103–106% | 9 | VO2max |  |
+| Zone 5c | Anaerobic Capacity | > 111% | N/A | 10 | Anaerobic |  |
 
 ---
 
@@ -91,7 +91,7 @@ The table columns below are documentation of where each zone lies. What is emitt
 | ER | EnduranceRun | 75–85% | 5–6 | Endurance | Physiological target: Aerobic Endurance / "Forever" Pace |
 | SSR | SteadyStateRun | 85–95% | 7–8 | Sub-threshold | Physiological target: High-End Aerobic |
 | TR | TempoRun | 95–102% | 8–9 | Threshold | Physiological target: Lactate Threshold |
-| RI | RunningIntervals | > 102% | 9–10 | Supra-threshold | Physiological target: VO2 Max |
+| RI | RunningIntervals | > 102% | 9–10 | VO2max | Physiological target: VO2 Max |
 
 ---
 
@@ -113,7 +113,7 @@ The table columns below are documentation of where each zone lies. What is emitt
 | EER | Extensive endurance run | 85–90% | 75–80% | 2–3 | Endurance |  |
 | IER | Intensive endurance run | 90–95% | 80–85% | 4–5 | Sub-threshold |  |
 | TER | Tempo endurance run | 95–100% | 85–90% | 6–7 | Threshold |  |
-| INT | Interval | > 100% | > 90% | 8–10 | Supra-threshold |  |
+| INT | Interval | > 100% | > 90% | 8–10 | VO2max |  |
 | FAR | Fartlek | 80–100% | 70–90% | 2–7 | Endurance | Variable effort by design |
 
 ---
@@ -137,7 +137,7 @@ The table columns below are documentation of where each zone lies. What is emitt
 | 2 | Endurance / Long Run | 80–88% | 80–88% | 85–89% | 3–4 | Endurance |  |
 | 3A | Extensive Threshold Stimulus | 88–95% | 88–95% | 89–95% | 4–5 | Sub-threshold |  |
 | 3B | Intensive Threshold Stimulus | 95–101% | 95–101% | 95–100% | 5–6 | Threshold |  |
-| 4 | Supra Threshold | 101–106% | 101–106% | > 100% | 7–8 | Supra-threshold |  |
-| 5 | Maximal Aerobic Power | 106–116% | 106–116% | > 100% | 8–9 | Supra-threshold |  |
-| 6 | Anaerobic Power | 116–150% | 116–150% | N/A | 9–10 | Supra-threshold |  |
-| 7 | Sprint / Maximal Power | > 150% | > 150% | N/A | 10 | Supra-threshold |  |
+| 4 | Supra Threshold | 101–106% | 101–106% | > 100% | 7–8 | VO2max |  |
+| 5 | Maximal Aerobic Power | 106–116% | 106–116% | > 100% | 8–9 | VO2max |  |
+| 6 | Anaerobic Power | 116–150% | 116–150% | N/A | 9–10 | Anaerobic |  |
+| 7 | Sprint / Maximal Power | > 150% | > 150% | N/A | 10 | Neuromuscular |  |

@@ -71,7 +71,7 @@ zones:
 
   - key: PI
     name: PowerInterval
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       power: {min: 100, max: null}
       lthr:  {min: 100, max: null}
