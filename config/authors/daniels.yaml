@@ -1,0 +1,60 @@
+# Daniels Running Zones
+# Conforms to config/schema/author.schema.json
+# Migrated from Training_Zones/Simple_Table_Running_Training_Zones.md (v5.1)
+
+id: daniels
+name: Daniels Running Zones
+sport: running
+
+zone_identifier_style: Letter code
+
+default_metric: pace
+available_metrics: [pace, lthr]
+primary_metrics:
+  - Lactate Threshold (LT) Pace
+  - Lactate Threshold Heart Rate (LTHR)
+intensity_anchors: ["% Threshold Pace", "% LTHR"]
+
+metric_status:
+  pace: native
+  lthr: estimated
+
+zones:
+  - key: E
+    name: Easy
+    physiological_class: endurance
+    ranges:
+      pace: {min: 75, max: 85}
+      lthr: {min: 72, max: 88}
+    rpe: {min: 1, max: 3}
+
+  - key: M
+    name: Marathon
+    physiological_class: tempo
+    ranges:
+      pace: {min: 85, max: 95}
+      lthr: {min: 89, max: 99}
+    rpe: {min: 3, max: 4}
+
+  - key: T
+    name: Threshold
+    physiological_class: threshold
+    ranges:
+      pace: {min: 100, max: 100}
+      lthr: {min: 100, max: 100}
+    rpe: {min: 4, max: 5}
+
+  - key: I
+    name: Interval
+    physiological_class: supra
+    ranges:
+      pace: {min: 105, max: 115}
+      lthr: {min: 100, max: null}
+    rpe: {min: 6, max: 8}
+
+  - key: R
+    name: Repetition
+    physiological_class: supra
+    ranges:
+      pace: {min: 115, max: 125}
+    rpe: {min: 9, max: 10}

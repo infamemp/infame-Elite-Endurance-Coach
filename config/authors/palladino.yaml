@@ -1,0 +1,114 @@
+# Palladino Running Power/Pace Zones
+# Conforms to config/schema/author.schema.json
+# Migrated from Training_Zones/Simple_Table_Running_Training_Zones.md (v5.1)
+
+id: palladino
+name: Palladino Running Power/Pace Zones
+sport: running
+
+zone_identifier_style: Number with letter sub-zone (e.g. "1A", "3B")
+
+default_metric: power
+available_metrics: [power, pace, lthr]
+primary_metrics:
+  - Functional Threshold Power (FTP) / Critical Power (CP)
+  - LT Pace
+  - LTHR
+intensity_anchors: ["% FTP/CP", "% Threshold Pace", "% LTHR"]
+
+metric_labels:
+  power: "% FTP/CP"
+
+metric_status:
+  power: native
+  pace: estimated
+  lthr: estimated
+
+zones:
+  - key: 1A
+    name: Post Interval Recovery
+    physiological_class: recovery
+    ranges:
+      power: {min: 50, max: 65}
+      pace:  {min: 50, max: 65}
+      lthr:  {min: null, max: 75}
+    rpe: {min: 1, max: 2}
+
+  - key: 1B
+    name: EZ Warm-Up
+    physiological_class: recovery
+    ranges:
+      power: {min: 65, max: 75}
+      pace:  {min: 65, max: 75}
+      lthr:  {min: 75, max: 80}
+    rpe: {min: 2, max: 2}
+
+  - key: 1C
+    name: EZ Aerobic Running
+    physiological_class: endurance
+    ranges:
+      power: {min: 75, max: 80}
+      pace:  {min: 75, max: 80}
+      lthr:  {min: 80, max: 85}
+    rpe: {min: 2, max: 3}
+
+  - key: "2"
+    name: Endurance / Long Run
+    physiological_class: endurance
+    ranges:
+      power: {min: 80, max: 88}
+      pace:  {min: 80, max: 88}
+      lthr:  {min: 85, max: 89}
+    rpe: {min: 3, max: 4}
+
+  - key: 3A
+    name: Extensive Threshold Stimulus
+    physiological_class: sub_threshold
+    ranges:
+      power: {min: 88, max: 95}
+      pace:  {min: 88, max: 95}
+      lthr:  {min: 89, max: 95}
+    rpe: {min: 4, max: 5}
+
+  - key: 3B
+    name: Intensive Threshold Stimulus
+    physiological_class: threshold
+    ranges:
+      power: {min: 95, max: 101}
+      pace:  {min: 95, max: 101}
+      lthr:  {min: 95, max: 100}
+    rpe: {min: 5, max: 6}
+
+  - key: "4"
+    name: Supra Threshold
+    physiological_class: supra
+    ranges:
+      power: {min: 101, max: 106}
+      pace:  {min: 101, max: 106}
+      lthr:  {min: 100, max: null}
+    rpe: {min: 7, max: 8}
+
+  - key: "5"
+    name: Maximal Aerobic Power
+    physiological_class: supra
+    ranges:
+      power: {min: 106, max: 116}
+      pace:  {min: 106, max: 116}
+      lthr:  {min: 100, max: null}
+    rpe: {min: 8, max: 9}
+
+  - key: "6"
+    name: Anaerobic Power
+    physiological_class: supra
+    ranges:
+      power: {min: 116, max: 150}
+      pace:  {min: 116, max: 150}
+    rpe: {min: 9, max: 10}
+
+  - key: "7"
+    name: Sprint / Maximal Power
+    physiological_class: supra
+    ranges:
+      power: {min: 150, max: null}
+      pace:  {min: 150, max: null}
+    rpe: {min: 10, max: 10}

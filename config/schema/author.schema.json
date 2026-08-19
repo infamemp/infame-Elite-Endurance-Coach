@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "author.schema.json",
+  "title": "Infame Coaching Methodology (Author) Definition",
+  "description": "Schema for a single coaching methodology. One file per author under config/authors/. This is the single source of truth: the engine, the validator, and the generated Claude Project files all read from here.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "sport",
+    "zone_identifier_style",
+    "default_metric",
+    "available_metrics",
+    "primary_metrics",
+    "zones"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Stable machine identifier. Must match the filename stem. Never change once in use."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name, as it appears in generated Markdown headings. E.g. 'Coggan Cycling Levels'."
+    },
+    "sport": {
+      "type": "string",
+      "enum": [
+        "cycling",
+        "running"
+      ],
+      "description": "Sport this methodology governs."
+    },
+    "sport_note": {
+      "type": "string",
+      "description": "Optional refinement shown in generated output when the sport label alone is imprecise. E.g. 'Ultrarunning / Running'."
+    },
+    "zone_identifier_style": {
+      "type": "string",
+      "description": "How this author names zones. E.g. 'Level N', 'Zone N (with sub-zone letters)', 'Letter code (workout code)'."
+    },
+    "default_metric": {
+      "type": "string",
+      "enum": [
+        "power",
+        "lthr",
+        "pace",
+        "hrmax",
+        "rpe"
+      ],
+      "description": "Metric used when the athlete declares no preference."
+    },
+    "available_metrics": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "power",
+          "lthr",
+          "pace",
+          "hrmax",
+          "rpe"
+        ]
+      },
+      "description": "Metrics this author defines. A zone range column may only exist for a metric listed here (Schema Extension Rule 1)."
+    },
+    "primary_metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "Human-readable physiological references. E.g. 'Power', 'Lactate Threshold Heart Rate (LTHR)'."
+    },
+    "intensity_anchors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional. Anchors as displayed in generated output. Defaults to available_metrics rendering when omitted."
+    },
+    "metric_status": {
+      "type": "object",
+      "description": "Whether each metric is native to the author or a cross-referenced estimate. Keys must appear in available_metrics.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "native",
+          "estimated"
+        ]
+      }
+    },
+    "dual_layer": {
+      "type": "object",
+      "description": "Present only when the athlete-facing cue metric differs from the engine-facing load metric (Schema Extension Rule 3).",
+      "required": [
+        "required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "engine_metric": {
+          "type": "string",
+          "enum": [
+            "power",
+            "lthr",
+            "pace"
+          ],
+          "description": "Metric emitted in Intervals.icu syntax; feeds platform load calculation."
+        },
+        "steering_metric": {
+          "type": "string",
+          "enum": [
+            "rpe"
+          ],
+          "description": "Metric the athlete reads on the device, carried in the cue text."
+        },
+        "note": {
+          "type": "string"
+        },
+        "steering_label": {
+          "type": "string",
+          "description": "Optional. Overrides the steering description, e.g. 'RPE per workout code'."
+        }
+      }
+    },
+    "special_output_rule": {
+      "type": "object",
+      "description": "Present only when the native intensity metric must NOT be the metric emitted in syntax (Schema Extension Rule 2). Worked example: Olbrich.",
+      "required": [
+        "native_metric",
+        "output_metric",
+        "rationale"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "native_metric": {
+          "type": "string",
+          "enum": [
+            "power",
+            "lthr",
+            "pace",
+            "hrmax",
+            "rpe"
+          ]
+        },
+        "output_metric": {
+          "type": "string",
+          "enum": [
+            "power",
+            "lthr",
+            "pace"
+          ]
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Author-level notes rendered as bullet lines in generated Markdown. Use for deliberate zone gaps, FTHR=LTHR equivalences, field-test pointers."
+    },
+    "zones": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Zone rows in ascending intensity order.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "physiological_class",
+          "ranges"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The author's native zone identifier, preserved verbatim. E.g. 'Level 4', 'Zone 5 / 5a', 'SSR'."
+          },
+          "name": {
+            "type": "string",
+            "description": "Zone name. E.g. 'Lactate Threshold'."
+          },
+          "physiological_class": {
+            "type": "string",
+            "enum": [
+              "recovery",
+              "endurance",
+              "tempo",
+              "sub_threshold",
+              "threshold",
+              "supra"
+            ],
+            "description": "Cross-author physiological class. Drives TSS cost via config/tss_classes.yaml. This is the only valid bridge between methodologies — never RPE (Schema Extension Rule 4)."
+          },
+          "ranges": {
+            "type": "object",
+            "description": "Numeric range per metric. Keys must appear in available_metrics. Omit a metric entirely where the author defines none (renders as N/A).",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "min": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "description": "Inclusive lower bound. null means open (renders '< max')."
+                },
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "description": "Inclusive upper bound. null means open (renders '> min')."
+                }
+              }
+            }
+          },
+          "rpe": {
+            "type": "object",
+            "description": "Author's own RPE calibration. Not comparable across authors (Schema Extension Rule 4).",
+            "additionalProperties": false,
+            "properties": {
+              "min": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "max": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "description": "Use when the author states a non-numeric value, e.g. 'Maximal'."
+              }
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "Row-level note. Rendered in the Notes column."
+          }
+        }
+      }
+    },
+    "metric_labels": {
+      "type": "object",
+      "description": "Optional per-author override of the column label for a metric. Use when the author's own vocabulary differs from the default, e.g. Palladino writes '% FTP/CP' rather than '% FTP'.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "default_metric_label": {
+      "type": "string",
+      "description": "Optional. Overrides how the default metric is displayed when the author qualifies it, e.g. 'RPE (workout-code specific)'."
+    }
+  }
+}

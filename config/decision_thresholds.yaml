@@ -1,0 +1,217 @@
+# Decision Thresholds — Infame Elite Endurance Coach v6
+# Conforms to config/schema/thresholds.schema.json
+#
+# Cross-cutting rules that are NOT properties of any single author.
+# Nothing here may be duplicated in the prompt, the engine, or the validator —
+# all three read from this file. Zero magic numbers outside config/.
+
+# ══════════════════════════════════════════════════════════════════
+# OUTPUT FORMATS — how each metric is written in Intervals.icu syntax
+# ══════════════════════════════════════════════════════════════════
+# The zone tables document ranges as "% FTP" for readability. That label is
+# documentation, not syntax. What gets emitted in a workout block is defined here.
+# The validator rejects any target that does not match its metric's `syntax` form.
+
+output_formats:
+  power:
+    syntax: "%"                    # e.g. "85-95%" — bare percentage, no suffix
+    table_label: "% FTP"
+    forbidden_suffixes: ["FTP", "CP", "W", "watts"]
+    note: Power is emitted as a standalone percentage. Never append FTP or CP.
+
+  lthr:
+    syntax: "% LTHR"               # e.g. "85-90% LTHR"
+    table_label: "% LTHR"
+    forbidden_suffixes: ["HR", "HRmax", "bpm"]
+    note: Heart rate is always expressed as % LTHR, never % HR or % HRmax.
+
+  pace:
+    syntax: "% Pace"               # e.g. "80-85% Pace"
+    table_label: "% Threshold Pace"
+    forbidden_suffixes: ["min/km", "min/mi", "/km", "/mile"]
+    note: Pace is always relative to threshold pace. Never emit absolute pace.
+
+  hrmax:
+    syntax: null                   # never emitted — see special_output_rule per author
+    table_label: "% HRmax"
+    note: >
+      % HRmax is a documentation-only metric. Any author whose native metric is
+      % HRmax must declare a special_output_rule substituting an emittable metric.
+
+# ══════════════════════════════════════════════════════════════════
+# PRESCRIPTION FLOORS — minimum intensity that may be prescribed
+# ══════════════════════════════════════════════════════════════════
+# Author zone tables preserve the source faithfully, including open lower bounds
+# ("< 55%"). Those bounds describe where the zone *begins*, not what may be
+# *prescribed*. A target at or near zero causes execution problems — an ERG
+# trainer drops to no resistance, and a device cannot steer a near-zero target.
+#
+# The generator renders open lower bounds using these floors, so the tables the
+# coach and the model read already show the usable range. The validator rejects
+# any emitted target below the floor for its metric.
+
+prescription_floors:
+  power: 25       # % FTP — avoids zero-resistance ERG behavior
+  lthr: 50        # % LTHR — below this is below resting heart rate territory
+  pace: 40        # % threshold pace
+  hrmax: 40       # % HRmax — near resting heart rate
+
+# ══════════════════════════════════════════════════════════════════
+# RAMP ELIGIBILITY
+# ══════════════════════════════════════════════════════════════════
+# Ramp steps depend on the discipline and the metric, not on the methodology.
+# A ramp requires a device that can steer a continuously changing target, which
+# in practice means a smart trainer under power control.
+#
+# Resolution order:
+#   1. If the athlete or coach explicitly sets ramps_allowed for a discipline
+#      in the intake, that decision wins.
+#   2. Otherwise a ramp is permitted only when the discipline appears in
+#      allowed_disciplines AND the session metric appears in required_metrics.
+
+ramps:
+  allowed_disciplines: [trainer, indoor, rodillo]
+  required_metrics: [power]
+  forbidden_disciplines: [road, mtb, gravel, run, trail, treadmill]
+  athlete_override_permitted: true
+  note: >
+    Coach or athlete may disable ramps for an otherwise eligible discipline.
+    They may not enable ramps for a discipline in forbidden_disciplines —
+    that list reflects device capability, not preference.
+
+# ══════════════════════════════════════════════════════════════════
+# TSS COMPUTATION RULES
+# ══════════════════════════════════════════════════════════════════
+# Resolves the ambiguities that made v5.1 TSS estimates vary between runs.
+# Multipliers live in config/tss_classes.yaml; these are the procedural rules.
+
+tss_rules:
+  range_cost_point: midpoint        # midpoint | low | high — how a target range is costed
+  ramp_cost_point: midpoint         # a ramp is costed at the midpoint of its start/end
+  repeats_multiply: true            # a repeat block multiplies its steps by the count
+  count_recovery_intervals: true    # recovery steps inside repeats are costed, not skipped
+  straddling_range_rule: midpoint_class
+  # When a range spans two physiological classes, the class containing the
+  # midpoint governs the whole step. No blending.
+  distance_steps: unverifiable
+  # Distance-based steps (2km, 500mtr) have no duration until the athlete's pace
+  # is known. They are excluded from the computed total and reported explicitly.
+  rounding: nearest_integer
+  divergence_tolerance_pct: 10
+  # Maximum permitted gap between a declared and a recomputed session TSS.
+
+# ══════════════════════════════════════════════════════════════════
+# CLASSIFICATION CUTPOINTS
+# ══════════════════════════════════════════════════════════════════
+# Disjoint semi-open intervals [min, max) used to classify an intensity target
+# into a physiological class. Derived from the class boundaries the authors
+# themselves declare, not invented: cycling power is verified against Coggan,
+# Friel and Carmichael (14/14 zones agree); running power comes entirely from
+# Palladino (9/9); % LTHR reflects a six-author consensus on the sub-threshold
+# to threshold boundary at 95%; % HRmax comes from Olbrich, the only author
+# defining it.
+#
+# PRECEDENCE — this matters more than the numbers themselves:
+#   1. The physiological_class assigned to a zone in config/authors/*.yaml is
+#      AUTHORITATIVE. When a target falls inside a declared zone of the active
+#      methodology, that zone's class governs and these cutpoints are not used.
+#   2. These cutpoints apply only as a fallback, when a target matches no
+#      declared zone — e.g. the validator costing "85-95%" emitted in a block.
+#
+# Authors genuinely disagree: Friel Zone 5a is supra at 100-102% LTHR while
+# Coggan Level 4 is still threshold up to 105%. No single set of cutpoints can
+# satisfy both, which is precisely why author class wins. 67 of 78 zones agree
+# with these cutpoints; the 11 that diverge are author disagreements, not errors.
+#
+# Palladino and Olbrich define no tempo zone. That gap is preserved rather than
+# invented: under running power, 75-88% is endurance per Palladino.
+
+classification_cutpoints:
+  cycling:
+    power:
+      recovery:      {min: 0,   max: 55}
+      endurance:     {min: 55,  max: 75}
+      tempo:         {min: 75,  max: 88}
+      sub_threshold: {min: 88,  max: 95}
+      threshold:     {min: 95,  max: 106}
+      supra:         {min: 106, max: null}
+    lthr:
+      recovery:      {min: 0,   max: 80}
+      endurance:     {min: 80,  max: 88}
+      tempo:         {min: 88,  max: 92}
+      sub_threshold: {min: 92,  max: 95}
+      threshold:     {min: 95,  max: 103}
+      supra:         {min: 103, max: null}
+  running:
+    power:
+      recovery:      {min: 0,   max: 75}
+      endurance:     {min: 75,  max: 88}
+      sub_threshold: {min: 88,  max: 95}
+      threshold:     {min: 95,  max: 101}
+      supra:         {min: 101, max: null}
+    lthr:
+      recovery:      {min: 0,   max: 80}
+      endurance:     {min: 80,  max: 88}
+      tempo:         {min: 88,  max: 92}
+      sub_threshold: {min: 92,  max: 95}
+      threshold:     {min: 95,  max: 103}
+      supra:         {min: 103, max: null}
+    pace:
+      recovery:      {min: 0,   max: 75}
+      endurance:     {min: 75,  max: 85}
+      tempo:         {min: 85,  max: 91}
+      sub_threshold: {min: 91,  max: 97}
+      threshold:     {min: 97,  max: 103}
+      supra:         {min: 103, max: null}
+    hrmax:
+      recovery:      {min: 0,   max: 75}
+      endurance:     {min: 75,  max: 80}
+      sub_threshold: {min: 80,  max: 85}
+      threshold:     {min: 85,  max: 90}
+      supra:         {min: 90,  max: null}
+
+class_resolution:
+  order: [author_zone, cutpoints]
+  note: >
+    Resolve an intensity target against the active methodology's zones first.
+    Fall back to classification_cutpoints only when no declared zone contains it.
+
+# ══════════════════════════════════════════════════════════════════
+# ATHLETE STATE RESOLUTION  (Stage 4 — not yet consumed)
+# ══════════════════════════════════════════════════════════════════
+# TSB is the primary governor. HRV is secondary and applies only where TSB is
+# absent. ACWR acts as a validation gate that can downgrade a severe reading.
+
+state_resolution:
+  tsb_bands:
+    maladaptation_risk: {max: -30}
+    functional_overreach: {min: -30, max: -20}
+    load_pressure: {min: -20, max: -10}
+    neutral: {min: -10, max: 10}
+    fresh: {min: 10}
+
+  acwr_safe_range: {min: 0.8, max: 1.3}
+  # Within this range, a maladaptation_risk reading accompanied by stable
+  # durability is downgraded to functional_overreach.
+
+  hrv_bands:
+    suppressed: {max: 0.90}         # ratio to baseline
+    normal: {min: 0.90, max: 1.10}
+    elevated: {min: 1.10}
+
+  operational_states: [recovery_priority, load_accepting]
+
+# ══════════════════════════════════════════════════════════════════
+# TAPER GOVERNANCE  (Stage 4 — not yet consumed)
+# ══════════════════════════════════════════════════════════════════
+
+taper:
+  a_race_taper_days: 10
+  a_race_pre_taper_days: 21
+  target_tsb_by_event_type:
+    time_trial: {min: 8, max: 18}
+    road_race: {min: 5, max: 15}
+    marathon: {min: 10, max: 20}
+    ultra: {min: 10, max: 25}
+    criterium: {min: 5, max: 15}
+    default: {min: 5, max: 15}
