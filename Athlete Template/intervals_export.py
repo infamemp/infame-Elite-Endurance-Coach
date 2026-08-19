@@ -546,17 +546,44 @@ def main():
         print("❌ No athletes found.")
         sys.exit(1)
 
-    # Deduplicate by athlete_id
-    seen_ids, deduped = set(), []
+    # ── Merge duplicate summary rows ─────────────────────────────
+    # athlete-summary.json returns two rows per athlete. They are not
+    # identical: one carries the current PMC (fitness/fatigue/form) with a
+    # weekly training_load of 0, the other carries the weekly load with a PMC
+    # snapshot from an earlier cut. Keeping only the first row silently used a
+    # stale PMC, which matters when a TSB sits near a band boundary.
+    #
+    # Merge instead of discard: take the most recent PMC across the rows, and
+    # the largest non-zero weekly load. Every other field falls back to the
+    # first row that defines it.
+    merged = {}
+    order = []
     for s in summary_list:
         aid = s.get("athlete_id")
-        if aid and aid not in seen_ids:
-            seen_ids.add(aid)
-            deduped.append(s)
-        elif aid in seen_ids:
-            print(f"  ⚠️  Duplicate skipped: {s.get('athlete_name')} ({aid})")
-    summary_list = deduped
-    print(f"   ✓ {len(summary_list)} unique athletes")
+        if not aid:
+            continue
+        if aid not in merged:
+            merged[aid] = dict(s)
+            order.append(aid)
+            continue
+
+        cur = merged[aid]
+        # PMC: the row with the higher fatigue (ATL) is the more recent one,
+        # since ATL has a 7-day time constant and moves first.
+        if clean_n(s.get("fatigue")) > clean_n(cur.get("fatigue")):
+            for k in ("fitness", "fatigue", "form", "rampRate"):
+                if s.get(k) is not None:
+                    cur[k] = s[k]
+        # Weekly load: keep the largest non-zero value.
+        if clean_n(s.get("training_load")) > clean_n(cur.get("training_load")):
+            cur["training_load"] = s.get("training_load")
+        # Any field the first row left empty.
+        for k, val in s.items():
+            if cur.get(k) in (None, "", []) and val not in (None, "", []):
+                cur[k] = val
+
+    summary_list = [merged[a] for a in order]
+    print(f"   ✓ {len(summary_list)} unique athletes (duplicate rows merged)")
 
     print("📥 Indexing profiles...")
     try: 
