@@ -484,17 +484,25 @@ def build_athlete_sheet(wb, aid, name, summary_row, master_profile):
             intf = act.get("icu_intensity")
             act_date = (act.get("start_date_local") or "")[:10]
             mov_time = act.get("moving_time") or act.get("elapsed_time")
-            t_load = act.get("icu_training_load") or act.get("training_load")
-            avg_w = act.get("weighted_average_watts") or act.get("average_watts")
+
+            # TSS: usar is None para no descartar valores 0; formatear con 2 decimales
+            t_load = act.get("icu_training_load")
+            if t_load is None:
+                t_load = act.get("training_load")
+
+            # Avg Power: icu_weighted_avg_watts (NP calculado por ICU),
+            # luego average_watts como fallback para medidores externos
+            avg_w = (act.get("icu_weighted_avg_watts") or
+                     act.get("average_watts"))
             
             ws.cell(row=row, column=1,  value=act_date)
             ws.cell(row=row, column=2,  value=v(act.get("name")))
             ws.cell(row=row, column=3,  value=v(act.get("type")))
             ws.cell(row=row, column=4,  value=fmt_sec(mov_time))
             ws.cell(row=row, column=5,  value=round(dist/1000, 2) if dist else "—")
-            ws.cell(row=row, column=6,  value=v(t_load))
-            ws.cell(row=row, column=7,  value=round(intf / 100, 2) if intf else "—")
-            ws.cell(row=row, column=8,  value=v(avg_w))
+            ws.cell(row=row, column=6,  value=f"{float(t_load):.2f}" if t_load is not None else "—")
+            ws.cell(row=row, column=7,  value=f"{intf/100:.2f}" if intf is not None else "—")
+            ws.cell(row=row, column=8,  value=round(avg_w) if avg_w is not None else "—")
             ws.cell(row=row, column=9,  value=v(act.get("average_heartrate")))
             elev = act.get("total_elevation_gain")
             ws.cell(row=row, column=10, value=round(elev) if elev else "—")
