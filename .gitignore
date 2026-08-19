@@ -16,3 +16,6 @@ Desktop.ini
 # Si creas una carpeta llamada 'privado', Git la ignorará por completo
 privado/
 datos_personales/
+
+data/
+*.xlsx
