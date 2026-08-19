@@ -59,7 +59,7 @@ zones:
 
   - key: INT
     name: Interval
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       lthr:  {min: 100, max: null}
       hrmax: {min: 90, max: null}

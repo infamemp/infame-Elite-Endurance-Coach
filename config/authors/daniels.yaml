@@ -46,7 +46,7 @@ zones:
 
   - key: I
     name: Interval
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       pace: {min: 105, max: 115}
       lthr: {min: 100, max: null}
@@ -54,7 +54,7 @@ zones:
 
   - key: R
     name: Repetition
-    physiological_class: supra
+    physiological_class: anaerobic
     ranges:
       pace: {min: 115, max: 125}
     rpe: {min: 9, max: 10}

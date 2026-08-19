@@ -57,7 +57,7 @@ zones:
 
   - key: Zone 5 / 5a
     name: VO2max / Threshold Aerobic
-    physiological_class: supra
+    physiological_class: vo2max
     ranges:
       power: {min: 105, max: 120}
       lthr:  {min: 100, max: 102}
@@ -65,7 +65,7 @@ zones:
 
   - key: Zone 6 / 5b
     name: Anaerobic Capacity
-    physiological_class: supra
+    physiological_class: anaerobic
     ranges:
       power: {min: 121, max: 150}
       lthr:  {min: 103, max: 106}
@@ -73,7 +73,7 @@ zones:
 
   - key: Zone 7 / 5c
     name: Neuromuscular Power
-    physiological_class: supra
+    physiological_class: neuromuscular
     ranges:
       power: {min: 150, max: null}
       lthr:  {min: 107, max: null}
