@@ -1,5 +1,7 @@
 [Week] 03 | [Date] 24-08-2026
 [Category]: Training
+[Methodology]: coggan
+[Discipline]: trainer
 [Focus]: VO2 Max
 [Duration] 01:00:00 | [Estimated TSS] 50
 

@@ -8,8 +8,9 @@
 - Compound or non-numeric details are captured in the `Notes` column rather than embedded in range cells.
 - Zones with an open lower bound in the source are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE — DO NOT EDIT.**
-This file is built from `config/authors/*.yaml` by `build_zone_tables.py`.
+**GENERATED FILE — DO NOT EDIT.** Built 2026-08-20 by `build_zone_tables.py`.
+If this date is older than your last change to `config/`, this file is stale —
+run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
 `config/authors/_template.yaml`, fill it in, run `validate`, then `build`.
 Hand edits here are lost on the next build.

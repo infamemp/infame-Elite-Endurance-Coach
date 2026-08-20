@@ -10,22 +10,31 @@ blocks the upload; it never repairs silently.
 Every rule and every number comes from config/ — this file contains no zone
 data, no thresholds, and no multipliers of its own.
 
+Methodology and discipline are read from the session header fields
+[Methodology] and [Discipline]. Passing them on the command line would risk
+validating a block against zones that do not apply and reporting a clean pass on
+a defective block, so the flags exist only as an override for raw blocks with no
+header.
+
 Usage:
-    python validate_block.py <file> --methodology <id> --discipline <name>
-    python validate_block.py block.md --methodology coggan --discipline trainer
-    python validate_block.py block.md --methodology koop --discipline trail
-    python validate_block.py block.txt --methodology friel_cycling --discipline road --tss 66
+    python validate_block.py <file> --fill-tss
+    python validate_block.py block.md
+    python validate_block.py raw.txt --methodology coggan --discipline trainer --tss 66
 
 Options:
-    --methodology   Author id, matching a file in config/authors/ (required)
-    --discipline    trainer | indoor | rodillo | road | mtb | gravel | run | trail | treadmill
+    --methodology   Override the [Methodology] header field
+    --discipline    Override the [Discipline] header field
     --tss           Expected TSS for a raw block with no header
     --tolerance     Override the divergence tolerance from config (percent)
     --quiet         Report findings only, omit the per-interval TSS breakdown
+    --fill-tss      Write the computed TSS into the header. The model writes
+                    [Estimated TSS] pending; the engine supplies the number.
+                    Refused if any hard constraint fails — a defective block is
+                    never completed, only reported.
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.0
+Version: 2.1
 """
 
 import argparse
@@ -50,6 +59,14 @@ FOREIGN_SECTIONS = {"calentamiento", "principal", "enfriamiento", "enfriar",
 # ══════════════════════════════════════════════════════════════════
 # CONFIG LOADING
 # ══════════════════════════════════════════════════════════════════
+
+def load_thresholds_only():
+    path = os.path.join(CONFIG, "decision_thresholds.yaml")
+    if not os.path.exists(path):
+        sys.exit(f"Config file not found: {path}")
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
 
 def load_config(methodology):
     def read(path):
@@ -235,8 +252,30 @@ def classify(mid, metric, author, thresholds):
 # HARD CONSTRAINTS
 # ══════════════════════════════════════════════════════════════════
 
-def check_constraints(steps, code, author, th, discipline):
+def load_profile(athlete_id):
+    """Athlete-declared profile. Absent is normal — most checks do not need it."""
+    if not athlete_id:
+        return {}
+    path = os.path.join(CONFIG, "athletes", f"{athlete_id}.yaml")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def profile_flag(profile, dotted):
+    """Read a dotted path such as ramp_overrides.treadmill_ramps_requested."""
+    node = profile
+    for part in (dotted or "").split("."):
+        if not isinstance(node, dict) or part not in node:
+            return False
+        node = node[part]
+    return bool(node)
+
+
+def check_constraints(steps, code, author, th, discipline, profile=None):
     errors, warns = [], []
+    profile = profile or {}
     of = th["output_formats"]
     floors = th["prescription_floors"]
     ramps = th["ramps"]
@@ -285,19 +324,36 @@ def check_constraints(steps, code, author, th, discipline):
             warns.append(("CHK-METRIC", s["line"],
                           f"{author['name']} does not define {metric}"))
 
-        # Ramp eligibility
+        # Ramp eligibility — three cases, per `ramps` in decision_thresholds.yaml
         if s["ramp"]:
-            if disc in [d.lower() for d in ramps["forbidden_disciplines"]]:
+            allowed = [x.lower() for x in ramps.get("allowed_disciplines", [])]
+            forbidden = [x.lower() for x in ramps.get("forbidden_disciplines", [])]
+            override = {k.lower(): v for k, v in
+                        (ramps.get("override_eligible") or {}).items()}
+
+            if disc in forbidden:
                 errors.append(("HC-RAMP", s["line"],
-                               f"Ramps are forbidden for discipline '{discipline}'"))
-            elif disc not in [d.lower() for d in ramps["allowed_disciplines"]]:
+                               f"Ramps are forbidden for discipline '{discipline}' "
+                               f"— no device control over a changing target"))
+            elif disc in allowed:
+                if metric not in ramps.get("required_metrics", []):
+                    errors.append(("HC-RAMP", s["line"],
+                                   f"Ramps in '{discipline}' require metric "
+                                   f"{'/'.join(ramps['required_metrics'])}, found {metric}"))
+            elif disc in override:
+                spec = override[disc]
+                if not profile_flag(profile, spec.get("flag", "")):
+                    errors.append(("HC-RAMP", s["line"],
+                                   f"Ramps in '{discipline}' require express request — "
+                                   f"set {spec.get('flag')} in the athlete profile"))
+                elif metric not in spec.get("permitted_metrics", []):
+                    errors.append(("HC-RAMP", s["line"],
+                                   f"Ramps in '{discipline}' permit metric "
+                                   f"{'/'.join(spec.get('permitted_metrics', []))}, "
+                                   f"found {metric}"))
+            else:
                 errors.append(("HC-RAMP", s["line"],
-                               f"Discipline '{discipline}' is not in allowed_disciplines "
-                               f"({', '.join(ramps['allowed_disciplines'])})"))
-            elif metric not in ramps["required_metrics"]:
-                errors.append(("HC-RAMP", s["line"],
-                               f"Ramps require metric {'/'.join(ramps['required_metrics'])}, "
-                               f"found {metric}"))
+                               f"Discipline '{discipline}' is not ramp-eligible"))
 
         # Dual-layer completeness
         if dl.get("required"):
@@ -371,39 +427,86 @@ def compute_tss(steps, author, th, tssc):
 # MAIN
 # ══════════════════════════════════════════════════════════════════
 
+def fill_tss(path, text, computed_by_session):
+    """Replace each [Estimated TSS] value with the computed figure, in session
+    order. The file is rewritten in place; only the TSS field changes."""
+    starts = [m.start() for m in HEADER_START_RE.finditer(text)]
+    if not starts:
+        return 0
+
+    field = re.compile(r"(\[Estimated TSS\]\s*:?\s*)([^\[|\n]*)")
+    pieces, written = [], 0
+    for i, st in enumerate(starts):
+        if i == 0 and st > 0:
+            pieces.append(text[:st])
+        end = starts[i + 1] if i + 1 < len(starts) else len(text)
+        chunk = text[st:end]
+        value = computed_by_session.get(i + 1)
+        if value is not None and field.search(chunk):
+            chunk = field.sub(lambda m: f"{m.group(1)}{value}", chunk, count=1)
+            written += 1
+        pieces.append(chunk)
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("".join(pieces))
+    return written
+
+
 def main():
     ap = argparse.ArgumentParser(description="Infame v6 block verification gate")
     ap.add_argument("file")
-    ap.add_argument("--methodology", required=True)
-    ap.add_argument("--discipline", required=True)
+    ap.add_argument("--methodology", help="override the [Methodology] header field")
+    ap.add_argument("--discipline", help="override the [Discipline] header field")
     ap.add_argument("--tss", type=float)
     ap.add_argument("--tolerance", type=float)
+    ap.add_argument("--athlete", help="athlete id, to load config/athletes/<id>.yaml")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--fill-tss", action="store_true",
+                    help="write the computed TSS into each [Estimated TSS] header field. "
+                         "Only applied when the block passes every hard constraint.")
     args = ap.parse_args()
-
-    author, th, tssc = load_config(args.methodology)
-    tol = args.tolerance if args.tolerance is not None else \
-        th["tss_rules"].get("divergence_tolerance_pct", 10)
 
     if not os.path.exists(args.file):
         sys.exit(f"File not found: {args.file}")
     text = open(args.file, encoding="utf-8").read()
     sessions = split_sessions(text)
 
-    print(f"validate_block v2.0 — {os.path.basename(args.file)}")
-    print(f"{author['name']} · {author['sport']} · discipline: {args.discipline}")
+    th = load_thresholds_only()
+    tol = args.tolerance if args.tolerance is not None else \
+        th["tss_rules"].get("divergence_tolerance_pct", 10)
+
+    print(f"validate_block v2.1 — {os.path.basename(args.file)}")
     print()
 
     failed = False
+    computed_by_session = {}
     for n, (header, code) in enumerate(sessions, 1):
+        methodology = args.methodology or header.get("Methodology")
+        discipline = args.discipline or header.get("Discipline")
+        if not methodology or not discipline:
+            missing = []
+            if not methodology:
+                missing.append("[Methodology]")
+            if not discipline:
+                missing.append("[Discipline]")
+            print(f"── Session {n}: cannot validate — header is missing "
+                  f"{' and '.join(missing)}")
+            print(f"   Add the field(s) to the session header, or pass "
+                  f"--methodology / --discipline for a raw block.\n")
+            failed = True
+            continue
+
+        author, _, tssc = load_config(methodology.strip().lower())
         label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
                  f"{header.get('Focus', '')}".strip(" ·") if header else "block")
         print(f"── Session {n}: {label}")
+        print(f"   {author['name']} · {author['sport']} · discipline: {discipline}")
 
         steps, findings = parse_block(code)
         errors = [f for f in findings if f[0].startswith(("HC-", "SYN-"))]
         warns = [f for f in findings if f[0].startswith("FMT-")]
-        e, w = check_constraints(steps, code, author, th, args.discipline)
+        profile = load_profile(header.get("Athlete ID") or args.athlete)
+        e, w = check_constraints(steps, code, author, th, discipline, profile)
         errors += e
         warns += w
         e, w = check_header(header)
@@ -420,13 +523,21 @@ def main():
                 for s, why in skipped:
                     print(f"   L{s['line']:>3}  not costed: {why}")
 
+            computed_by_session[n] = computed
             declared = args.tss
-            if header.get("Estimated TSS"):
+            raw_field = (header.get("Estimated TSS") or "").strip().lower()
+            if raw_field in ("pending", "tbd", "", "—", "-"):
+                declared = None
+            elif header.get("Estimated TSS"):
                 m = re.search(r"\d+(?:\.\d+)?", header["Estimated TSS"])
                 if m:
                     declared = float(m.group(0))
             print(f"   Computed TSS: {computed}", end="")
-            if declared is not None:
+            if declared is None and raw_field in ("pending", "tbd"):
+                print(" · header marked pending"
+                      + (" — will be filled" if args.fill_tss else
+                         " (run with --fill-tss to write it)"))
+            elif declared is not None:
                 div = abs(computed - declared) / declared * 100 if declared else 0
                 ok = div <= tol
                 print(f" · declared {declared:g} · divergence {div:.1f}% "
@@ -449,8 +560,16 @@ def main():
         print()
 
     if failed:
+        if args.fill_tss:
+            print("TSS not written: the block must pass every hard constraint first.")
         print("RESULT: BLOCKED — hard-constraint violations. Do not upload.")
         sys.exit(1)
+
+    if args.fill_tss and computed_by_session:
+        written = fill_tss(args.file, text, computed_by_session)
+        print(f"Wrote computed TSS into {written} header(s) in "
+              f"{os.path.basename(args.file)}")
+
     print("RESULT: PASS — verified against config. Upload-safe.")
     sys.exit(0)
 

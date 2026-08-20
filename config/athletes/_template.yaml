@@ -1,0 +1,112 @@
+# TEMPLATE — copy to config/athletes/<athlete_id>.yaml and fill from ATHLETE_INTAKE.md
+#
+# This file holds ONLY what the athlete declares. Anything measurable — FTP, LTHR,
+# threshold pace, zones, PMC, training history, HRV — comes from Intervals.icu via
+# engine/fetch_athlete_data.py and must never be copied here. Two sources for one
+# number is the failure this architecture exists to prevent.
+#
+# Unknown or not applicable: use null. Never guess.
+
+# ── Identity ──────────────────────────────────────────────────────
+id: i000000                    # Intervals.icu athlete id — must match the folder in data/
+name: Athlete Name
+age: null
+language: es                   # conversational language: es | en | ...
+units: km                      # km | mi
+
+# ── Goals ─────────────────────────────────────────────────────────
+# Ordered by priority. The first entry is the one training protects.
+goals:
+  - description: null          # in the athlete's own words
+    date: null                 # YYYY-MM-DD, or null if no target date
+    priority: A                # A | B | C
+    experience: none           # none | past | recent
+    event_type: null           # time_trial | road_race | marathon | ultra | criterium | null
+                               # drives the target TSB range in decision_thresholds.yaml
+
+# ── Injuries and limitations ──────────────────────────────────────
+# Medical screening happens before an athlete is accepted and is not repeated here.
+# What is recorded is only what changes prescription.
+limitations:
+  current_injury: null         # what, since when, what they can and cannot do
+  recurring_issues: []         # problems that return under load
+  notes: null                  # medication, heat tolerance, range of motion, etc.
+
+# ── Availability ──────────────────────────────────────────────────
+# The most important section. A plan built on unavailable hours fails by design.
+availability:
+  days:                        # minutes available per day; null means unavailable
+    mon: null
+    tue: null
+    wed: null
+    thu: null
+    fri: null
+    sat: null
+    sun: null
+  long_session_days: []        # e.g. [sat, sun]
+  preferred_time: null         # morning | midday | evening | varies
+  sustainable: true            # false if the week above is optimistic rather than normal
+  disruptions: []              # - {from: YYYY-MM-DD, to: YYYY-MM-DD, reason: travel}
+
+# ── Training context ──────────────────────────────────────────────
+context:
+  sports: []                   # cycling | running | both | other
+  disciplines: []              # road | mtb | gravel | trainer | trail | treadmill | track
+  indoor_frequency: null       # never | occasional | frequent | primary
+  indoor_by_choice: null       # true = preference, false = only option available
+  terrain: null                # flat | rolling | mountainous
+  trail_technicality: null     # smooth | mixed | technical | null
+  typical_elevation_m: null    # per typical outing
+  climate: null                # heat, humidity, or altitude worth accounting for
+
+# ── History ───────────────────────────────────────────────────────
+# For a complete beginner: set starting_from_zero true and leave the rest null.
+history:
+  starting_from_zero: false
+  recent_pattern: null         # what the last 3 months actually looked like
+  peak_sustained: null         # biggest consistent week or month, and when
+  longest_session: null        # in the last year
+  structured_plan_before: null # whose, and whether it worked
+  enjoys: []                   # session types that keep them engaged
+  dislikes: []                 # session types they will skip
+
+# ── Equipment ─────────────────────────────────────────────────────
+# Drives the Metric Map. Getting this wrong produces sessions the athlete
+# cannot execute on their device.
+equipment:
+  devices: []                  # watch, HR strap, bike computer, phone app
+  bike_power_meter: false
+  smart_trainer: false         # required for ramp targets
+  erg_control: false           # device can steer the trainer automatically
+  run_power_meter: false
+  tracks_sleep: false
+  tracks_hrv: false
+
+# ── Metric preferences ────────────────────────────────────────────
+# Overrides the default metric per discipline. Leave null to let the Metric Map
+# resolve it. Trail pace is discouraged but permitted when explicitly chosen —
+# record the decision here so it is not re-litigated every block.
+metric_overrides:
+  road: null                   # power | lthr | pace
+  mtb: null
+  gravel: null
+  trainer: null
+  trail: null                  # default lthr; pace only by explicit request
+  treadmill: null
+  track: null
+ramp_overrides:
+  treadmill_ramps_requested: false   # express athlete/coach request; see decision_thresholds.yaml
+  disable_ramps: []                  # disciplines where ramps are eligible but unwanted
+
+# ── Communication preferences ─────────────────────────────────────
+preferences:
+  target_style: both           # numbers | effort | both
+  explanation_depth: null      # minimal | reasoning | teaching
+  preferred_methodology: null  # author id from config/authors/, or null to let the coach choose
+  notes: null
+
+# ── Provenance ────────────────────────────────────────────────────
+intake:
+  completed: null              # YYYY-MM-DD
+  last_reviewed: null          # re-run the intake when goals, availability,
+                               # injuries, or equipment change
