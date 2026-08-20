@@ -1,5 +1,7 @@
 [Week] 02 | [Date] 20-08-2026
 [Category]: Training
+[Methodology]: koop
+[Discipline]: trail
 [Focus]: Aerobic Endurance
 [Duration] 01:15:00 | [Estimated TSS] 70
 

@@ -1,5 +1,7 @@
 [Week] 04 | [Date] 31-08-2026
 [Category]: Entrenamiento
+[Methodology]: coggan
+[Discipline]: road
 [Focus]: Threshold
 [Duration] 01:10:00 | [Estimated TSS] 90
 

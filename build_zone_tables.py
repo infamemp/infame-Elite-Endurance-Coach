@@ -23,6 +23,7 @@ Version: 1.0
 """
 
 import argparse
+import datetime as _dt
 import difflib
 import os
 import sys
@@ -332,8 +333,9 @@ HEADER_NOTES = """**Schema notes:**
 - Compound or non-numeric details are captured in the `Notes` column rather than embedded in range cells.
 - Zones with an open lower bound in the source are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE \u2014 DO NOT EDIT.**
-This file is built from `config/authors/*.yaml` by `build_zone_tables.py`.
+**GENERATED FILE \u2014 DO NOT EDIT.** Built {BUILD_DATE} by `build_zone_tables.py`.
+If this date is older than your last change to `config/`, this file is stale \u2014
+run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
 `config/authors/_template.yaml`, fill it in, run `validate`, then `build`.
 Hand edits here are lost on the next build."""
@@ -377,7 +379,8 @@ def build():
         group = [a for a in authors if a["sport"] == sport]
         if not group:
             continue
-        parts = [f"# {SPORT_TITLES[sport]}", "", HEADER_NOTES, "",
+        header_notes = HEADER_NOTES.replace("{BUILD_DATE}", _dt.date.today().isoformat())
+        parts = [f"# {SPORT_TITLES[sport]}", "", header_notes, "",
                  render_syntax_block(thresholds), "", "---", ""]
         for i, a in enumerate(group):
             parts.append(render_author(a, thresholds))

@@ -19,3 +19,6 @@ datos_personales/
 
 data/
 *.xlsx
+
+config/athletes/*.yaml
+!config/athletes/_template.yaml

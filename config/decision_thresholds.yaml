@@ -70,14 +70,30 @@ prescription_floors:
 #      allowed_disciplines AND the session metric appears in required_metrics.
 
 ramps:
+  # Ramps require a device that can steer a continuously changing target.
   allowed_disciplines: [trainer, indoor, rodillo]
   required_metrics: [power]
-  forbidden_disciplines: [road, mtb, gravel, run, trail, treadmill]
+
+  # Treadmill CAN steer a changing target — speed and gradient adjust
+  # progressively, the same way a smart trainer adjusts resistance. It is not
+  # forbidden, only off by default: a ramp on a moving belt asks the athlete to
+  # physically accelerate, which is a different demand from a resistance ramp.
+  # Enable per athlete via ramp_overrides.treadmill_ramps_requested in
+  # config/athletes/<id>.yaml.
+  override_eligible:
+    treadmill:
+      requires: athlete_profile_flag
+      flag: ramp_overrides.treadmill_ramps_requested
+      permitted_metrics: [pace, lthr]
+
+  # Device cannot steer a changing target outdoors. Not overridable.
+  forbidden_disciplines: [road, mtb, gravel, run, trail]
+
   athlete_override_permitted: true
-  note: >
-    Coach or athlete may disable ramps for an otherwise eligible discipline.
-    They may not enable ramps for a discipline in forbidden_disciplines —
-    that list reflects device capability, not preference.
+  no_magnitude_limit: >
+    No cap is placed on ramp duration or delta. A progressive ramp test is a
+    legitimate protocol, and any numeric ceiling would prohibit it. Magnitude is
+    the coach's judgement.
 
 # ══════════════════════════════════════════════════════════════════
 # TSS COMPUTATION RULES
@@ -222,8 +238,43 @@ state_resolution:
 # ══════════════════════════════════════════════════════════════════
 
 taper:
-  a_race_taper_days: 10
+  # Volume, duration, intensity and frequency parameters come from:
+  #   Bosquet L, Montpetit J, Arvisais D, Mujika I. Effects of Tapering on
+  #   Performance: A Meta-Analysis. Med Sci Sports Exerc. 2007;39(8):1358-1365.
+  #   27 studies of competitive athletes.
+
+  optimal_duration_days: 14
+  duration_range_days: {min: 8, max: 14}
+  # 8-14 d carries the largest effect (0.59). Shorter and longer tapers still
+  # improve performance but with wider confidence intervals — individual
+  # variation in optimal duration is well documented.
+
+  volume_reduction_pct: {min: 41, max: 60}
+  # Largest effect (0.72) of any moderator variable in the meta-analysis.
+  # Performance responds more to volume reduction than to any other component.
+
+  pattern: progressive
+  # Progressive (linear or exponential) outperforms step taper. A fast decay is
+  # reported as more beneficial than a slow one.
+
+  maintain_intensity: true
+  # Training load must NOT be reduced at the expense of intensity. Intensity
+  # maintains the adaptations the taper is meant to express; studies that cut it
+  # showed no benefit.
+
+  min_frequency_pct_of_pretaper: 80
+  # Reducing session frequency produced no significant improvement. Cut volume
+  # through session duration, not by removing sessions.
+
+  reduce_volume_via: session_duration
+
+  # ── Scheduling ────────────────────────────────────────────────
+  a_race_taper_days: 14
   a_race_pre_taper_days: 21
+
+  # ── Target TSB at race ────────────────────────────────────────
+  # HEURISTIC, not from Bosquet — the meta-analysis does not address TSB.
+  # These are the coach's working ranges and may be revised from experience.
   target_tsb_by_event_type:
     time_trial: {min: 8, max: 18}
     road_race: {min: 5, max: 15}
@@ -231,3 +282,53 @@ taper:
     ultra: {min: 10, max: 25}
     criterium: {min: 5, max: 15}
     default: {min: 5, max: 15}
+  target_tsb_source: coach_heuristic
+
+# ══════════════════════════════════════════════════════════════════
+# METRIC RESOLUTION
+# ══════════════════════════════════════════════════════════════════
+# Defaults per discipline. An athlete-level override in
+# config/athletes/<id>.yaml under metric_overrides always wins.
+
+metric_defaults:
+  road: power                  # falls back to lthr when no power meter
+  mtb: power
+  gravel: power
+  trainer: power
+  track: pace
+  run: pace
+  treadmill: pace
+  trail: lthr
+  # Trail defaults to LTHR, or run power when available. Pace is DISCOURAGED,
+  # not prohibited: on variable gradient and surface, pace stops representing
+  # effort — the same effort yields paces minutes per km apart.
+
+discouraged_metrics:
+  trail:
+    metric: pace
+    reason: >
+      Gradient and surface variability break the relationship between pace and
+      effort on trail terrain.
+    permitted_when: explicitly_chosen
+    requires: >
+      Warn the athlete why it is problematic, confirm the choice is deliberate,
+      and record it in metric_overrides.trail in the athlete profile so it is not
+      re-litigated each block.
+
+no_metric_available:
+  fallback: rpe
+  note: >
+    A trail athlete with neither a power meter nor a heart rate monitor has no
+    preferable metric. Prescribe by RPE with descriptive cue text, and tell the
+    athlete what a heart rate monitor would add. Never silently default to pace.
+
+# ══════════════════════════════════════════════════════════════════
+# STATE FRESHNESS
+# ══════════════════════════════════════════════════════════════════
+
+state_block:
+  max_age_days: 7
+  # Beyond this, the #STATE block is stale: flag it and ask for a rebuild.
+  # A stale state presented as current is more damaging than no state at all.
+  absent_behavior: stop_and_wait
+  rebuild_command: python engine/build_state.py --athlete <id>
