@@ -36,6 +36,10 @@ try:
 except ImportError:
     sys.exit("Missing dependency. Run: pip install pyyaml")
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import longitudinal  # noqa: E402
+import power_profile  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
 DATA = os.path.join(ROOT, "data")
@@ -44,6 +48,14 @@ DATA = os.path.join(ROOT, "data")
 # not tunable coaching parameters, so they live here rather than in config.
 CTL_TAU = 42
 ATL_TAU = 7
+
+
+def load_power_profile_cfg():
+    path = os.path.join(CONFIG, "power_profile.yaml")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def load_thresholds():
@@ -456,6 +468,16 @@ def build(aid, thresholds, quiet=False):
     state = resolve_state(pmc, hrv, acwr, durability, thresholds)
     projection = project_pmc(pmc, data.get("events", []))
     taper = taper_check(projection, data.get("events", []), thresholds)
+    longit = longitudinal.analyze(data, thresholds)
+
+    ppcfg = load_power_profile_cfg()
+    pp = None
+    if ppcfg:
+        pts = (((data.get("curves") or {}).get("power") or {})
+               .get("42d") or {}).get("points") or {}
+        pts = {k: v.get("watts") for k, v in pts.items() if v.get("watts")}
+        if pts:
+            pp = power_profile.analyze(pts, data.get("profile") or {}, ppcfg)
 
     payload = {
         "schema_version": 1,
@@ -465,11 +487,16 @@ def build(aid, thresholds, quiet=False):
         "signals": {"pmc": pmc, "hrv": hrv, "acwr": acwr, "durability": durability},
         "projection": projection,
         "taper": taper,
+        "longitudinal": longit,
+        "power_profile": pp,
     }
 
     dest = os.path.join(DATA, str(aid))
     os.makedirs(dest, exist_ok=True)
     md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper)
+    md = md.rstrip() + "\n\n" + longitudinal.render(longit)
+    if pp:
+        md = md.rstrip() + "\n\n" + power_profile.render(pp)
     with open(os.path.join(dest, "state.md"), "w", encoding="utf-8") as f:
         f.write(md)
     with open(os.path.join(dest, "state.json"), "w", encoding="utf-8") as f:
