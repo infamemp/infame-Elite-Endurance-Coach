@@ -22,3 +22,7 @@ data/
 
 config/athletes/*.yaml
 !config/athletes/_template.yaml
+
+__pycache__/
+
+athlete_docs/
