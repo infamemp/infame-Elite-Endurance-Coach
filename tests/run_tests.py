@@ -116,6 +116,7 @@ def load_cfg():
 
 
 def unit_tests():
+    import yaml
     th, tssc, ppcfg = load_cfg()
     import longitudinal, power_profile
     import validate_block as vb
@@ -161,6 +162,25 @@ def unit_tests():
     check("ramps: no magnitude cap is imposed",
           "no_magnitude_limit" in r,
           "a cap would prohibit a progressive ramp test")
+
+    # ── Anchored authors are converted before matching ────────────
+    carm = yaml.safe_load(open(os.path.join(ROOT, "config", "authors",
+                                            "carmichael.yaml"), encoding="utf-8"))
+    anc = carm.get("anchor")
+    check("anchor: carmichael declares a non-threshold anchor", bool(anc))
+    if anc:
+        equal("anchor: factor is 1.10", anc["factor_from_threshold"], 1.10)
+        equal("anchor: applies to power", anc["metric"], "power")
+        equal("anchor: class taken from the equivalent column",
+              anc.get("class_from"), "equivalent")
+        # SS is 86-90 on the author's scale; on the threshold scale that is 95-99.
+        cls, src = vb.classify(97, "power", carm, th)
+        equal("anchor: a 97% FTP target matches SteadyState", cls, "threshold")
+        check("anchor: the source names the conversion",
+              "threshold-equivalent" in (src or ""), src)
+        # Without conversion 97% would fall in ClimbingRepeat (95-100 native).
+        cls2, _ = vb.classify(107, "power", carm, th)
+        equal("anchor: a 107% FTP target matches ClimbingRepeat", cls2, "vo2max")
 
     # ── Author zone classification wins over cutpoints ────────────
     author = {"id": "coggan", "sport": "cycling", "zones": [
@@ -314,6 +334,9 @@ BLOCK_CASES = [
     ("koop_trail.md", 1, ["HC-DUAL", "HC-RAMP"]),
     ("treadmill_ramp.md", 0, []),
     ("treadmill_ramp_denied.md", 1, ["HC-RAMP"]),
+    # Carmichael anchors on his own field test, not on threshold. A block written
+    # on the threshold scale must still match his zones, via the declared factor.
+    ("carmichael_ss.md", 0, []),
 ]
 
 
