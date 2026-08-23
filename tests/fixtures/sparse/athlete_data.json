@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2026-08-23",
+  "window_days": 180,
+  "profile": {
+    "id": "TEST",
+    "name": "Sparse Athlete",
+    "sex": "M",
+    "weight": 80.0,
+    "height": 178,
+    "resting_hr": 48,
+    "timezone": "America/Mexico_City",
+    "sport_settings": [
+      {
+        "types": [
+          "Ride",
+          "VirtualRide"
+        ],
+        "ftp": 180,
+        "lthr": 165,
+        "max_hr": 188,
+        "w_prime": 20000
+      }
+    ]
+  },
+  "wellness": [
+    {
+      "date": "2026-08-13",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-14",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-15",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-16",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-17",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-18",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-19",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-20",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-21",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-22",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    }
+  ],
+  "pmc_series": [
+    {
+      "date": "2026-08-13",
+      "ctl": 8.0,
+      "atl": 11.0,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-14",
+      "ctl": 8.1,
+      "atl": 11.1,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-15",
+      "ctl": 8.2,
+      "atl": 11.2,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-16",
+      "ctl": 8.3,
+      "atl": 11.3,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-17",
+      "ctl": 8.4,
+      "atl": 11.4,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-18",
+      "ctl": 8.6,
+      "atl": 11.6,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-19",
+      "ctl": 8.7,
+      "atl": 11.7,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-20",
+      "ctl": 8.8,
+      "atl": 11.8,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-21",
+      "ctl": 8.9,
+      "atl": 11.9,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-22",
+      "ctl": 9.0,
+      "atl": 12.0,
+      "tsb": -3.0,
+      "ramp_rate": 1.5
+    }
+  ],
+  "activities": [
+    {
+      "date": "2026-08-01",
+      "type": "Ride",
+      "moving_time": 3600,
+      "training_load": 30,
+      "average_watts": 200,
+      "weighted_avg_watts": 210
+    },
+    {
+      "date": "2026-08-08",
+      "type": "Ride",
+      "moving_time": 3600,
+      "training_load": 30,
+      "average_watts": 200,
+      "weighted_avg_watts": 210
+    },
+    {
+      "date": "2026-08-15",
+      "type": "Ride",
+      "moving_time": 3600,
+      "training_load": 30,
+      "average_watts": 200,
+      "weighted_avg_watts": 210
+    },
+    {
+      "date": "2026-08-22",
+      "type": "Ride",
+      "moving_time": 3600,
+      "training_load": 30,
+      "average_watts": 200,
+      "weighted_avg_watts": 210
+    }
+  ],
+  "curves": {},
+  "events": []
+}

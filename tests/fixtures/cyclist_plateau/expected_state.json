@@ -1,0 +1,250 @@
+{
+  "athlete_id": "_test_cyclist_plateau",
+  "longitudinal": {
+    "adaptation_state": {
+      "anchors_set_recently": "3/5",
+      "available": true,
+      "evidence": [
+        "4 of 5 anchors flat against 90d, 1 down (5)",
+        "aerobic end at 97% of the yearly best while the short end sits at 58% — top-end capacity is the gap, not aerobic fitness",
+        "closest to yearly best at 3600 (97%)",
+        "durability drifting and flat",
+        "anaerobic depth maintained"
+      ],
+      "state": "plateau"
+    },
+    "durability_trend": {
+      "available": true,
+      "change_pct_points": 0.0,
+      "direction": "flat",
+      "median_previous_pct": 6.9,
+      "median_recent_pct": 6.9,
+      "sessions": {
+        "previous": 6,
+        "recent": 6
+      },
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "drifting"
+    },
+    "progression": {
+      "anchors": [
+        {
+          "anchor": "5",
+          "band": "decline",
+          "best_1y": 748,
+          "level_pct_of_1y": 57.6,
+          "recent_42d": 431,
+          "set_in_last_42d": false,
+          "trend_vs_90d_pct": -17.6,
+          "window_90d": 523
+        },
+        {
+          "anchor": "60",
+          "band": "stable",
+          "best_1y": 374,
+          "level_pct_of_1y": 91.7,
+          "recent_42d": 343,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 343
+        },
+        {
+          "anchor": "300",
+          "band": "stable",
+          "best_1y": 280,
+          "level_pct_of_1y": 84.3,
+          "recent_42d": 236,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 236
+        },
+        {
+          "anchor": "1200",
+          "band": "stable",
+          "best_1y": 233,
+          "level_pct_of_1y": 85.0,
+          "recent_42d": 198,
+          "set_in_last_42d": false,
+          "trend_vs_90d_pct": -2.0,
+          "window_90d": 202
+        },
+        {
+          "anchor": "3600",
+          "band": "stable",
+          "best_1y": 191,
+          "level_pct_of_1y": 96.9,
+          "recent_42d": 185,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 185
+        }
+      ],
+      "anchors_set_recently": "3/5",
+      "anchors_unavailable": [
+        "7200"
+      ],
+      "available": true,
+      "composites": {
+        "aerobic_durability": {
+          "ratio_1y": 0.682,
+          "ratio_42d": 0.784,
+          "shift_pct": 14.9
+        },
+        "anaerobic_reserve": {
+          "ratio_1y": 2.671,
+          "ratio_42d": 1.826,
+          "shift_pct": -31.6
+        },
+        "durability_gradient": {
+          "ratio_1y": 0.82,
+          "ratio_42d": 0.934,
+          "shift_pct": 14.0
+        },
+        "glycolytic_bias": {
+          "ratio_1y": 1.605,
+          "ratio_42d": 1.732,
+          "shift_pct": 7.9
+        }
+      },
+      "method": "Trend is 42d against 90d. Level is 42d as a percent of the 1y best. The windows are nested, so the 1y comparison is a level reading only and is never scored as gain or decline.",
+      "unit": "watts"
+    },
+    "repeatability": {
+      "available": true,
+      "change_pct_points": -0.0,
+      "clamped_sessions": 0,
+      "note": "'untested' means no session reached the anaerobic depth threshold — it says nothing about capacity, only that capacity was not probed.",
+      "peak_depletion_previous_pct": 85.0,
+      "peak_depletion_recent_pct": 85.0,
+      "sessions_above_threshold": 27,
+      "sessions_with_w_prime": 40,
+      "source": "activity max W' balance depletion as a percent of W'",
+      "status": "maintained",
+      "threshold_pct": 80
+    },
+    "sport_basis": "cycling",
+    "testing": {
+      "data_flags": [],
+      "frame": {
+        "after": "Easy 45 minutes at low endurance, then cool down",
+        "spacing": "Separate maximal tests by at least one day, with an easy recovery day before the sprint test. Test efforts need not fall on the same day.\n",
+        "warmup": "Warm up thoroughly before any maximal effort"
+      },
+      "tests": [
+        {
+          "anchor": "5",
+          "level_pct_of_1y": 57.6,
+          "protocol": "2 x 10s maximal sprint, flying start, full recovery between. Day 5 of the baseline week — always after a recovery day, never on accumulated fatigue.\n",
+          "reason": "sitting at 58% of the yearly best — either the capacity dropped or it has not been probed lately, and the data cannot tell which",
+          "trend_vs_90d_pct": -17.6
+        },
+        {
+          "anchor": "300",
+          "level_pct_of_1y": 84.3,
+          "protocol": "5-minute maximal test. Day 1 of the baseline week — it opens the week because it is the least fatiguing of the long efforts and anchors VO2max.\n",
+          "reason": "sitting at 84% of the yearly best — either the capacity dropped or it has not been probed lately, and the data cannot tell which",
+          "trend_vs_90d_pct": 0.0
+        }
+      ]
+    }
+  },
+  "power_profile": {
+    "available": true,
+    "ft_source": "configured FTP",
+    "note": "Scores are ordinal positions between the table's anchor rows, not true percentiles. Phenotype comes from the shape of the profile, never from one duration alone.",
+    "phenotype": "undetermined",
+    "phenotype_reason": "5s, 1min sits below the table floor, which is under 'average untrained'. For a training athlete that means the effort was never made in this window, not that the capacity is absent. Phenotype cannot be read from an untested duration.",
+    "scored": {
+      "1min": {
+        "category": "lowest",
+        "score": 0.0,
+        "w_per_kg": 4.67,
+        "watts": 343
+      },
+      "5min": {
+        "category": "novice_2",
+        "score": 24.9,
+        "w_per_kg": 3.21,
+        "watts": 236
+      },
+      "5s": {
+        "category": "lowest",
+        "score": 0.0,
+        "w_per_kg": 5.86,
+        "watts": 431
+      },
+      "FT": {
+        "category": "novice_2",
+        "score": 28.5,
+        "w_per_kg": 2.79,
+        "watts": 205
+      }
+    },
+    "sex_table": "men",
+    "test_duration_basis": "all-rounder default — phenotype is unknown until the profile is tested, and the day-2 duration depends on it. Run the testing week at the default, then the phenotype resolves and later tests use its duration.",
+    "test_duration_minutes": 25,
+    "untested_columns": [
+      "5s",
+      "1min"
+    ],
+    "weight_kg": 73.5
+  },
+  "projection": {
+    "caveat": "Unplanned days are projected as zero load. With few planned sessions on the calendar this understates future CTL.",
+    "days_with_planned_load": 0,
+    "horizon_days": 42,
+    "method": "Banister exponential, CTL tau 42d, ATL tau 7d"
+  },
+  "schema_version": 1,
+  "signals": {
+    "acwr": {
+      "acute_7d": 190,
+      "available": true,
+      "chronic_weekly_avg": 213.8,
+      "ratio": 0.89,
+      "source": "activity training_load, 7d vs 28d/4"
+    },
+    "durability": {
+      "available": true,
+      "median_decoupling": 6.9,
+      "moderate_drift": 6,
+      "sessions": 6,
+      "severe_drift": 0,
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "drifting"
+    },
+    "hrv": {
+      "available": true,
+      "band": "normal",
+      "baseline_median": 36,
+      "ratio": 1.0,
+      "readings": {
+        "baseline": 53,
+        "recent": 7
+      },
+      "recent_mean": 36,
+      "source": "wellness HRV, 7d mean vs 53d median"
+    },
+    "pmc": {
+      "atl": 83.0,
+      "ctl": 66.0,
+      "ramp_rate": 1.5,
+      "source": "pmc_series (daily wellness record)",
+      "tsb": -17.0
+    }
+  },
+  "state": {
+    "flags": [],
+    "governor": "tsb",
+    "load_recovery_state": "load_pressure",
+    "operational_state": "load_accepting",
+    "reasoning": [
+      "TSB -17.0 falls in band 'load_pressure' (primary governor)",
+      "Operational state: 'load_accepting'"
+    ]
+  },
+  "taper": {
+    "applicable": false,
+    "reason": "no races on the calendar"
+  }
+}

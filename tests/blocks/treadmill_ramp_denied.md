@@ -1,5 +1,5 @@
 [Week] 06 | [Date] 14-09-2026
-[Athlete ID]: TESTRAMP
+[Athlete ID]: NOPROFILE
 [Category]: Training
 [Methodology]: daniels
 [Discipline]: treadmill
