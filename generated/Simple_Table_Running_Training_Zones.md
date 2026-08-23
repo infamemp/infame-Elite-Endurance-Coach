@@ -8,7 +8,7 @@
 - Compound or non-numeric details are captured in the `Notes` column rather than embedded in range cells.
 - Zones with an open lower bound in the source are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE — DO NOT EDIT.** Built 2026-08-20 by `build_zone_tables.py`.
+**GENERATED FILE — DO NOT EDIT.** Built 2026-08-23 by `build_zone_tables.py`.
 If this date is older than your last change to `config/`, this file is stale —
 run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
@@ -97,7 +97,7 @@ The table columns below are documentation of where each zone lies. What is emitt
 ---
 
 ## Methodology: Olbrich Running Zones
-* **Sport:** Running
+* **Sport:** Ultramarathon / Running
 * **Zone Identifier Style:** Descriptive name (no native code; codes below derived for schema consistency)
 * **Default Metric:** % LTHR
 * **Available Metrics:** % LTHR, % HRmax
@@ -107,6 +107,11 @@ The table columns below are documentation of where each zone lies. What is emitt
 * **HRmax Status:** Native
 * **Dual-Layer Required:** No
 * **Special Output Rule:** Native metric is % HRmax, but Intervals.icu syntax MUST use Estimated % LTHR per Olbrich Exception. Never output % HRmax in syntax.
+* **Note:** Source: Wolfgang Olbrich, "Ultramarathon Training" (2012), Ch. 17.2 zone table. Olbrich is a German Athletics Federation licensed high-performance running coach; the methodology targets 100 km, 24-hour and multi-day racing, not shorter road distances.
+* **Note:** The book defines zones in % HRmax only. The % LTHR column is a cross-reference estimate, which is why the Special Output Rule exists: HRmax is native but cannot be emitted, so syntax uses estimated % LTHR.
+* **Note:** Olbrich prefers heart rate over pace outright, on the grounds that terrain, temperature and weather change daily while heart rate does not lie.
+* **Note:** The book carries an internal discrepancy on the long recovery jog: Ch. 6 gives 65-70% HRmax, Ch. 17.2 gives under 70%. The Ch. 17.2 value is used here as the plan-execution figure, per the knowledge base.
+* **Note:** The gap between 70% and 75% HRmax is in the source: no zone covers it. Left as the author has it rather than closed artificially.
 
 | Zone Key | Zone Name | % LTHR Range | % HRmax Range | RPE (1-10) | Class | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

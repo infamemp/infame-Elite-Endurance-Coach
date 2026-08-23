@@ -5,6 +5,7 @@
 id: olbrich
 name: Olbrich Running Zones
 sport: running
+sport_note: Ultramarathon / Running
 
 zone_identifier_style: Descriptive name (no native code; codes below derived for schema consistency)
 
@@ -23,6 +24,27 @@ special_output_rule:
   native_metric: hrmax
   output_metric: lthr
   rationale: per Olbrich Exception
+
+notes:
+  - >-
+    Source: Wolfgang Olbrich, "Ultramarathon Training" (2012), Ch. 17.2 zone
+    table. Olbrich is a German Athletics Federation licensed high-performance
+    running coach; the methodology targets 100 km, 24-hour and multi-day racing,
+    not shorter road distances.
+  - >-
+    The book defines zones in % HRmax only. The % LTHR column is a
+    cross-reference estimate, which is why the Special Output Rule exists: HRmax
+    is native but cannot be emitted, so syntax uses estimated % LTHR.
+  - >-
+    Olbrich prefers heart rate over pace outright, on the grounds that terrain,
+    temperature and weather change daily while heart rate does not lie.
+  - >-
+    The book carries an internal discrepancy on the long recovery jog: Ch. 6
+    gives 65-70% HRmax, Ch. 17.2 gives under 70%. The Ch. 17.2 value is used
+    here as the plan-execution figure, per the knowledge base.
+  - >-
+    The gap between 70% and 75% HRmax is in the source: no zone covers it. Left
+    as the author has it rather than closed artificially.
 
 zones:
   - key: LRJ
