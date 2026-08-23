@@ -1,0 +1,1966 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2026-08-23",
+  "window_days": 180,
+  "profile": {
+    "id": "TEST",
+    "name": "Runner",
+    "sex": "M",
+    "weight": 64.0,
+    "height": 178,
+    "resting_hr": 48,
+    "timezone": "America/Mexico_City",
+    "sport_settings": [
+      {
+        "types": [
+          "Ride",
+          "VirtualRide"
+        ],
+        "ftp": null,
+        "lthr": 165,
+        "max_hr": 188,
+        "w_prime": 20000
+      }
+    ]
+  },
+  "wellness": [
+    {
+      "date": "2026-04-25",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-04-26",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-04-27",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-04-28",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-04-29",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-04-30",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-01",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-02",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-03",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-04",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-05",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-06",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-07",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-08",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-09",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-10",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-11",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-12",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-13",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-14",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-15",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-16",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-17",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-18",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-19",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-20",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-21",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-22",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-23",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-24",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-25",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-26",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-27",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-28",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-29",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-30",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-05-31",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-01",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-02",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-03",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-04",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-05",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-06",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-07",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-08",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-09",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-10",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-11",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-12",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-13",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-14",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-15",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-16",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-17",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-18",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-19",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-20",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-21",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-22",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-23",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-24",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-25",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-26",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-27",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-28",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-29",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-06-30",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-01",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-02",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-03",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-04",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-05",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-06",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-07",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-08",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-09",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-10",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-11",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-12",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-13",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-14",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-15",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-16",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-17",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-18",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-19",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-20",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-21",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-22",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-23",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-24",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-25",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-26",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-27",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-28",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-29",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-30",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-07-31",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-01",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-02",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-03",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-04",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-05",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-06",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-07",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-08",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-09",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-10",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-11",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-12",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-13",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-14",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-15",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-16",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-17",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-18",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-19",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-20",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-21",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-08-22",
+      "hrv": 62,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    }
+  ],
+  "pmc_series": [
+    {
+      "date": "2026-04-25",
+      "ctl": 45.0,
+      "atl": 59.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-04-26",
+      "ctl": 45.1,
+      "atl": 59.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-04-27",
+      "ctl": 45.2,
+      "atl": 59.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-04-28",
+      "ctl": 45.3,
+      "atl": 59.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-04-29",
+      "ctl": 45.4,
+      "atl": 59.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-04-30",
+      "ctl": 45.5,
+      "atl": 59.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-01",
+      "ctl": 45.7,
+      "atl": 59.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-02",
+      "ctl": 45.8,
+      "atl": 59.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-03",
+      "ctl": 45.9,
+      "atl": 59.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-04",
+      "ctl": 46.0,
+      "atl": 60.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-05",
+      "ctl": 46.1,
+      "atl": 60.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-06",
+      "ctl": 46.2,
+      "atl": 60.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-07",
+      "ctl": 46.3,
+      "atl": 60.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-08",
+      "ctl": 46.4,
+      "atl": 60.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-09",
+      "ctl": 46.5,
+      "atl": 60.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-10",
+      "ctl": 46.6,
+      "atl": 60.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-11",
+      "ctl": 46.7,
+      "atl": 60.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-12",
+      "ctl": 46.9,
+      "atl": 60.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-13",
+      "ctl": 47.0,
+      "atl": 61.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-14",
+      "ctl": 47.1,
+      "atl": 61.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-15",
+      "ctl": 47.2,
+      "atl": 61.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-16",
+      "ctl": 47.3,
+      "atl": 61.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-17",
+      "ctl": 47.4,
+      "atl": 61.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-18",
+      "ctl": 47.5,
+      "atl": 61.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-19",
+      "ctl": 47.6,
+      "atl": 61.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-20",
+      "ctl": 47.7,
+      "atl": 61.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-21",
+      "ctl": 47.8,
+      "atl": 61.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-22",
+      "ctl": 47.9,
+      "atl": 61.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-23",
+      "ctl": 48.1,
+      "atl": 62.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-24",
+      "ctl": 48.2,
+      "atl": 62.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-25",
+      "ctl": 48.3,
+      "atl": 62.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-26",
+      "ctl": 48.4,
+      "atl": 62.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-27",
+      "ctl": 48.5,
+      "atl": 62.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-28",
+      "ctl": 48.6,
+      "atl": 62.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-29",
+      "ctl": 48.7,
+      "atl": 62.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-30",
+      "ctl": 48.8,
+      "atl": 62.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-31",
+      "ctl": 48.9,
+      "atl": 62.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-01",
+      "ctl": 49.0,
+      "atl": 63.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-02",
+      "ctl": 49.2,
+      "atl": 63.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-03",
+      "ctl": 49.3,
+      "atl": 63.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-04",
+      "ctl": 49.4,
+      "atl": 63.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-05",
+      "ctl": 49.5,
+      "atl": 63.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-06",
+      "ctl": 49.6,
+      "atl": 63.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-07",
+      "ctl": 49.7,
+      "atl": 63.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-08",
+      "ctl": 49.8,
+      "atl": 63.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-09",
+      "ctl": 49.9,
+      "atl": 63.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-10",
+      "ctl": 50.0,
+      "atl": 64.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-11",
+      "ctl": 50.1,
+      "atl": 64.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-12",
+      "ctl": 50.2,
+      "atl": 64.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-13",
+      "ctl": 50.4,
+      "atl": 64.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-14",
+      "ctl": 50.5,
+      "atl": 64.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-15",
+      "ctl": 50.6,
+      "atl": 64.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-16",
+      "ctl": 50.7,
+      "atl": 64.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-17",
+      "ctl": 50.8,
+      "atl": 64.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-18",
+      "ctl": 50.9,
+      "atl": 64.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-19",
+      "ctl": 51.0,
+      "atl": 65.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-20",
+      "ctl": 51.1,
+      "atl": 65.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-21",
+      "ctl": 51.2,
+      "atl": 65.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-22",
+      "ctl": 51.3,
+      "atl": 65.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-23",
+      "ctl": 51.4,
+      "atl": 65.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-24",
+      "ctl": 51.6,
+      "atl": 65.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-25",
+      "ctl": 51.7,
+      "atl": 65.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-26",
+      "ctl": 51.8,
+      "atl": 65.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-27",
+      "ctl": 51.9,
+      "atl": 65.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-28",
+      "ctl": 52.0,
+      "atl": 66.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-29",
+      "ctl": 52.1,
+      "atl": 66.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-30",
+      "ctl": 52.2,
+      "atl": 66.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-01",
+      "ctl": 52.3,
+      "atl": 66.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-02",
+      "ctl": 52.4,
+      "atl": 66.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-03",
+      "ctl": 52.5,
+      "atl": 66.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-04",
+      "ctl": 52.6,
+      "atl": 66.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-05",
+      "ctl": 52.8,
+      "atl": 66.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-06",
+      "ctl": 52.9,
+      "atl": 66.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-07",
+      "ctl": 53.0,
+      "atl": 67.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-08",
+      "ctl": 53.1,
+      "atl": 67.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-09",
+      "ctl": 53.2,
+      "atl": 67.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-10",
+      "ctl": 53.3,
+      "atl": 67.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-11",
+      "ctl": 53.4,
+      "atl": 67.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-12",
+      "ctl": 53.5,
+      "atl": 67.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-13",
+      "ctl": 53.6,
+      "atl": 67.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-14",
+      "ctl": 53.7,
+      "atl": 67.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-15",
+      "ctl": 53.8,
+      "atl": 67.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-16",
+      "ctl": 54.0,
+      "atl": 68.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-17",
+      "ctl": 54.1,
+      "atl": 68.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-18",
+      "ctl": 54.2,
+      "atl": 68.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-19",
+      "ctl": 54.3,
+      "atl": 68.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-20",
+      "ctl": 54.4,
+      "atl": 68.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-21",
+      "ctl": 54.5,
+      "atl": 68.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-22",
+      "ctl": 54.6,
+      "atl": 68.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-23",
+      "ctl": 54.7,
+      "atl": 68.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-24",
+      "ctl": 54.8,
+      "atl": 68.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-25",
+      "ctl": 54.9,
+      "atl": 68.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-26",
+      "ctl": 55.1,
+      "atl": 69.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-27",
+      "ctl": 55.2,
+      "atl": 69.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-28",
+      "ctl": 55.3,
+      "atl": 69.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-29",
+      "ctl": 55.4,
+      "atl": 69.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-30",
+      "ctl": 55.5,
+      "atl": 69.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-31",
+      "ctl": 55.6,
+      "atl": 69.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-01",
+      "ctl": 55.7,
+      "atl": 69.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-02",
+      "ctl": 55.8,
+      "atl": 69.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-03",
+      "ctl": 55.9,
+      "atl": 69.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-04",
+      "ctl": 56.0,
+      "atl": 70.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-05",
+      "ctl": 56.1,
+      "atl": 70.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-06",
+      "ctl": 56.3,
+      "atl": 70.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-07",
+      "ctl": 56.4,
+      "atl": 70.4,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-08",
+      "ctl": 56.5,
+      "atl": 70.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-09",
+      "ctl": 56.6,
+      "atl": 70.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-10",
+      "ctl": 56.7,
+      "atl": 70.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-11",
+      "ctl": 56.8,
+      "atl": 70.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-12",
+      "ctl": 56.9,
+      "atl": 70.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-13",
+      "ctl": 57.0,
+      "atl": 71.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-14",
+      "ctl": 57.1,
+      "atl": 71.1,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-15",
+      "ctl": 57.2,
+      "atl": 71.2,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-16",
+      "ctl": 57.3,
+      "atl": 71.3,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-17",
+      "ctl": 57.5,
+      "atl": 71.5,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-18",
+      "ctl": 57.6,
+      "atl": 71.6,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-19",
+      "ctl": 57.7,
+      "atl": 71.7,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-20",
+      "ctl": 57.8,
+      "atl": 71.8,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-21",
+      "ctl": 57.9,
+      "atl": 71.9,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-22",
+      "ctl": 58.0,
+      "atl": 72.0,
+      "tsb": -14.0,
+      "ramp_rate": 1.5
+    }
+  ],
+  "activities": [
+    {
+      "date": "2026-05-09",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-05-12",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-05-15",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-05-18",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-05-21",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-05-24",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-05-27",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-05-30",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-06-02",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-06-05",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-06-08",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-06-11",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-06-14",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-06-17",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-06-20",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-06-23",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-06-26",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-06-29",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-07-02",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-07-05",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-07-08",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-07-11",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-07-14",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-07-17",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-07-20",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-07-23",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-07-26",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-07-29",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-08-01",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-08-04",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-08-07",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-08-10",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    },
+    {
+      "date": "2026-08-13",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.8
+    },
+    {
+      "date": "2026-08-16",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.2
+    },
+    {
+      "date": "2026-08-19",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 4.0
+    },
+    {
+      "date": "2026-08-22",
+      "type": "Run",
+      "moving_time": 3600,
+      "training_load": 70,
+      "decoupling": 3.5
+    }
+  ],
+  "curves": {
+    "pace": {
+      "42d": {
+        "points": {
+          "400": {
+            "metres": 400,
+            "seconds": 62,
+            "speed_ms": 6.452
+          },
+          "1000": {
+            "metres": 1000,
+            "seconds": 172,
+            "speed_ms": 5.814
+          },
+          "3000": {
+            "metres": 3000,
+            "seconds": 570,
+            "speed_ms": 5.263
+          },
+          "5000": {
+            "metres": 5000,
+            "seconds": 990,
+            "speed_ms": 5.051
+          },
+          "10000": {
+            "metres": 10000,
+            "seconds": 2100,
+            "speed_ms": 4.762
+          },
+          "21097": {
+            "metres": 21097,
+            "seconds": 4740,
+            "speed_ms": 4.451
+          }
+        },
+        "window": {
+          "id": "",
+          "from": "2026-07-12",
+          "to": "2026-08-23"
+        }
+      },
+      "90d": {
+        "points": {
+          "400": {
+            "metres": 400,
+            "seconds": 63,
+            "speed_ms": 6.349
+          },
+          "1000": {
+            "metres": 1000,
+            "seconds": 175,
+            "speed_ms": 5.714
+          },
+          "3000": {
+            "metres": 3000,
+            "seconds": 578,
+            "speed_ms": 5.19
+          },
+          "5000": {
+            "metres": 5000,
+            "seconds": 1005,
+            "speed_ms": 4.975
+          },
+          "10000": {
+            "metres": 10000,
+            "seconds": 2130,
+            "speed_ms": 4.695
+          },
+          "21097": {
+            "metres": 21097,
+            "seconds": 4800,
+            "speed_ms": 4.395
+          }
+        },
+        "window": {
+          "id": "",
+          "from": "2026-07-12",
+          "to": "2026-08-23"
+        }
+      },
+      "1y": {
+        "points": {
+          "400": {
+            "metres": 400,
+            "seconds": 58,
+            "speed_ms": 6.897
+          },
+          "1000": {
+            "metres": 1000,
+            "seconds": 163,
+            "speed_ms": 6.135
+          },
+          "3000": {
+            "metres": 3000,
+            "seconds": 540,
+            "speed_ms": 5.556
+          },
+          "5000": {
+            "metres": 5000,
+            "seconds": 940,
+            "speed_ms": 5.319
+          },
+          "10000": {
+            "metres": 10000,
+            "seconds": 2010,
+            "speed_ms": 4.975
+          },
+          "21097": {
+            "metres": 21097,
+            "seconds": 4560,
+            "speed_ms": 4.627
+          }
+        },
+        "window": {
+          "id": "",
+          "from": "2026-07-12",
+          "to": "2026-08-23"
+        }
+      }
+    }
+  },
+  "events": []
+}

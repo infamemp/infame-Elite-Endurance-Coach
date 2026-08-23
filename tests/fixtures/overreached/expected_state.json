@@ -1,0 +1,220 @@
+{
+  "athlete_id": "_test_overreached",
+  "longitudinal": {
+    "adaptation_state": {
+      "anchors_set_recently": "5/5",
+      "available": true,
+      "evidence": [
+        "5 of 5 anchors flat against 90d",
+        "closest to yearly best at 300 (99%)",
+        "durability stable and flat"
+      ],
+      "state": "plateau"
+    },
+    "durability_trend": {
+      "available": true,
+      "change_pct_points": 0.0,
+      "direction": "flat",
+      "median_previous_pct": 2.6,
+      "median_recent_pct": 2.6,
+      "sessions": {
+        "previous": 6,
+        "recent": 6
+      },
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "stable"
+    },
+    "progression": {
+      "anchors": [
+        {
+          "anchor": "5",
+          "band": "stable",
+          "best_1y": 1020,
+          "level_pct_of_1y": 98.0,
+          "recent_42d": 1000,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 1000
+        },
+        {
+          "anchor": "60",
+          "band": "stable",
+          "best_1y": 570,
+          "level_pct_of_1y": 98.2,
+          "recent_42d": 560,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 560
+        },
+        {
+          "anchor": "300",
+          "band": "stable",
+          "best_1y": 345,
+          "level_pct_of_1y": 98.6,
+          "recent_42d": 340,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 340
+        },
+        {
+          "anchor": "1200",
+          "band": "stable",
+          "best_1y": 305,
+          "level_pct_of_1y": 98.4,
+          "recent_42d": 300,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 300
+        },
+        {
+          "anchor": "3600",
+          "band": "stable",
+          "best_1y": 282,
+          "level_pct_of_1y": 98.6,
+          "recent_42d": 278,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 278
+        }
+      ],
+      "anchors_set_recently": "5/5",
+      "anchors_unavailable": [
+        "7200"
+      ],
+      "available": true,
+      "composites": {
+        "aerobic_durability": {
+          "ratio_1y": 0.817,
+          "ratio_42d": 0.818,
+          "shift_pct": 0.0
+        },
+        "anaerobic_reserve": {
+          "ratio_1y": 2.957,
+          "ratio_42d": 2.941,
+          "shift_pct": -0.5
+        },
+        "durability_gradient": {
+          "ratio_1y": 0.925,
+          "ratio_42d": 0.927,
+          "shift_pct": 0.2
+        },
+        "glycolytic_bias": {
+          "ratio_1y": 1.869,
+          "ratio_42d": 1.867,
+          "shift_pct": -0.1
+        }
+      },
+      "method": "Trend is 42d against 90d. Level is 42d as a percent of the 1y best. The windows are nested, so the 1y comparison is a level reading only and is never scored as gain or decline.",
+      "unit": "watts"
+    },
+    "repeatability": {
+      "available": false,
+      "reason": "only 0 sessions with W' data (need 3)"
+    },
+    "sport_basis": "cycling",
+    "testing": {
+      "data_flags": [],
+      "frame": {
+        "after": "Easy 45 minutes at low endurance, then cool down",
+        "spacing": "Separate maximal tests by at least one day, with an easy recovery day before the sprint test. Test efforts need not fall on the same day.\n",
+        "warmup": "Warm up thoroughly before any maximal effort"
+      },
+      "tests": []
+    }
+  },
+  "power_profile": {
+    "available": true,
+    "ft_source": "configured FTP",
+    "note": "Scores are ordinal positions between the table's anchor rows, not true percentiles. Phenotype comes from the shape of the profile, never from one duration alone.",
+    "phenotype": "time_trialist",
+    "phenotype_reason": "threshold score 60 sits 21 points above 5s",
+    "scored": {
+      "1min": {
+        "category": "good",
+        "score": 50.5,
+        "w_per_kg": 8.24,
+        "watts": 560
+      },
+      "5min": {
+        "category": "very_good_low",
+        "score": 57.6,
+        "w_per_kg": 5.0,
+        "watts": 340
+      },
+      "5s": {
+        "category": "moderate_low",
+        "score": 38.6,
+        "w_per_kg": 14.71,
+        "watts": 1000
+      },
+      "FT": {
+        "category": "very_good_low",
+        "score": 59.5,
+        "w_per_kg": 4.41,
+        "watts": 300
+      }
+    },
+    "sex_table": "men",
+    "test_duration_minutes": 20,
+    "weight_kg": 68.0
+  },
+  "projection": {
+    "caveat": "Unplanned days are projected as zero load. With few planned sessions on the calendar this understates future CTL.",
+    "days_with_planned_load": 0,
+    "horizon_days": 42,
+    "method": "Banister exponential, CTL tau 42d, ATL tau 7d"
+  },
+  "schema_version": 1,
+  "signals": {
+    "acwr": {
+      "acute_7d": 390,
+      "available": true,
+      "chronic_weekly_avg": 455.0,
+      "ratio": 0.86,
+      "source": "activity training_load, 7d vs 28d/4"
+    },
+    "durability": {
+      "available": true,
+      "median_decoupling": 2.6,
+      "moderate_drift": 0,
+      "sessions": 6,
+      "severe_drift": 0,
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "stable"
+    },
+    "hrv": {
+      "available": true,
+      "band": "normal",
+      "baseline_median": 50,
+      "ratio": 1.0,
+      "readings": {
+        "baseline": 53,
+        "recent": 7
+      },
+      "recent_mean": 50,
+      "source": "wellness HRV, 7d mean vs 53d median"
+    },
+    "pmc": {
+      "atl": 130.0,
+      "ctl": 95.0,
+      "ramp_rate": 1.5,
+      "source": "pmc_series (daily wellness record)",
+      "tsb": -35.0
+    }
+  },
+  "state": {
+    "flags": [],
+    "governor": "tsb",
+    "load_recovery_state": "functional_overreach",
+    "operational_state": "recovery_priority",
+    "reasoning": [
+      "TSB -35.0 falls in band 'maladaptation_risk' (primary governor)",
+      "Downgraded to 'functional_overreach': ACWR 0.86 is inside the safe range [0.8, 1.3] and durability is stable",
+      "Operational state: 'recovery_priority'"
+    ]
+  },
+  "taper": {
+    "applicable": false,
+    "reason": "no races on the calendar"
+  }
+}

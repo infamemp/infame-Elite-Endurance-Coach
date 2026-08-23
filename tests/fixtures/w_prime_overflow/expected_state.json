@@ -1,0 +1,235 @@
+{
+  "athlete_id": "_test_w_prime_overflow",
+  "longitudinal": {
+    "adaptation_state": {
+      "anchors_set_recently": "5/5",
+      "available": true,
+      "evidence": [
+        "5 of 5 anchors flat against 90d",
+        "closest to yearly best at 3600 (97%)",
+        "durability stable and flat",
+        "anaerobic depth maintained"
+      ],
+      "state": "plateau"
+    },
+    "durability_trend": {
+      "available": true,
+      "change_pct_points": 0.0,
+      "direction": "flat",
+      "median_previous_pct": 4.2,
+      "median_recent_pct": 4.2,
+      "sessions": {
+        "previous": 6,
+        "recent": 6
+      },
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "stable"
+    },
+    "progression": {
+      "anchors": [
+        {
+          "anchor": "5",
+          "band": "stable",
+          "best_1y": 950,
+          "level_pct_of_1y": 94.7,
+          "recent_42d": 900,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 900
+        },
+        {
+          "anchor": "60",
+          "band": "stable",
+          "best_1y": 500,
+          "level_pct_of_1y": 96.0,
+          "recent_42d": 480,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 480
+        },
+        {
+          "anchor": "300",
+          "band": "stable",
+          "best_1y": 315,
+          "level_pct_of_1y": 95.2,
+          "recent_42d": 300,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 300
+        },
+        {
+          "anchor": "1200",
+          "band": "stable",
+          "best_1y": 268,
+          "level_pct_of_1y": 96.3,
+          "recent_42d": 258,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 258
+        },
+        {
+          "anchor": "3600",
+          "band": "stable",
+          "best_1y": 245,
+          "level_pct_of_1y": 97.1,
+          "recent_42d": 238,
+          "set_in_last_42d": true,
+          "trend_vs_90d_pct": 0.0,
+          "window_90d": 238
+        }
+      ],
+      "anchors_set_recently": "5/5",
+      "anchors_unavailable": [
+        "7200"
+      ],
+      "available": true,
+      "composites": {
+        "aerobic_durability": {
+          "ratio_1y": 0.778,
+          "ratio_42d": 0.793,
+          "shift_pct": 2.0
+        },
+        "anaerobic_reserve": {
+          "ratio_1y": 3.016,
+          "ratio_42d": 3.0,
+          "shift_pct": -0.5
+        },
+        "durability_gradient": {
+          "ratio_1y": 0.914,
+          "ratio_42d": 0.922,
+          "shift_pct": 0.9
+        },
+        "glycolytic_bias": {
+          "ratio_1y": 1.866,
+          "ratio_42d": 1.86,
+          "shift_pct": -0.3
+        }
+      },
+      "method": "Trend is 42d against 90d. Level is 42d as a percent of the 1y best. The windows are nested, so the 1y comparison is a level reading only and is never scored as gain or decline.",
+      "unit": "watts"
+    },
+    "repeatability": {
+      "available": true,
+      "change_pct_points": -0.0,
+      "clamped_sessions": 20,
+      "note": "'untested' means no session reached the anaerobic depth threshold — it says nothing about capacity, only that capacity was not probed.",
+      "peak_depletion_previous_pct": 100.0,
+      "peak_depletion_recent_pct": 100.0,
+      "sessions_above_threshold": 20,
+      "sessions_with_w_prime": 30,
+      "source": "activity max W' balance depletion as a percent of W'",
+      "status": "maintained",
+      "threshold_pct": 80
+    },
+    "sport_basis": "cycling",
+    "testing": {
+      "data_flags": [
+        {
+          "action": "Refresh W' with a ramp or CP test, then update the athlete's sport settings in Intervals.icu.",
+          "detail": "20 session(s) recorded depletion above 100% of the configured W'. Every anaerobic reading derived from it is compressed.",
+          "issue": "W' appears underestimated"
+        }
+      ],
+      "frame": {
+        "after": "Easy 45 minutes at low endurance, then cool down",
+        "spacing": "Separate maximal tests by at least one day, with an easy recovery day before the sprint test. Test efforts need not fall on the same day.\n",
+        "warmup": "Warm up thoroughly before any maximal effort"
+      },
+      "tests": []
+    }
+  },
+  "power_profile": {
+    "available": true,
+    "ft_source": "configured FTP",
+    "note": "Scores are ordinal positions between the table's anchor rows, not true percentiles. Phenotype comes from the shape of the profile, never from one duration alone.",
+    "phenotype": "time_trialist",
+    "phenotype_reason": "threshold score 40 sits 15 points above 5s",
+    "scored": {
+      "1min": {
+        "category": "novice_2",
+        "score": 27.8,
+        "w_per_kg": 6.76,
+        "watts": 480
+      },
+      "5min": {
+        "category": "moderate_low",
+        "score": 41.8,
+        "w_per_kg": 4.23,
+        "watts": 300
+      },
+      "5s": {
+        "category": "novice_2",
+        "score": 25.4,
+        "w_per_kg": 12.68,
+        "watts": 900
+      },
+      "FT": {
+        "category": "moderate_low",
+        "score": 40.4,
+        "w_per_kg": 3.45,
+        "watts": 245
+      }
+    },
+    "sex_table": "men",
+    "test_duration_minutes": 20,
+    "weight_kg": 71.0
+  },
+  "projection": {
+    "caveat": "Unplanned days are projected as zero load. With few planned sessions on the calendar this understates future CTL.",
+    "days_with_planned_load": 0,
+    "horizon_days": 42,
+    "method": "Banister exponential, CTL tau 42d, ATL tau 7d"
+  },
+  "schema_version": 1,
+  "signals": {
+    "acwr": {
+      "acute_7d": 160,
+      "available": true,
+      "chronic_weekly_avg": 140.0,
+      "ratio": 1.14,
+      "source": "activity training_load, 7d vs 28d/4"
+    },
+    "durability": {
+      "available": true,
+      "median_decoupling": 4.2,
+      "moderate_drift": 0,
+      "sessions": 6,
+      "severe_drift": 0,
+      "source": "activity decoupling, sessions of 45min or more",
+      "status": "stable"
+    },
+    "hrv": {
+      "available": true,
+      "band": "normal",
+      "baseline_median": 48,
+      "ratio": 1.0,
+      "readings": {
+        "baseline": 53,
+        "recent": 7
+      },
+      "recent_mean": 48,
+      "source": "wellness HRV, 7d mean vs 53d median"
+    },
+    "pmc": {
+      "atl": 68.0,
+      "ctl": 58.0,
+      "ramp_rate": 1.5,
+      "source": "pmc_series (daily wellness record)",
+      "tsb": -10.0
+    }
+  },
+  "state": {
+    "flags": [],
+    "governor": "tsb",
+    "load_recovery_state": "neutral",
+    "operational_state": "load_accepting",
+    "reasoning": [
+      "TSB -10.0 falls in band 'neutral' (primary governor)",
+      "Operational state: 'load_accepting'"
+    ]
+  },
+  "taper": {
+    "applicable": false,
+    "reason": "no races on the calendar"
+  }
+}

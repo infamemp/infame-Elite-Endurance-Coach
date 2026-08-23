@@ -1,0 +1,29 @@
+# TEST FIXTURE — not a real athlete.
+# Referenced by tests/blocks/treadmill_ramp.md to prove that treadmill ramps are
+# permitted when, and only when, the athlete profile requests them. Kept in the
+# repository on purpose: a test that depends on a gitignored file passes on one
+# machine and fails on another.
+id: TESTRAMP
+name: Test Fixture
+language: en
+units: km
+goals: []
+limitations: {current_injury: null, recurring_issues: [], notes: null}
+availability:
+  days: {mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null}
+  long_session_days: []
+  preferred_time: null
+  sustainable: true
+  disruptions: []
+context: {sports: [running], disciplines: [treadmill]}
+history: {starting_from_zero: false}
+equipment: {devices: [], bike_power_meter: false, smart_trainer: false,
+            erg_control: false, run_power_meter: true, tracks_sleep: false,
+            tracks_hrv: false}
+metric_overrides: {road: null, mtb: null, gravel: null, trainer: null,
+                   trail: null, treadmill: null, track: null}
+ramp_overrides:
+  treadmill_ramps_requested: true
+  disable_ramps: []
+preferences: {target_style: both}
+intake: {completed: null, last_reviewed: null}
