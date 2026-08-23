@@ -1,6 +1,6 @@
 # Improvement Backlog — Infame Elite Endurance Coach
 
-**Written:** 2026-08-22, at the completion of v6.2
+**Written:** 2026-08-22 · **Revised:** 2026-08-23
 **Status:** Nothing here is committed work. It is a considered list of where the
 system could go, with honest reasoning about what each item costs and what it is
 worth.
@@ -23,6 +23,11 @@ few will reveal whether the template asks the right questions.
 
 **Translate the `.gitignore` comments to English.** Trivial, and the project
 convention is English throughout.
+
+**Give Friel running its own knowledge base.** It currently shares the cycling
+Training Bible. The zones are correctly migrated, but the methodology text Claude
+reads is about cycling. The Triathlete's Training Bible or Friel's running
+material would close the last KB gap.
 
 **Extract the Bosquet and Ingham knowledge bases.** The taper parameters from
 Bosquet 2007 are already in config, but the reasoning behind them is not in
@@ -130,6 +135,26 @@ of the list.
 current architecture: the zone schema has no vocabulary for load, sets, or reps.
 Adding it would require a parallel config type rather than a new author. Worth
 considering only if the coaching practice actually prescribes it.
+
+### Check the anchor before adding any author
+
+A mechanism added in August 2026, after Carmichael revealed the gap. Most authors
+express their percentages against functional threshold; some do not, and reading
+their table as if they did prescribes every session at the wrong intensity.
+
+Carmichael anchors on the CTS Field Test — two 8-minute maximal efforts — which
+his book places about 10% above threshold power. Read as % FTP, his PowerInterval
+lands at threshold instead of VO2max, which is the one place the method cannot
+afford to be wrong.
+
+The `anchor` block in the author schema declares the metric, the conversion
+factor and its source. The YAML keeps the author's own numbers; the generator
+emits an additional threshold-equivalent column; the validator converts before
+matching. **When adding an author, the first question is what their 100% actually
+is.** If it is not threshold, declare the anchor.
+
+Two more that already anchor differently and are handled by other means: Olbrich
+on HRmax, via a special output rule; Koop on RPE, via dual-layer.
 
 ### Two cautions on adding authors
 

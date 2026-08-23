@@ -1,6 +1,6 @@
 # RESTORE POINT — Infame Elite Endurance Coach v6.2
 
-**Date frozen:** 2026-08-22
+**Date frozen:** 2026-08-23
 **Git tag:** `v6.2-complete`
 **Previous restore points:** `v6.1-stage6`, `v6.0-stage5`, `v5.1-stable`
 **Status:** All eight stages complete. The system is in production use.
@@ -41,6 +41,7 @@ or contradicts it.
 infame_elite_endurance_coach/
 ├─ config/
 │  ├─ authors/          8 methodologies as YAML + _template.yaml
+│  │                    (carmichael declares a non-threshold `anchor`)
 │  ├─ athletes/         ATHLETE_INTAKE.md, _template.yaml, TESTRAMP.yaml
 │  │                    (real athlete profiles are gitignored)
 │  ├─ schema/           author.schema.json
@@ -56,12 +57,12 @@ infame_elite_endurance_coach/
 │  └─ validate_block.py        hard-constraint gate + TSS audit + --fill-tss
 ├─ tests/
 │  ├─ make_fixtures.py         generates 7 synthetic athletes
-│  ├─ run_tests.py             67 tests: unit, block, golden
+│  ├─ run_tests.py             75 tests: unit, block, golden
 │  ├─ fixtures/                datasets + frozen expected outputs
 │  └─ blocks/                  workout-block verification fixtures
 ├─ generated/          zone tables built from config — NEVER hand-edited
-├─ Prompt/             infame_elite_endurance_coach.md v6.0 + archive/
-├─ Knowledge/          6 book-derived KBs
+├─ Prompt/             infame_elite_endurance_coach.md v6.1 + archive/
+├─ Knowledge/          8 book-derived KBs
 ├─ Syntax/             Intervals.icu workout builder reference
 ├─ Athlete Template/   intervals_export.py (Excel report)
 ├─ Excel to MD Converter/
@@ -113,6 +114,13 @@ pass. Treadmill ramps blocked without the athlete-profile flag, permitted with i
 power/pace curves across 42d/90d/1y windows. State resolution validated against
 real athlete data and confirmed to match the coach's own judgement.
 
+**Non-threshold anchors.** An author whose percentages are measured against
+something other than functional threshold declares it in an `anchor` block. The
+YAML keeps the author's own numbers; the generator emits an additional
+threshold-equivalent column; the validator converts before matching a target, and
+says so in the source it reports. Carmichael is the worked example, and the
+mechanism is available to any future author who anchors differently.
+
 **Longitudinal analysis.** Separates trend (42d vs 90d) from level (42d as a
 percent of the 1y best), because the windows are nested and the 1y comparison is
 unfair by construction. Reports durability direction, anaerobic repeatability, and
@@ -120,11 +128,11 @@ an adaptation state with its evidence attached. Refuses to read phenotype from
 values below the Coggan table floor. Emits per-anchor testing recommendations with
 duration-based protocols, plus data-quality flags.
 
-**Regression suite.** 67 tests across three kinds. Verified to catch a real
+**Regression suite.** 75 tests across three kinds. Verified to catch a real
 regression: altering one config band failed both a unit test and a golden
 comparison, each naming exactly what moved.
 
-**Prompt v6 in the Project.** Phase 0 gating returns a single-sentence prompt with
+**Prompt v6.1 in the Project.** Phase 0 gating returns a single-sentence prompt with
 no data. With `#SESSION` but no `#STATE`, it names the rebuild command, refuses to
 estimate, and stops.
 
@@ -137,6 +145,7 @@ Nothing in the engine is invented. Every threshold traces to a source:
 | Area | Source |
 |:---|:---|
 | Zone tables, 8 authors | The authors' own published zones, migrated verbatim |
+| Carmichael anchor factor 1.10 | The Time-Crunched Cyclist 3rd ed., Ch. 4 — field test power is ~10% above LT power |
 | Cycling power cutpoints | Coach's own bands, verified against 14/14 zones of Coggan, Friel, Carmichael |
 | Running power cutpoints | Palladino's zones, 9/9 agreement |
 | Taper parameters | Bosquet et al. 2007 meta-analysis, 27 studies |
@@ -170,6 +179,9 @@ declared half.
   the test fixture. Profile-dependent rules — treadmill ramps, trail metric
   overrides, cue language — apply to nobody until profiles are created.
 - **Bosquet and Ingham KBs** were discussed but not extracted into `Knowledge/`.
+- **Friel running has no KB of its own** — it currently shares the cycling
+  Training Bible. Zones are correctly migrated; the methodology text is not his
+  running material.
 - **Target TSB ranges by event type** are coach heuristic, flagged in config.
 - **`.gitignore` comments are in Spanish.** Project convention is English.
 - **The 120-minute power anchor has no data.** Intervals.icu curve data stops at
