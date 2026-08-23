@@ -226,15 +226,28 @@ SUFFIX_TO_METRIC = {"": "power", "FTP": "power", "CP": "power",
 def classify(mid, metric, author, thresholds):
     """Return (class, source). The author's declared zone governs; the
     cutpoints in decision_thresholds.yaml apply only when no zone contains
-    the value."""
+    the value.
+
+    An author who anchors on something other than threshold (see `anchor` in
+    the author file) publishes zones on their own scale. A target written in a
+    workout block is always on the threshold scale, so the author's zones are
+    converted before comparison — otherwise a correct Carmichael target would
+    match the wrong zone."""
+    anc = author.get("anchor")
+    factor = (anc["factor_from_threshold"]
+              if anc and anc.get("metric") == metric else 1.0)
     for z in author["zones"]:
         r = (z.get("ranges") or {}).get(metric)
         if not r:
             continue
         lo, hi = r.get("min"), r.get("max")
-        lo = lo if lo is not None else 0
+        lo = (lo if lo is not None else 0) * factor
+        hi = hi * factor if hi is not None else None
         if lo <= mid and (hi is None or mid <= hi):
-            return z["physiological_class"], f"{author['id']} {z['key']}"
+            src = f"{author['id']} {z['key']}"
+            if factor != 1.0:
+                src += " (threshold-equivalent)"
+            return z["physiological_class"], src
 
     cuts = (thresholds.get("classification_cutpoints", {})
             .get(author["sport"], {}).get(metric))

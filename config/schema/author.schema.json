@@ -270,6 +270,54 @@
     "default_metric_label": {
       "type": "string",
       "description": "Optional. Overrides how the default metric is displayed when the author qualifies it, e.g. 'RPE (workout-code specific)'."
+    },
+    "anchor": {
+      "type": "object",
+      "description": "Present ONLY when the author's percentages are measured against something other than functional threshold. Most authors anchor on threshold (FTP, LTHR, threshold pace) and omit this field. Carmichael is the worked example: his percentages are of the CTS Field Test result, which the book places about 10% above LT power. Without this declaration his zones read ~10% easy.",
+      "required": [
+        "metric",
+        "reference",
+        "factor_from_threshold",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "enum": [
+            "power",
+            "lthr",
+            "pace",
+            "hrmax"
+          ],
+          "description": "Which metric column carries the non-threshold anchor."
+        },
+        "reference": {
+          "type": "string",
+          "description": "What the author's 100% actually is, in words."
+        },
+        "factor_from_threshold": {
+          "type": "number",
+          "description": "Anchor value divided by threshold value. 1.10 means the anchor sits 10% above threshold, so the author's percentages must be multiplied by 1.10 to be read against threshold."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the factor comes from. Never an estimate."
+        },
+        "equivalent_column_label": {
+          "type": "string",
+          "description": "Header for the generated threshold-equivalent column."
+        },
+        "class_from": {
+          "type": "string",
+          "enum": [
+            "native",
+            "equivalent"
+          ],
+          "default": "equivalent",
+          "description": "Which column determines physiological_class. Defaults to the threshold equivalent, because the classification cutpoints are calibrated on threshold and TSS must be comparable across authors."
+        }
+      }
     }
   }
 }

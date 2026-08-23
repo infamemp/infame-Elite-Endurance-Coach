@@ -13,14 +13,47 @@ available_metrics: [power, lthr]
 primary_metrics:
   - CTS Field Test Power
   - CTS Field Test Heart Rate (LTHR)
-intensity_anchors: ["% FTP", "% LTHR"]
+intensity_anchors: ["% CTS Field Test", "% LTHR"]
+
+metric_labels:
+  power: "% CTS Field Test"
 
 metric_status:
   power: native
   lthr: native
 
+# Carmichael does NOT anchor on FTP. Every percentage in this file is of the CTS
+# Field Test result — two 8-minute all-out time trials separated by 10 minutes of
+# easy spinning, taking the higher of the two averages. The book states that
+# result sits about 10% above lab-tested LT power, and gives the chain: a 60-min
+# TT is LT power, a 20-min effort is ~5% above that, and the field test is ~5%
+# above the 20-min. FTP is LT power by definition, so field test = ~1.10 x FTP.
+#
+# The values below are the author's, unchanged. The generator emits an additional
+# "% FTP (equivalent)" column derived from the factor, for athletes who have an
+# FTP but have not performed the CTS Field Test.
+anchor:
+  metric: power
+  reference: CTS Field Test result — higher average of two 8-minute maximal efforts
+  factor_from_threshold: 1.10
+  source: >-
+    The Time-Crunched Cyclist, 3rd ed. 2017, Ch. 4 — "CTS Field Test avg power is
+    approximately 10% above lab-tested LT power. This 10% is already factored
+    into the Table 4.1 percentages."
+  equivalent_column_label: "% FTP (equivalent)"
+  class_from: equivalent
+
 notes:
-  - Use the athlete's provided FTP. If FTP is missing and athlete uses Carmichael methodology, suggest the CTS field test protocol from the Carmichael KB file.
+  - >-
+    The anchor applies to POWER only. The field test heart rate anchor is the
+    average HR of an 8-minute maximal effort, which already sits at LTHR — heart
+    rate saturates near maximum where power does not. The % LTHR column is the
+    author's, used verbatim, with no conversion.
+  - >-
+    Prescribe from the native column when the athlete has performed the CTS Field
+    Test (protocol in the Carmichael knowledge base). Prescribe from the "% FTP
+    (equivalent)" column when the athlete has only an FTP from a 20 or 60 minute
+    test. Both routes reach the same absolute intensity.
   - >-
     The gap between EM (top 73% FTP) and Tempo (bottom 80% FTP), and the overlap
     between EM (up to 91% LTHR) and Tempo (88–90% LTHR), are confirmed intentional
@@ -40,7 +73,7 @@ zones:
 
   - key: T
     name: Tempo
-    physiological_class: tempo
+    physiological_class: sub_threshold
     ranges:
       power: {min: 80, max: 85}
       lthr:  {min: 88, max: 90}
@@ -48,7 +81,7 @@ zones:
 
   - key: SS
     name: SteadyState
-    physiological_class: sub_threshold
+    physiological_class: threshold
     ranges:
       power: {min: 86, max: 90}
       lthr:  {min: 92, max: 94}
@@ -56,7 +89,7 @@ zones:
 
   - key: CR
     name: ClimbingRepeat
-    physiological_class: threshold
+    physiological_class: vo2max
     ranges:
       power: {min: 95, max: 100}
       lthr:  {min: 95, max: 97}
@@ -67,13 +100,16 @@ zones:
     physiological_class: threshold
     ranges: {}
     rpe: {min: 9, max: 9}
-    note: Structured as alternating Under (86–90% FTP / 92–94% LTHR) and Over (95–100% FTP / 95–97% LTHR) intervals
+    note: >-
+      Alternating Under and Over. Under = SS, Over = CR. Native scale 86-90 and
+      95-100 % CTS Field Test; FTP equivalent 95-99 and 105-110 %. Heart rate
+      92-94 and 95-97 % LTHR.
 
   - key: PI
     name: PowerInterval
     physiological_class: vo2max
     ranges:
-      power: {min: 100, max: null}
+      power: {min: 101, max: null}
       lthr:  {min: 100, max: null}
     rpe: {min: 10, max: 10}
     note: Max effort; no defined upper bound
