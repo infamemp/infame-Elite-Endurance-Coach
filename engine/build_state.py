@@ -241,14 +241,20 @@ def resolve_state(pmc, hrv, acwr, durability, thresholds):
             reasoning.append(
                 f"Gate not applied: durability is '{durability.get('status')}', not stable")
 
-    # HRV sanity check: an apparently fresh athlete with strongly suppressed HRV
-    # is flagged, but TSB is not overridden.
+    # HRV sanity check: reported for visibility only. It never overrides TSB
+    # and must never be read as a reason to pause or condition prescription —
+    # HRV as a standalone metric lacks the evidence base to drive training
+    # decisions. Explicitly labelled non-actionable so the reasoning layer does
+    # not treat it as a gate.
     flags = []
     if hrv.get("available") and hrv["band"] == "suppressed" and \
             state in ("fresh", "neutral"):
-        flags.append(f"HRV suppressed (ratio {hrv['ratio']}) while TSB indicates "
-                     f"'{state}' — recovery may lag the load picture")
-        reasoning.append("HRV/TSB divergence flagged; TSB retained as governor")
+        flags.append(f"[reference only, not actionable] HRV suppressed "
+                     f"(ratio {hrv['ratio']}) while TSB indicates '{state}'. "
+                     f"Report this to the coach; it does not gate or delay "
+                     f"prescription.")
+        reasoning.append("HRV/TSB divergence noted for visibility; "
+                         "TSB retained as sole governor, no HRV-based gating applied")
 
     if durability.get("status") == "degraded":
         flags.append(f"Durability degraded: {durability['severe_drift']} of "
