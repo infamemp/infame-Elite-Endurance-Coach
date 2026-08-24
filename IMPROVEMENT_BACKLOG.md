@@ -29,9 +29,16 @@ Training Bible. The zones are correctly migrated, but the methodology text Claud
 reads is about cycling. The Triathlete's Training Bible or Friel's running
 material would close the last KB gap.
 
-**Extract the Bosquet and Ingham knowledge bases.** The taper parameters from
-Bosquet 2007 are already in config, but the reasoning behind them is not in
-`Knowledge/`. Ingham was discussed and never sourced.
+**Bosquet — resolved, no further action needed.** His 2007 meta-analysis already
+drove the taper parameters in `decision_thresholds.yaml` (14-day duration, 41-60%
+volume reduction, intensity maintained, frequency >=80%, progressive pattern), and
+`Knowledge/Mujika_Tapering_Peaking_Extraction.md` already covers the reasoning —
+Mujika co-authored the meta-analysis. A separate Bosquet KB would duplicate it.
+
+**Ingham — open, contingent on interest rather than a gap.** Discussed once, never
+sourced. His book (*How to Support a Champion*) is not a zone system or a taper
+method — it is about the practice of supporting elite athletes. It would enter as
+a general knowledge base if the coach wants it, not as a prescriptive author.
 
 **Revisit the target TSB ranges by event type.** They are currently the coach's
 working numbers, flagged as heuristic in config. After a season of real races,
