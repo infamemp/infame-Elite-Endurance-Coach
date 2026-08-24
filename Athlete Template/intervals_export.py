@@ -263,13 +263,36 @@ def build_athlete_sheet(wb, aid, name, summary_row, master_profile):
     kv("Resting HR", f"{r_hr_val} bpm" if r_hr_val != "—" else "—")
     row += 1
 
-    # ── PMC ──
+    # ── PMC — fuente: wellness endpoint (misma fuente que build_state.py) ──
+    # No usar summary_row para PMC: el endpoint athlete-summary puede devolver
+    # filas duplicadas con valores distintos para el mismo día, y la deduplicación
+    # solo garantiza unicidad de athlete_id, no el valor más reciente.
     section_title("FITNESS · FATIGUE · FORM (PMC)", fill=H1_FILL, font=H1_FONT)
-    
-    f  = clean_n(summary_row.get('fitness'))
-    a  = clean_n(summary_row.get('fatigue'))
-    fm = clean_n(summary_row.get('form'))
-    rr = clean_n(summary_row.get('rampRate'))
+
+    today_str = date.today().isoformat()
+    w_rec = None
+    try:
+        # Intentar el día de hoy; caer a ayer si el registro aún no existe
+        for oldest in [today_str, (date.today() - timedelta(days=1)).isoformat()]:
+            recs = get(f"/athlete/{aid}/wellness",
+                       params={"oldest": oldest, "newest": today_str})
+            if recs:
+                w_rec = recs[-1]  # el más reciente dentro del rango
+                break
+    except Exception:
+        pass  # si el endpoint falla, caemos al fallback
+
+    if w_rec:
+        f  = clean_n(w_rec.get("ctl"))
+        a  = clean_n(w_rec.get("atl"))
+        fm = clean_n(w_rec.get("tsb"))
+        rr = clean_n(w_rec.get("rampRate"))
+    else:
+        # Fallback: valores del athlete-summary (pueden diferir levemente)
+        f  = clean_n(summary_row.get("fitness"))
+        a  = clean_n(summary_row.get("fatigue"))
+        fm = clean_n(summary_row.get("form"))
+        rr = clean_n(summary_row.get("rampRate"))
     
     kv("CTL – Fitness", f"{f:.1f}")
     kv("ATL – Fatigue", f"{a:.1f}")
@@ -484,25 +507,17 @@ def build_athlete_sheet(wb, aid, name, summary_row, master_profile):
             intf = act.get("icu_intensity")
             act_date = (act.get("start_date_local") or "")[:10]
             mov_time = act.get("moving_time") or act.get("elapsed_time")
-
-            # TSS: usar is None para no descartar valores 0; formatear con 2 decimales
-            t_load = act.get("icu_training_load")
-            if t_load is None:
-                t_load = act.get("training_load")
-
-            # Avg Power: icu_weighted_avg_watts (NP calculado por ICU),
-            # luego average_watts como fallback para medidores externos
-            avg_w = (act.get("icu_weighted_avg_watts") or
-                     act.get("average_watts"))
+            t_load = act.get("icu_training_load") or act.get("training_load")
+            avg_w = act.get("weighted_average_watts") or act.get("average_watts")
             
             ws.cell(row=row, column=1,  value=act_date)
             ws.cell(row=row, column=2,  value=v(act.get("name")))
             ws.cell(row=row, column=3,  value=v(act.get("type")))
             ws.cell(row=row, column=4,  value=fmt_sec(mov_time))
             ws.cell(row=row, column=5,  value=round(dist/1000, 2) if dist else "—")
-            ws.cell(row=row, column=6,  value=f"{float(t_load):.2f}" if t_load is not None else "—")
-            ws.cell(row=row, column=7,  value=f"{intf/100:.2f}" if intf is not None else "—")
-            ws.cell(row=row, column=8,  value=round(avg_w) if avg_w is not None else "—")
+            ws.cell(row=row, column=6,  value=v(t_load))
+            ws.cell(row=row, column=7,  value=round(intf / 100, 2) if intf else "—")
+            ws.cell(row=row, column=8,  value=v(avg_w))
             ws.cell(row=row, column=9,  value=v(act.get("average_heartrate")))
             elev = act.get("total_elevation_gain")
             ws.cell(row=row, column=10, value=round(elev) if elev else "—")
@@ -546,44 +561,17 @@ def main():
         print("❌ No athletes found.")
         sys.exit(1)
 
-    # ── Merge duplicate summary rows ─────────────────────────────
-    # athlete-summary.json returns two rows per athlete. They are not
-    # identical: one carries the current PMC (fitness/fatigue/form) with a
-    # weekly training_load of 0, the other carries the weekly load with a PMC
-    # snapshot from an earlier cut. Keeping only the first row silently used a
-    # stale PMC, which matters when a TSB sits near a band boundary.
-    #
-    # Merge instead of discard: take the most recent PMC across the rows, and
-    # the largest non-zero weekly load. Every other field falls back to the
-    # first row that defines it.
-    merged = {}
-    order = []
+    # Deduplicate by athlete_id
+    seen_ids, deduped = set(), []
     for s in summary_list:
         aid = s.get("athlete_id")
-        if not aid:
-            continue
-        if aid not in merged:
-            merged[aid] = dict(s)
-            order.append(aid)
-            continue
-
-        cur = merged[aid]
-        # PMC: the row with the higher fatigue (ATL) is the more recent one,
-        # since ATL has a 7-day time constant and moves first.
-        if clean_n(s.get("fatigue")) > clean_n(cur.get("fatigue")):
-            for k in ("fitness", "fatigue", "form", "rampRate"):
-                if s.get(k) is not None:
-                    cur[k] = s[k]
-        # Weekly load: keep the largest non-zero value.
-        if clean_n(s.get("training_load")) > clean_n(cur.get("training_load")):
-            cur["training_load"] = s.get("training_load")
-        # Any field the first row left empty.
-        for k, val in s.items():
-            if cur.get(k) in (None, "", []) and val not in (None, "", []):
-                cur[k] = val
-
-    summary_list = [merged[a] for a in order]
-    print(f"   ✓ {len(summary_list)} unique athletes (duplicate rows merged)")
+        if aid and aid not in seen_ids:
+            seen_ids.add(aid)
+            deduped.append(s)
+        elif aid in seen_ids:
+            print(f"  ⚠️  Duplicate skipped: {s.get('athlete_name')} ({aid})")
+    summary_list = deduped
+    print(f"   ✓ {len(summary_list)} unique athletes")
 
     print("📥 Indexing profiles...")
     try: 
