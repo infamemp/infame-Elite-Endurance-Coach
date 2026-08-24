@@ -233,7 +233,7 @@
   },
   "state": {
     "flags": [
-      "HRV suppressed (ratio 0.786) while TSB indicates 'neutral' — recovery may lag the load picture",
+      "[reference only, not actionable] HRV suppressed (ratio 0.786) while TSB indicates 'neutral'. Report this to the coach; it does not gate or delay prescription.",
       "Durability degraded: 6 of 6 sessions above 10% decoupling"
     ],
     "governor": "tsb",
@@ -241,7 +241,7 @@
     "operational_state": "load_accepting",
     "reasoning": [
       "TSB -6.0 falls in band 'neutral' (primary governor)",
-      "HRV/TSB divergence flagged; TSB retained as governor",
+      "HRV/TSB divergence noted for visibility; TSB retained as sole governor, no HRV-based gating applied",
       "Operational state: 'load_accepting'"
     ]
   },
