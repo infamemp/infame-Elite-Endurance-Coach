@@ -285,7 +285,8 @@ def build_athlete_sheet(wb, aid, name, summary_row, master_profile):
     if w_rec:
         f  = clean_n(w_rec.get("ctl"))
         a  = clean_n(w_rec.get("atl"))
-        fm = clean_n(w_rec.get("tsb"))
+        tsb_raw = w_rec.get("tsb")
+        fm = (f - a) if tsb_raw is None else clean_n(tsb_raw)
         rr = clean_n(w_rec.get("rampRate"))
     else:
         # Fallback: valores del athlete-summary (pueden diferir levemente)
@@ -561,16 +562,26 @@ def main():
         print("❌ No athletes found.")
         sys.exit(1)
 
-    # Deduplicate by athlete_id
-    seen_ids, deduped = set(), []
+    # Fusionar duplicados por athlete_id — el API devuelve hasta 2 filas por atleta.
+    # Se toma como primaria la fila con mayor fitness (más reciente); la secundaria
+    # rellena solo los campos que el primario tenga en None. Sin warnings: es
+    # comportamiento esperado del endpoint.
+    seen: dict = {}
     for s in summary_list:
         aid = s.get("athlete_id")
-        if aid and aid not in seen_ids:
-            seen_ids.add(aid)
-            deduped.append(s)
-        elif aid in seen_ids:
-            print(f"  ⚠️  Duplicate skipped: {s.get('athlete_name')} ({aid})")
-    summary_list = deduped
+        if not aid:
+            continue
+        if aid not in seen:
+            seen[aid] = dict(s)
+        else:
+            existing = seen[aid]
+            f_new      = s.get("fitness") or 0
+            f_existing = existing.get("fitness") or 0
+            primary, secondary = (s, existing) if f_new > f_existing else (existing, s)
+            merged = dict(secondary)
+            merged.update({k: v for k, v in primary.items() if v is not None})
+            seen[aid] = merged
+    summary_list = list(seen.values())
     print(f"   ✓ {len(summary_list)} unique athletes")
 
     print("📥 Indexing profiles...")
