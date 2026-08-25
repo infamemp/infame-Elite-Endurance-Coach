@@ -3,7 +3,7 @@
 [Methodology]: carmichael
 [Discipline]: trainer
 [Focus]: SteadyState
-[Duration] 01:00:00 | [Estimated TSS] pending
+[Duration] 01:00:00| [Estimated TSS] pending
 
 ```text
 Warmup

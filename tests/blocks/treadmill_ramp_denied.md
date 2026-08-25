@@ -4,7 +4,7 @@
 [Methodology]: daniels
 [Discipline]: treadmill
 [Focus]: Ramp Test
-[Duration] 00:30:00 | [Estimated TSS] pending
+[Duration] 00:30:00| [Estimated TSS] pending
 
 ```text
 Warmup
