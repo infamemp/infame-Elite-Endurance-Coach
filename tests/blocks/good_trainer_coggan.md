@@ -3,7 +3,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: VO2 Max
-[Duration] 01:00:00 | [Estimated TSS] 50
+[Duration] 01:00:00| [Estimated TSS] 50
 
 ```text
 Warmup

@@ -337,6 +337,11 @@ BLOCK_CASES = [
     # Carmichael anchors on his own field test, not on threshold. A block written
     # on the threshold scale must still match his zones, via the declared factor.
     ("carmichael_ss.md", 0, []),
+    # A real Infame delivery, pasted exactly as the coach receives it -- missing
+    # code fences, a Duration with "(estimado)" and a leading ~, a Rest day with
+    # "--" as methodology, and a race session titled with a bare distance line.
+    # None of this should require manual cleanup before validating.
+    ("vianey_raw_unfixed.md", 0, []),
 ]
 
 

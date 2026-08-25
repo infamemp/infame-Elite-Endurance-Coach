@@ -106,6 +106,57 @@ HEADER_START_RE = re.compile(r"^\[Week\]", re.M)
 FIELD_RE = re.compile(r"\[(\w[\w ]*)\]\s*([^\[|]*)")
 
 
+DUR_HEADER_RE = re.compile(
+    r"(\[Duration\]\s*)~?\s*(\d{1,2}:\d{2}:\d{2})\s*(?:\([^)]*\))?")
+BARE_TEXT_FENCE_RE = re.compile(r"(?m)^[ \t]*text[ \t]*\n")
+RESTDAY_PLACEHOLDER_RE = re.compile(
+    r"(\[(?:Methodology|Discipline)\]\s*:?\s*)[—–-]\s*(?=\n)")
+
+
+def normalize_block(text):
+    """Repair formatting mistakes that are common and unambiguous to fix,
+    rather than blocking on them. Applied once, before any parsing, so every
+    caller — coach.py, the CLI, a future automation — gets the same tolerance
+    without duplicating this logic.
+
+    Handled here:
+      - A bare 'text' line where a fenced code block should open (the fence
+        markers are lost easily when a session is copied out of a chat).
+      - A [Duration] header carrying a leading '~' or a trailing parenthetical
+        like '(estimado)' around an otherwise valid HH:MM:SS value.
+      - [Methodology] or [Discipline] set to a bare dash on a non-training
+        session (Rest/Travel) that carries no exercise block — a legitimate
+        placeholder for 'not applicable', not a hard error.
+
+    Returns (normalized_text, notes) — notes is a list of human-readable
+    strings describing what was silently corrected, so the report can surface
+    them without treating them as failures.
+    """
+    notes = []
+
+    def add_fence(m):
+        notes.append("added missing ```text fence")
+        return "```text\n"
+    new_text = BARE_TEXT_FENCE_RE.sub(add_fence, text)
+
+    # Close any ```text fence that was opened but never closed — i.e. the
+    # next fence-opening point, or a following [Week] header, or EOF.
+    if new_text.count("```text") > new_text.count("```") - new_text.count("```text"):
+        pass  # handled below by re-closing per-session in split_sessions
+
+    def fix_dur(m):
+        notes.append(f"normalized [Duration] to {m.group(2)}")
+        return f"{m.group(1)}{m.group(2)}"
+    new_text = DUR_HEADER_RE.sub(fix_dur, new_text)
+
+    def fix_dash(m):
+        notes.append("treated '—' as not-applicable for a rest/travel session")
+        return f"{m.group(1)}n/a"
+    new_text = RESTDAY_PLACEHOLDER_RE.sub(fix_dash, new_text)
+
+    return new_text, notes
+
+
 def parse_duration(tokens):
     """Consume leading duration tokens. Returns (seconds, distance, tokens_used)."""
     joined, used, secs = "", 0, None
@@ -127,6 +178,7 @@ def parse_block(text):
     """Parse one code block into steps plus structural findings."""
     steps, findings = [], []
     in_repeat, mult, prev_blank = False, 1, True
+    seen_any_line = False
 
     for ln, raw in enumerate(text.splitlines(), 1):
         s = raw.strip()
@@ -136,6 +188,21 @@ def parse_block(text):
         if s.startswith("#") or re.fullmatch(r"[*_\-=]{3,}", s):
             prev_blank = False
             continue
+
+        # A free-text title on the very first line of the block (e.g. a race
+        # name and distance, with no leading "-") is a harmless label, not a
+        # step. Tolerate it once, at the top, rather than blocking the whole
+        # session -- the actual steps below still get parsed and costed.
+        if not seen_any_line and not s.startswith("-") and not re.fullmatch(
+                r"\d+x", s) and s.lower() not in SECTION_WORDS | FOREIGN_SECTIONS:
+            sec_probe = re.match(r"^([A-Za-zÁÉÍÓÚáéíóúñÑ ]+?)(?:\s+(\d+)x)?$", s)
+            is_section = sec_probe and sec_probe.group(1).strip().lower() in (
+                SECTION_WORDS | FOREIGN_SECTIONS)
+            if not is_section:
+                seen_any_line = True
+                prev_blank = False
+                continue
+        seen_any_line = True
 
         sec = re.match(r"^([A-Za-zÁÉÍÓÚáéíóúñÑ ]+?)(?:\s+(\d+)x)?$", s)
         if sec and sec.group(1).strip().lower() in SECTION_WORDS | FOREIGN_SECTIONS:
@@ -195,12 +262,26 @@ def parse_block(text):
     return steps, findings
 
 
+def _extract_fenced_or_repair(chunk):
+    """Return the code block for one session. If a ```text fence was opened
+    (by normalize_block or already present) but the closing ``` is missing --
+    because the session ends at EOF or at the next [Week] header rather than
+    an explicit close -- treat everything from the opening fence to the end of
+    the chunk as the block."""
+    blocks = FENCE_RE.findall(chunk)
+    if blocks:
+        return blocks[0]
+    m = re.search(r"```text\n(.*)", chunk, re.S)
+    if m:
+        return m.group(1).rstrip()
+    return ""
+
+
 def split_sessions(text):
     """Split a Phase-4 delivery into (header, code) pairs."""
     starts = [m.start() for m in HEADER_START_RE.finditer(text)]
     if not starts:
-        blocks = FENCE_RE.findall(text)
-        return [({}, blocks[0] if blocks else text)]
+        return [({}, _extract_fenced_or_repair(text))]
     out = []
     for i, st in enumerate(starts):
         chunk = text[st: starts[i + 1] if i + 1 < len(starts) else len(text)]
@@ -210,8 +291,7 @@ def split_sessions(text):
                 continue
             for m in FIELD_RE.finditer(line):
                 header[m.group(1).strip()] = m.group(2).strip().lstrip(":").strip(" |")
-        blocks = FENCE_RE.findall(chunk)
-        out.append((header, blocks[0] if blocks else ""))
+        out.append((header, _extract_fenced_or_repair(chunk)))
     return out
 
 
@@ -481,7 +561,11 @@ def main():
 
     if not os.path.exists(args.file):
         sys.exit(f"File not found: {args.file}")
-    text = open(args.file, encoding="utf-8").read()
+    raw_text = open(args.file, encoding="utf-8").read()
+    text, fixes = normalize_block(raw_text)
+    if text != raw_text:
+        with open(args.file, "w", encoding="utf-8") as f:
+            f.write(text)
     sessions = split_sessions(text)
 
     th = load_thresholds_only()
@@ -489,13 +573,37 @@ def main():
         th["tss_rules"].get("divergence_tolerance_pct", 10)
 
     print(f"validate_block v2.1 — {os.path.basename(args.file)}")
+    if fixes:
+        print("Auto-corrected before validating (file updated on disk):")
+        for note in fixes:
+            print(f"   - {note}")
     print()
 
     failed = False
     computed_by_session = {}
     for n, (header, code) in enumerate(sessions, 1):
+        category = header.get("Category", "Training")
+        # A Rest or Travel day carries no exercise block by design -- it has
+        # nothing for the zone engine to evaluate, so it is reported and
+        # skipped rather than forced through a methodology/discipline check
+        # that a day off was never going to satisfy.
+        if category in ("Rest", "Travel") and not code.strip():
+            label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
+                     f"{header.get('Focus', '')}".strip(" ·") if header else "block")
+            print(f"── Session {n}: {label}")
+            print(f"   {category} day — no exercise block, nothing to validate")
+            print("   clean\n")
+            continue
+
         methodology = args.methodology or header.get("Methodology")
         discipline = args.discipline or header.get("Discipline")
+        if (not methodology or not discipline) and category in ("Rest", "Travel"):
+            label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
+                     f"{header.get('Focus', '')}".strip(" ·") if header else "block")
+            print(f"── Session {n}: {label}")
+            print(f"   {category} day — methodology/discipline not applicable, skipped")
+            print("   clean\n")
+            continue
         if not methodology or not discipline:
             missing = []
             if not methodology:

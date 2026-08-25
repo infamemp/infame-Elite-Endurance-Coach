@@ -3,7 +3,7 @@
 [Methodology]: coggan
 [Discipline]: road
 [Focus]: Threshold
-[Duration] 01:10:00 | [Estimated TSS] 90
+[Duration] 01:10:00| [Estimated TSS] 90
 
 ```text
 Calentamiento

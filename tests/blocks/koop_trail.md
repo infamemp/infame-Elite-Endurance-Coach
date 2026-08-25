@@ -3,7 +3,7 @@
 [Methodology]: koop
 [Discipline]: trail
 [Focus]: Aerobic Endurance
-[Duration] 01:15:00 | [Estimated TSS] 70
+[Duration] 01:15:00| [Estimated TSS] 70
 
 ```text
 Warmup
