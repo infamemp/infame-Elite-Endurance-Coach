@@ -7,6 +7,10 @@ This manual covers **operational use**. For internal architecture, see
 `ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`, and `IMPROVEMENT_BACKLOG.md`
 at the repo root — this document complements those, it does not replace them.
 
+> `WORKFLOW_CHECKLIST.md` specifically covers system setup, maintenance
+> (editing `config/`/`engine/`, regression tests), and adding a coaching
+> methodology. This document covers the day-to-day athlete workflow.
+
 ---
 
 ## 0. Before you start — requirements on each machine
