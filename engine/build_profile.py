@@ -200,7 +200,7 @@ def render_workouts(events):
     for e in workouts:
         load = e.get("planned_load")
         L.append(f"| {e.get('date', '—')} | {e.get('name') or '—'} | "
-                 f"{e.get('type') or '—'} | {load if load is not None else '—'} | "
+                 f"{e.get('type') or 'Workout'} | {load if load is not None else '—'} | "
                  f"{fmt_sec(e.get('planned_time'))} |")
     L.append("")
     return L
@@ -216,7 +216,7 @@ def render_history(activities, days=28):
     if not recent:
         L.append("No activities in this window.")
         L.append("")
-        return L
+        return L, recent
     L.append("| Date | Name | Sport | Duration | Dist (km) | TSS | IF | "
              "Avg Power (W) | Avg HR | Elev (m) | Decoupling % | EF | VI |")
     L.append("| :--- | :--- | :--- | :--- | ---: | ---: | ---: | "
@@ -261,13 +261,17 @@ def render_context_snapshot(events, recent_activities, days=28):
     L.append(f"**Avg weekly TSS ({days // 7}w):** {total_load / weeks:.0f}")
     L.append(f"**Avg weekly hours ({days // 7}w):** {total_secs / 3600 / weeks:.1f} h")
 
-    group_secs = {}
+    # Distribution by activity count, not time or load — matches the metric
+    # the old Excel export used (verified: 13 Cycling / 11 Running of 24
+    # activities reproduces its exact 54%/46% for this same athlete/window).
+    group_count = {}
     for a in recent_activities:
         grp = SPORT_GROUP.get(a.get("type"), a.get("type") or "Other")
-        group_secs[grp] = group_secs.get(grp, 0) + (a.get("moving_time") or 0)
-    if total_secs:
-        parts = [f"{g} {secs / total_secs * 100:.0f}%"
-                 for g, secs in sorted(group_secs.items(), key=lambda kv: -kv[1])]
+        group_count[grp] = group_count.get(grp, 0) + 1
+    total_count = sum(group_count.values())
+    if total_count:
+        parts = [f"{g} {n / total_count * 100:.0f}%"
+                 for g, n in sorted(group_count.items(), key=lambda kv: -kv[1])]
         L.append(f"**Sport distribution ({days // 7}w):** " + " · ".join(parts))
     L.append("")
     return L
