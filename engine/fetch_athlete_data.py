@@ -24,7 +24,10 @@ Options:
 
 Requires the ICU_API_KEY environment variable.
 
-Version: 1.0
+Version: 1.1 — profile now also carries age, city, country, per-sport pace
+units and eFTP (from the cached athlete-summary.json row); events now carry
+distance. Added to retire intervals_export.py + convert.py from the daily
+workflow, so athlete_data.json alone can supply everything the old Excel did.
 """
 
 import argparse
@@ -62,6 +65,10 @@ CURVE_METRES = [400, 1000, 5000, 10000, 21097]
 CURVE_WINDOWS = ["42d", "90d", "1y"]
 
 SESSION = None
+
+# Populated by list_athletes() — the merged athlete-summary.json row per id,
+# so fetch_profile() can read eFTP-by-category without a second API call.
+_SUMMARY_CACHE = {}
 
 
 def make_session():
@@ -290,6 +297,7 @@ def fetch_events(aid):
             "name": e.get("name"),
             "category": e.get("category"),
             "type": e.get("type"),
+            "distance": e.get("distance"),
             "planned_load": e.get("icu_training_load") or e.get("training_load"),
             "planned_time": e.get("moving_time"),
             "priority": e.get("race_category") or e.get("priority"),
@@ -298,29 +306,69 @@ def fetch_events(aid):
     return out
 
 
-def fetch_profile(aid):
-    """Static profile and per-sport settings: FTP, LTHR, threshold pace, zones."""
+def calc_age(dob_str):
+    """Age in years from an ISO date string (icu_date_of_birth). None if
+    missing or unparseable — this is optional context, never blocking."""
+    if not dob_str:
+        return None
+    try:
+        dob = date.fromisoformat(dob_str[:10])
+    except (ValueError, TypeError):
+        return None
+    today = date.today()
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
+def eftp_by_category(summary_row):
+    """eFTP per sport category (Ride/Run/Swim) from athlete-summary.json's
+    byCategory block. Same source and shape intervals_export.py already
+    reads — kept identical so the two scripts never disagree."""
+    out = {}
+    for bc in (summary_row or {}).get("byCategory") or []:
+        cat = bc.get("category", "")
+        if cat:
+            out[cat] = {"eftp": bc.get("eftp"), "eftp_per_kg": bc.get("eftpPerKg")}
+    return out
+
+
+def fetch_profile(aid, summary_row=None):
+    """Static profile and per-sport settings: FTP, LTHR, threshold pace,
+    pace units, zones, eFTP. summary_row (from list_athletes()'s cache)
+    supplies eFTP-by-category — falls back to _SUMMARY_CACHE if not passed
+    explicitly, so existing callers get it with no change on their side."""
     a = get(f"/athlete/{aid}", optional=True) or {}
+    summary_row = summary_row or _SUMMARY_CACHE.get(aid) or {}
+    eftp_map = eftp_by_category(summary_row)
+
     sports = []
     for s in a.get("sportSettings", []) or []:
+        types = s.get("types") or []
+        eftp_entry = next((eftp_map[c] for c in types if c in eftp_map), None)
         sports.append({
-            "types": s.get("types"),
+            "types": types,
             "ftp": s.get("ftp"),
             "indoor_ftp": s.get("indoor_ftp"),
             "lthr": s.get("lthr"),
             "max_hr": s.get("max_hr"),
             "threshold_pace": s.get("threshold_pace"),
+            "pace_units": s.get("pace_units"),
             "w_prime": s.get("w_prime"),
             "power_zones": s.get("power_zones"),
             "hr_zones": s.get("hr_zones"),
             "pace_zones": s.get("pace_zones"),
+            "eftp": eftp_entry.get("eftp") if eftp_entry else None,
+            "eftp_per_kg": eftp_entry.get("eftp_per_kg") if eftp_entry else None,
         })
     return {
         "id": aid,
         "name": a.get("name"),
         "sex": a.get("sex"),
+        "dob": a.get("icu_date_of_birth"),
+        "age": calc_age(a.get("icu_date_of_birth")),
         "weight": a.get("icu_weight") or a.get("weight"),
         "height": a.get("height"),
+        "city": a.get("city"),
+        "country": a.get("country"),
         "resting_hr": a.get("icu_resting_hr") or a.get("resting_hr"),
         "timezone": a.get("timezone"),
         "sport_settings": sports,
@@ -332,14 +380,34 @@ def fetch_profile(aid):
 # ══════════════════════════════════════════════════════════════════
 
 def list_athletes():
+    """Every athlete on the account, as (id, name) pairs.
+
+    athlete-summary.json can return up to two rows per athlete_id with
+    different fields populated — the same quirk already fixed in
+    intervals_export.py. Rows are merged the same way: the row with the
+    higher fitness value is primary, the other fills only what the primary
+    is missing. The merged row is cached per id so fetch_profile() can read
+    eFTP-by-category from it without a second API call."""
     summary = get("/athlete/0/athlete-summary.json") or []
-    seen, out = set(), []
+    merged = {}
     for s in summary:
         aid = s.get("athlete_id")
-        if aid and aid not in seen:
-            seen.add(aid)
-            out.append((aid, s.get("athlete_name", "—")))
-    return out
+        if not aid:
+            continue
+        if aid not in merged:
+            merged[aid] = dict(s)
+        else:
+            existing = merged[aid]
+            f_new = s.get("fitness") or 0
+            f_existing = existing.get("fitness") or 0
+            primary, secondary = (s, existing) if f_new > f_existing else (existing, s)
+            row = dict(secondary)
+            row.update({k: v for k, v in primary.items() if v is not None})
+            merged[aid] = row
+
+    _SUMMARY_CACHE.clear()
+    _SUMMARY_CACHE.update(merged)
+    return [(aid, row.get("athlete_name", "—")) for aid, row in merged.items()]
 
 
 def fetch_one(aid, name, days, outdir):
