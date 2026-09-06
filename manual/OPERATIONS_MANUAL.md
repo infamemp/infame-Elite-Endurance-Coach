@@ -212,7 +212,46 @@ copy it.
 
 ---
 
-## 9. Macrocycle close / race debrief (Phase 6)
+## 9. Measuring what a block actually did
+
+**Command:**
+```
+python coach.py review <id> --since <block start date>
+```
+
+**What it does:**
+- Compares CTL/ATL/TSB, ACWR, and durability (median decoupling) between
+  the given date and today — all reconstructable from the 180-day pull
+  `coach.py prep` already fetches, so this works immediately, for any
+  athlete, no waiting required
+- Compares power/pace curve anchors between a dated snapshot near that date
+  and today's curves — see below for why this one takes time to become useful
+- Folds in any `#RACE_RESULT` entries from `out/<athlete_name>/race_notes.md`
+  whose date falls inside the window
+- Writes `out/<athlete_name>/review.md`
+
+**Why curve progression needs patience.** Intervals.icu's curve endpoint
+only ever returns the best value in a window as of *today* — never a
+historical one. `coach.py prep` now saves a dated snapshot
+(`data/<id>/history/<date>.json`) every time it runs, specifically so this
+comparison becomes possible later. Until enough time has passed since
+snapshot capture started, this section will honestly say so instead of
+faking a number:
+```
+No curve history yet for this athlete — snapshot capture started with
+the first `coach.py prep` run after this feature shipped.
+```
+That's expected, not a bug — it clears up on its own as `prep` keeps running.
+
+**Recording a race result.** After a race debrief in Phase 6, the coach
+emits a `#RACE_RESULT` block (see the prompt's Phase 6). Append it — never
+overwrite — to `out/<athlete_name>/race_notes.md`. A season can have
+several races; `review` only pulls in the ones whose date falls inside the
+`--since` window you asked for.
+
+---
+
+## 10. Macrocycle close / race debrief (Phase 6)
 
 When the macrocycle's final block ends (usually after the A-race), the
 coach enters Phase 6:
@@ -227,7 +266,7 @@ coach enters Phase 6:
 
 ---
 
-## 10. Maintenance — keeping machines in sync, running tests
+## 11. Maintenance — keeping machines in sync, running tests
 
 **Any time you edit something in `config/` or `engine/`:**
 ```
@@ -253,21 +292,23 @@ visibility.
 
 ---
 
-## 11. Common issues
+## 12. Common issues
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | `Missing environment variable ICU_API_KEY` | Not set in this terminal/machine | `setx ICU_API_KEY "your_key"`, open a new terminal |
 | `Athlete 'iXXXXXX' not found` | Typo in the id, or not a coach for this athlete | `python coach.py prep --list` to see real ids |
 | `config/athletes/iXXXXXX.yaml already exists` | This athlete was already onboarded | Edit the existing YAML directly, don't use `new` again |
-| Avg Power showing `—` for power-meter activities | Local copy out of sync with the repo | Repeat step 10 (sync machines) |
+| Avg Power showing `—` for power-meter activities | Local copy out of sync with the repo | Repeat step 11 (sync machines) |
 | `PROFILE BUILD FAILED (non-blocking)` | `build_profile.py` failed, but `state.md` was still delivered | Check the printed error; the chat can proceed with `state.md` alone while you fix it |
 | `note: no continuity.md here yet` | First week for this athlete/block, or it was never saved | Normal in the first case; in the second, request the header from the coach (step 7) |
 | `#STATE` older than 7 days | Haven't run `prep` recently | `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale state |
+| `No data for '<id>'` (on `review`) | Never ran `prep` for this athlete | `python coach.py prep <id>` first — `review` reads `data/<id>/athlete_data.json`, it doesn't fetch |
+| "No curve history yet" (on `review`) | Snapshot capture only just started | Not an error — see section 9. Clears up as `prep` keeps running over time |
 
 ---
 
-## 12. Quick file and folder reference
+## 13. Quick file and folder reference
 
 ```
 infame_elite_endurance_coach/
@@ -292,14 +333,18 @@ infame_elite_endurance_coach/
 ├── data/<id>/                    the engine's internal layer — don't browse by hand
 │   ├── athlete_data.json
 │   ├── state.md / state.json
-│   └── profile.md
+│   ├── profile.md
+│   └── history/<date>.json       dated curve snapshots — feeds `review`'s
+│                                 progression comparison, written by `prep`
 ├── out/<athlete_name>/           what you drag into the Claude Project
 │   ├── state.md
 │   ├── profile.md
-│   └── continuity.md             the only file you write by hand
+│   ├── continuity.md             the only file you write by hand for #SESSION
+│   ├── race_notes.md             #RACE_RESULT blocks, appended by hand
+│   └── review.md                 written by `coach.py review`, not hand-edited
 ├── out/roster.md                 name ↔ id ↔ last-updated table
 ├── tests/
-│   ├── run_tests.py               67 tests — run after any config/engine change
+│   ├── run_tests.py               76 tests — run after any config/engine change
 │   └── make_fixtures.py
 └── Prompt/
     └── infame_elite_endurance_coach.md   the prompt — also lives in the Claude Project
@@ -348,7 +393,7 @@ proven in real practice across your 16–23 athletes.
 
 8. **A dedicated golden test for `build_profile.py`.** The other two engine
    scripts (`fetch_athlete_data.py`, `build_state.py`) are covered by the
-   67-test suite; `build_profile.py` was verified by hand this session but
+   76-test suite; `build_profile.py` was verified by hand this session but
    has no fixture of its own in `tests/`. Adding one would catch a silent
    regression the next time it's touched.
 
@@ -357,7 +402,18 @@ proven in real practice across your 16–23 athletes.
    the `intervals_export.py` drift before it ever touched a real athlete's
    data.
 
-10. **Consider retiring `intervals_export.py` and `convert.py` from the repo
-    entirely** (or moving them to a `legacy/` folder) once the new workflow
-    has run a few weeks in real production — they still sit there today as
-    historical reference, but are no longer part of the daily path.
+10. ~~Consider retiring `intervals_export.py` and `convert.py`~~ — **done**:
+    moved to `legacy/` when the repo was cleaned up (see `RESTORE_POINT_v6.4.md`).
+
+11. **`data/<id>/history/` has no retention limit.** `coach.py prep` writes
+    one dated snapshot per athlete per day it runs. With 16–23 athletes run
+    regularly, this is a slow but unbounded accumulation of small files.
+    Not a problem yet; worth a cap (e.g. keep one per week beyond a year
+    old) before it becomes one.
+
+12. **Scrub `out/`'s brief public-repo exposure from git history.**
+    `git rm --cached` (done) stops future commits from carrying it, but the
+    already-pushed commits from the window the repo was public still
+    contain it until a history rewrite (`git filter-repo` or BFG) is run.
+    Left as your call — low realistic risk given the short window and
+    single-maintainer repo, but not automatically safe.

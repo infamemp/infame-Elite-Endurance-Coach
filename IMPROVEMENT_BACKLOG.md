@@ -1,6 +1,6 @@
 # Improvement Backlog — Infame Elite Endurance Coach
 
-**Written:** 2026-08-22 · **Revised:** 2026-08-23
+**Written:** 2026-08-22 · **Revised:** 2026-09-06
 **Status:** Nothing here is committed work. It is a considered list of where the
 system could go, with honest reasoning about what each item costs and what it is
 worth.
@@ -48,7 +48,44 @@ literature would give, because they would be the coach's own athletes.
 **Add a data-quality flag for missing signals.** The engine reports problems with
 data it has, but says nothing about data it lacks. An athlete with no HRV loses
 the secondary recovery signal; one with no configured W' cannot be assessed for
-anaerobic depth. Both are worth telling the coach.
+anaerobic depth. Both are worth telling the coach. *Update, September:* worth
+auditing which wellness fields (HRV, sleep, respiration, subjective fatigue) are
+actually populated across the real roster before assuming they're absent —
+Intervals.icu's wellness endpoint supports more fields than the fetcher
+currently reads, and "not available" in `#STATE` today conflates "the athlete's
+device doesn't track it" with "the field exists and we never asked for it."
+
+**Cap `data/<id>/history/` retention.** New as of the results module
+(September): `coach.py prep` now writes one dated curve snapshot per athlete
+per run, with no expiry. Not a problem yet at seventeen athletes; worth a cap
+(e.g. keep one per week beyond a year old) before it becomes one.
+
+**Scrub `out/`'s brief public-repo exposure from git history.** The repo was
+made public for review in early September and `out/` — which holds real
+athlete names, ages, weights, and training history — was briefly committed
+before being caught and untracked. `git rm --cached` stops it going forward;
+the already-pushed commits from that window still contain it until a history
+rewrite (`git filter-repo` or BFG) is run. Low realistic risk given the short
+window and that this is a single-maintainer repo, but not automatically safe.
+
+**`User-Agent` header — resolved, no further action needed.** The official API
+guide warns Cloudflare (which fronts Intervals.icu) can silently challenge or
+block requests from bare-Python clients. Added to `fetch_athlete_data.py`'s
+session headers in September. Worth checking any future script that calls the
+API directly does the same.
+
+**Golden-test date drift — resolved, worth remembering why.** The regression
+suite's synthetic fixtures are dated relative to whenever `make_fixtures.py`
+was last run, specifically so they never age out of a rolling window — but
+that guarantee only held if the fixture was regenerated before each
+comparison, and `run_tests.py` never did that. A fixture generated once and
+left on disk silently drifted out of its own 7/28-day ACWR windows as real
+time passed, failing all seven cases identically for a reason unrelated to any
+code change. `run_tests.py` now regenerates every fixture immediately before
+comparing. The lesson generalizes: any test harness that reads "now" is
+exposed to the same class of bug the fixtures were built to avoid against
+athlete data — worth a second look if `longitudinal.py`'s rolling-window
+tests are ever extended.
 
 ---
 
@@ -203,13 +240,49 @@ CP from sea level is not valid at altitude, and one from 18°C is not valid at 2
 The engine records neither. For a coach in Mexico with athletes at varying
 elevations, this is not academic.
 
+**Pull interval-level data for structured sessions.** Intervals.icu's
+`GET /activity/{id}?intervals=true` returns per-interval decoupling, estimated
+CP, zone actually worked, and training load — not just the session aggregate
+Infame reads today. This is the missing piece for two items already on this
+list: it is what would let the engine measure whether a prescribed 4x8' at
+105% was actually executed at 105% (rather than degrading by the third
+repetition), and it is a second, session-level source of estimated CP to
+cross-check against Skiba's W'-balance model above. Costs one API call per
+activity, so worth scoping to sessions with prescribed structure rather than
+every aerobic ride — see the rate-limit note in the September API research if
+this is pursued.
+
 ---
 
 ## 5. Workflow and automation
 
-**Package the engine as a single command.** `coach.py prepare --athlete <id>`
-running fetch and build together, per the original architecture document. Small,
-and it removes a step from every day.
+**Package the engine as a single command — resolved, September.** `coach.py
+prep <id>` runs fetch, state resolution, and profile rendering together, per
+the original architecture document — `new` and `check` joined it as the
+onboarding and verification shortcuts. Removed a step from every day, as
+predicted.
+
+**Upload verified blocks via the Intervals.icu API.** The last manual step in
+the daily loop. `POST /api/v1/athlete/{id}/events/bulk?upsert=true` accepts
+the coach's native workout-description syntax directly — no format
+conversion needed — and an `external_id` makes it idempotent: re-uploading a
+corrected block updates it instead of duplicating it, which today requires
+deleting by hand in Intervals.icu. A secondary benefit: Intervals computes
+its own TSS from the same description on upload, which is a free,
+independent check against the verifier's — if they disagree systematically,
+that is worth investigating on its own. Natural fit as a `coach.py push`
+subcommand once `check` has passed.
+
+**A dedicated MCP server exposing this engine — scoped, deferred in favor of
+the results module, September.** Not a generic wrapper around the raw
+Intervals.icu API — several already exist and hand the model unresolved
+data, reintroducing exactly the interpretation risk the `#STATE` contract
+exists to prevent. The version worth building exposes the engine's own
+functions as tools (`get_athlete_state`, `get_athlete_profile`,
+`validate_block`, `push_block`, `list_roster`), so the Project could call
+them mid-conversation without losing determinism — closer to a lower-friction
+alternative to dragging files than to the "automate the reasoning layer" item
+below, which is a much larger and different change.
 
 **A `.exe` via PyInstaller.** Double-click instead of a terminal. Cheap to build,
 and it makes the tools usable from a machine without Python installed.
@@ -271,3 +344,12 @@ If it were my decision, in this order:
    genuinely cannot express today.
 5. **Then decide about automation**, with a month of real use informing what
    should stay manual.
+
+**September update on item 1:** real use has started — seventeen athletes,
+several weeks. It has already done exactly what real use is supposed to do:
+surfaced a silently-broken Avg Power field the Excel pipeline never caught,
+a dormant date-drift bug in the golden-test fixtures, and confirmed the
+wellness-field question above is worth an actual audit rather than an
+assumption. None of that would have surfaced from reasoning about the system
+in the abstract. Items 2 through 5 are unaffected by this and remain open in
+the order above.

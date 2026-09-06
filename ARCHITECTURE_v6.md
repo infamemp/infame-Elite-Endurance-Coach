@@ -1,8 +1,32 @@
 # ARCHITECTURE — Infame Elite Endurance Coach v6
 
 **Status:** Design. Not yet implemented.
-**Baseline:** `v5.1-stable` (see `RESTORE_POINT_v5.1.md`)
+**Baseline:** `v5.1-stable` (see `archive/RESTORE_POINT_v5.1.md`)
 **Date:** 2026-08-18
+
+> **Implementation note (2026-09-06):** this is the original design document,
+> kept as written. The built system follows its layer model and contracts
+> exactly, but diverged on naming and a few mechanics as it was actually
+> built:
+> - The single entry point is `coach.py prep` / `new` / `check` — not
+>   `prepare` / `verify` / `upload` / `validate-config` / `build-project-files`
+>   as sketched in §5 and §6.
+> - The fetcher is `engine/fetch_athlete_data.py`, not `intervals_client.py`.
+>   The state resolver is `engine/build_state.py`, not `training_state.py` +
+>   `pmc_forecast.py`. There is no separate `power_curve.py` or
+>   `durability.py` — both live inside `engine/longitudinal.py`.
+> - A fourth output, `engine/build_profile.py` → `profile.md`, was added
+>   later (v6.3) for raw athlete context; it isn't in the §4 layout below.
+> - Delivery to the Claude Project is a folder, `out/<athlete_name>/`, not a
+>   single "context pack" file.
+> - A results module (v6.4) — `coach.py review`, dated curve snapshots, and
+>   a `#RACE_RESULT` block emitted by the prompt — was added after this
+>   design was written; the design's four layers held without modification.
+>
+> For what actually exists today, read `README.md` and the current
+> `RESTORE_POINT_v6.*.md` in `archive/` (or the repo root, whichever is
+> newest) — not this file's §4 and §5. The goal, the layer model, and the
+> contracts in §1–3 still hold exactly as designed.
 
 ---
 

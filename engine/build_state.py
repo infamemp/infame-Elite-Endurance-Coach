@@ -135,14 +135,20 @@ def hrv_signal(data, thresholds):
     }
 
 
-def acwr_signal(data):
+def acwr_signal(data, as_of=None):
     """Acute:chronic workload ratio. Acute is the last 7 days of training load;
-    chronic is the average 7-day load across the last 28."""
+    chronic is the average 7-day load across the last 28.
+
+    as_of anchors the two windows at a date other than today, so a past
+    block's ACWR can be reconstructed from the same 180-day activities pull
+    fetch_athlete_data.py already retrieves — no separate history needed for
+    this signal, unlike curve progression. Defaults to today, preserving the
+    exact behavior every existing caller and golden test already relies on."""
     acts = data.get("activities", [])
     if not acts:
         return {"available": False, "reason": "no activities"}
 
-    today = date.today()
+    today = as_of or date.today()
     def load_between(start, end):
         return sum(a.get("training_load") or 0 for a in acts
                    if a.get("date") and start <= d(a["date"]) <= end)

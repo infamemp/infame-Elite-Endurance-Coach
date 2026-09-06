@@ -189,6 +189,16 @@ coach resumes at Phase 5 and recalibrates.
 **D3.** It will ask for what the engine cannot know: compliance, how the sessions
 felt, any niggles. That qualitative half is yours.
 
+**D4 (optional).** To see what actually moved during the block, before or
+after the recalibration conversation:
+```
+python coach.py review <athlete_id> --since <block start date>
+```
+Compares CTL/ATL/TSB, ACWR, and durability against today, and curve
+progression once enough snapshot history exists (see `IMPROVEMENT_BACKLOG.md`
+and `RESTORE_POINT_v6.4.md` for how that history accumulates). Writes
+`out/<athlete_name>/review.md`.
+
 ---
 
 ## E — Changing the system
@@ -287,6 +297,7 @@ gitignored file. Tests must only rely on what is committed.
 | Prepare every athlete | `python coach.py prep --all` |
 | List athletes / refresh roster | `python coach.py prep --list` |
 | Verify a block and fill TSS | `python coach.py check <file>` |
+| Compare an athlete's signals since a past date | `python coach.py review <id> --since <date>` |
 | Pull data only | `python engine\fetch_athlete_data.py --athlete <id>` |
 | Resolve state only | `python engine\build_state.py --athlete <id>` |
 | Render profile only | `python engine\build_profile.py --athlete <id>` |

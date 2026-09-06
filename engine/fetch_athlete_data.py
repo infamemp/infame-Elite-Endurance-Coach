@@ -74,8 +74,16 @@ _SUMMARY_CACHE = {}
 def make_session():
     s = requests.Session()
     token = base64.b64encode(f"API_KEY:{API_KEY}".encode()).decode()
-    s.headers.update({"Authorization": f"Basic {token}",
-                      "Accept": "application/json"})
+    s.headers.update({
+        "Authorization": f"Basic {token}",
+        "Accept": "application/json",
+        # Cloudflare (which fronts Intervals.icu) can challenge or block
+        # requests from bare Python clients. A browser-shaped User-Agent
+        # avoids that — see forum.intervals.icu/t/api-access-to-intervals-icu/609
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/128.0.0.0 Safari/537.36"),
+    })
     return s
 
 
