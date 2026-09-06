@@ -39,7 +39,7 @@ authoritative. The model prescribes on top of it and never recalculates it.
   constraint, recomputing TSS from the same config the engine uses. A block that
   fails is not uploaded.
 - **`generated/`** — zone tables built from `config/`, never hand-edited.
-- **`tests/`** — 75 regression tests over synthetic athletes with frozen expected
+- **`tests/`** — 76 regression tests over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
 - **`Knowledge/`** — 8 book-derived knowledge bases.
@@ -47,15 +47,22 @@ authoritative. The model prescribes on top of it and never recalculates it.
 ### Daily use
 
 ```
-python engine/fetch_athlete_data.py --athlete <id>
-python engine/build_state.py --athlete <id>
-# paste state.md into the Claude Project, design the block in conversation
-python verify/validate_block.py <file> --fill-tss
+python coach.py prep <id>
+# drag out/<athlete_name>/ (state.md, profile.md, continuity.md if present)
+# into the Claude Project, design the block in conversation
+python coach.py check <file>
 ```
 
-Full step-by-step in `WORKFLOW_CHECKLIST.md`. Architecture rationale in
-`ARCHITECTURE_v6.md`. Current state and open items in `RESTORE_POINT_v6.2.md`.
-Where the project could go next: `IMPROVEMENT_BACKLOG.md`.
+Onboarding a new athlete: `python coach.py new <id>`. Measuring what a block
+actually did: `python coach.py review <id> --since <date>` — compares
+CTL/ATL/TSB, ACWR, durability, and (once enough history has accumulated)
+curve progression between two dates, folding in `race_notes.md` if present.
+Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
+workflow) and `WORKFLOW_CHECKLIST.md` (system setup, maintenance, adding a
+methodology). Architecture rationale in `ARCHITECTURE_v6.md`. Current state
+and open items in the newest `RESTORE_POINT_v6.*.md` (root or `archive/`,
+whichever is most recent). Where the project could go next:
+`IMPROVEMENT_BACKLOG.md`.
 
 ---
 
@@ -94,25 +101,70 @@ Defaults that keep the engine's output consistent and portable:
 ## 🗂️ Repository Structure
 
 ```
+coach.py         single entry point: prep / new / check
 config/          authors, athletes, schema, thresholds, TSS classes, power profile
-engine/          fetch, state resolution, longitudinal analysis, power profile
+engine/          fetch, state resolution, profile rendering, longitudinal analysis
 verify/          the hard-constraint gate
 generated/       zone tables built from config — never hand-edited
+out/             per-athlete state.md/profile.md/continuity.md — what you drag
+                 into the Claude Project; out/roster.md lists every athlete
 tests/           fixtures, golden baselines, the regression runner
 Prompt/          the coach system prompt, with dated archive
 Knowledge/       8 book-derived methodology KBs
 Syntax/          Intervals.icu workout builder reference
+manual/          OPERATIONS_MANUAL.md + QUICK_GUIDE.md (English) and their
+                 Spanish counterparts
+legacy/          retired scripts (pre-coach.py Excel pipeline), kept for reference
+archive/         older RESTORE_POINT_*.md and Prompt versions
 ```
 
-Not in version control: `data/` (athlete data pulled from Intervals.icu), real
-athlete profiles, spreadsheets, and generated athlete documents. The Intervals.icu
-API key lives in the `ICU_API_KEY` environment variable, never in code.
+Not in version control: `data/` and `out/` (athlete data pulled from
+Intervals.icu and what's rendered from it), real athlete profiles,
+spreadsheets, and generated athlete documents. The Intervals.icu API key
+lives in the `ICU_API_KEY` environment variable, never in code.
 
 ---
 
 ## 🔄 Changelog
 
-**v6 — deterministic engine architecture (current)**
+**v6.4 — results module (current)**
+
+The system could generate and verify plans but never measured whether they
+worked. What changed:
+
+- **`coach.py review`** compares an athlete's signals between any past date
+  and today: CTL/ATL/TSB and ACWR (both fully reconstructable from the
+  180-day pull already fetched — no new data needed), durability, and curve
+  progression (needs a dated snapshot — see next point).
+- **Curve snapshots** are captured on every `coach.py prep`, since
+  Intervals.icu's curves endpoint only ever returns the best value as of
+  today, never a historical one. Progression tracking is only as old as the
+  first snapshot captured after this shipped.
+- **`#RACE_RESULT`** — Phase 6 of the prompt now emits a small saveable block
+  after a race debrief, appended to `out/<athlete>/race_notes.md`, which
+  `review` reads automatically for any race inside the requested window.
+- **A dormant regression-suite bug was found and fixed:** the golden tests'
+  synthetic fixtures are dated relative to whenever `make_fixtures.py` was
+  last run, not to the calendar — so a fixture generated once and left on
+  disk silently drifts out of its own rolling windows as real time passes,
+  failing for reasons unrelated to any code change. `run_tests.py` now
+  regenerates every fixture immediately before comparing, closing the gap
+  for good.
+
+**v6.3 — unified daily workflow**
+
+- **`coach.py`** gained `prep` (fetch + resolve + render in one call,
+  delivered to a named `out/<athlete>/` folder instead of `data/<id>/`),
+  `new` (athlete onboarding), and a live `continuity.md` staleness check.
+  `out/roster.md` gives a name-to-id index across the whole account.
+- **`build_profile.py`** replaced the Excel-based `intervals_export.py` +
+  `convert.py` pipeline for the athlete-facing context document, recovering
+  data the old pipeline silently dropped (Avg Power on every activity).
+- **`#SESSION` can be requested on demand mid-block**, not only at
+  block-end, so an off-calendar consult in a fresh chat has a continuity
+  artifact to resume from.
+
+**v6 — deterministic engine architecture**
 
 Rebuilt around four layers so that computation and judgement stop competing for
 the same pass. What changed:
@@ -128,7 +180,7 @@ the same pass. What changed:
   figure.
 - **A verification gate** checks every generated block against the hard
   constraints before it can reach an athlete.
-- **A regression suite** of 75 tests over synthetic athletes with frozen expected
+- **A regression suite** of 76 tests over synthetic athletes with frozen expected
   outputs.
 - **Non-threshold anchors** declared per author, keeping zones interchangeable
   across methodologies without altering any author's published numbers.
@@ -149,7 +201,7 @@ Any change to `config/` or `engine/` follows the same sequence:
 ```bash
 python build_zone_tables.py validate    # schema-check the authors
 python build_zone_tables.py build       # regenerate the zone tables
-python tests/run_tests.py               # 75 regression tests
+python tests/run_tests.py               # 76 regression tests
 ```
 
 A failing golden test does not automatically mean a bug — it means output

@@ -11,6 +11,7 @@ One-page reference. Full detail in `OPERATIONS_MANUAL.md`.
 | `python coach.py prep --all` | Same, for every athlete on the account |
 | `python coach.py prep --list` | List athletes, refresh `out/roster.md`, fetch nothing |
 | `python coach.py check <file>` | Validate a block and fill its TSS before uploading |
+| `python coach.py review <id> --since <date>` | Compare a block's signals against today |
 
 ## Every new chat with an athlete
 
@@ -35,6 +36,15 @@ No need to re-drag mid-conversation — only when opening a **new** chat.
 1. Coach auto-emits a bordered `#SESSION` after the last session
 2. Copy it into `out/<name>/continuity.md`
 3. `python coach.py prep <id>` before the next chat
+4. Optional: `python coach.py review <id> --since <block start>` to see
+   what actually moved (CTL/ATL/TSB, ACWR, durability work now; curve
+   progression needs snapshot history to accumulate first)
+
+## After a race (Phase 6)
+
+1. Coach emits a `#RACE_RESULT` block during the debrief
+2. Append (never overwrite) it to `out/<name>/race_notes.md`
+3. `review` picks it up automatically for any window that includes that date
 
 ## Golden rules
 
@@ -53,3 +63,5 @@ No need to re-drag mid-conversation — only when opening a **new** chat.
 | `...already exists` (on `new`) | Athlete already onboarded — edit the YAML directly |
 | Avg Power blank on power-meter activities | Machines out of sync — recopy the affected file to both |
 | `note: no continuity.md here yet` | Normal for week 1 of a block — not an error |
+| `No data for '<id>'` (on `review`) | Run `python coach.py prep <id>` first |
+| "No curve history yet" (on `review`) | Not an error — snapshot capture just started, clears up over time |

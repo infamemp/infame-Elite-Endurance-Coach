@@ -12,6 +12,7 @@ Referencia de una página. El detalle completo está en
 | `python coach.py prep --all` | Lo mismo, para todos los atletas de la cuenta |
 | `python coach.py prep --list` | Lista atletas, refresca `out/roster.md`, no descarga nada |
 | `python coach.py check <archivo>` | Valida un bloque y calcula su TSS antes de subirlo |
+| `python coach.py review <id> --since <fecha>` | Compara los indicadores de un bloque contra hoy |
 
 ## Cada chat nuevo con un atleta
 
@@ -38,6 +39,15 @@ chat **nuevo**.
    la última sesión
 2. Cópialo en `out/<nombre>/continuity.md`
 3. `python coach.py prep <id>` antes del siguiente chat
+4. Opcional: `python coach.py review <id> --since <inicio del bloque>` para
+   ver qué se movió de verdad (CTL/ATL/TSB, ACWR y durability ya funcionan;
+   la progresión de curvas necesita que se acumule historial primero)
+
+## Después de una carrera (Fase 6)
+
+1. El coach emite un bloque `#RACE_RESULT` durante el debrief
+2. Agrégalo (nunca reemplaces) a `out/<nombre>/race_notes.md`
+3. `review` lo toma automáticamente para cualquier ventana que incluya esa fecha
 
 ## Reglas de oro
 
@@ -58,3 +68,5 @@ chat **nuevo**.
 | `...already exists` (en `new`) | Ese atleta ya está dado de alta — edita el YAML directo |
 | Avg Power vacío en actividades con medidor | Máquinas desincronizadas — vuelve a copiar el archivo afectado a ambas |
 | `note: no continuity.md here yet` | Normal en la semana 1 de un bloque — no es un error |
+| `No data for '<id>'` (en `review`) | Corre `python coach.py prep <id>` primero |
+| "No curve history yet" (en `review`) | No es un error — la captura apenas empezó, se resuelve con el tiempo |

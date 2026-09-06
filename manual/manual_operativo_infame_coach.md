@@ -207,7 +207,48 @@ el `#SESSION` de cierre, con un borde visual y la instrucción de copiarlo.
 
 ---
 
-## 9. Cierre de macrociclo / debrief de carrera (Fase 6)
+## 9. Medir qué pasó realmente en un bloque
+
+**Comando:**
+```
+python coach.py review <id> --since <fecha de inicio del bloque>
+```
+
+**Qué hace:**
+- Compara CTL/ATL/TSB, ACWR y durability (mediana de decoupling) entre esa
+  fecha y hoy — todo reconstruible desde los 180 días que `coach.py prep`
+  ya descarga, así que funciona de inmediato, para cualquier atleta, sin
+  esperar nada
+- Compara las anclas de curva de potencia/pace entre un snapshot fechado
+  cercano a esa fecha y las curvas de hoy — ver abajo por qué esta parte
+  toma tiempo en ser útil
+- Incorpora cualquier entrada `#RACE_RESULT` de
+  `out/<nombre_atleta>/race_notes.md` cuya fecha caiga dentro de la ventana
+- Escribe `out/<nombre_atleta>/review.md`
+
+**Por qué la progresión de curvas requiere paciencia.** El endpoint de
+curvas de Intervals.icu solo entrega el mejor valor de la ventana **a fecha
+de hoy** — nunca uno histórico. `coach.py prep` ahora guarda un snapshot
+fechado (`data/<id>/history/<fecha>.json`) cada vez que corre, justo para
+que esta comparación sea posible más adelante. Hasta que no pase suficiente
+tiempo desde que empezó la captura, esta sección lo va a decir honestamente
+en vez de inventar un número:
+```
+No curve history yet for this athlete — snapshot capture started with
+the first `coach.py prep` run after this feature shipped.
+```
+Eso es esperado, no un error — se resuelve solo conforme sigas corriendo `prep`.
+
+**Registrar el resultado de una carrera.** Después del debrief de carrera en
+la Fase 6, el coach emite un bloque `#RACE_RESULT` (ver la Fase 6 del
+prompt). Agrégalo — nunca reemplaces — a
+`out/<nombre_atleta>/race_notes.md`. Una temporada puede tener varias
+carreras; `review` solo trae las que caen dentro de la ventana `--since`
+que pediste.
+
+---
+
+## 10. Cierre de macrociclo / debrief de carrera (Fase 6)
 
 Cuando el bloque final del macrociclo termina (normalmente después de la
 carrera A), el coach entra en Fase 6:
@@ -221,7 +262,7 @@ carrera A), el coach entra en Fase 6:
 
 ---
 
-## 10. Mantenimiento — sincronizar máquinas y correr pruebas
+## 11. Mantenimiento — sincronizar máquinas y correr pruebas
 
 **Cada vez que edites algo en `config/` o en `engine/`:**
 ```
@@ -248,21 +289,23 @@ Danger Zone → Change visibility.
 
 ---
 
-## 11. Solución de problemas comunes
+## 12. Solución de problemas comunes
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
 | `Missing environment variable ICU_API_KEY` | No configurada en esta terminal/máquina | `setx ICU_API_KEY "tu_key"`, abre una terminal nueva |
 | `Athlete 'iXXXXXX' not found` | Typo en el ID, o no es coach de ese atleta | `python coach.py prep --list` para ver los IDs reales |
 | `config/athletes/iXXXXXX.yaml already exists` | Ya diste de alta a este atleta antes | Edita el YAML existente, no uses `new` de nuevo |
-| Avg Power en `—` para actividades con medidor | Copia local desincronizada con el repo | Repite el paso 10 (sincronizar máquinas) |
+| Avg Power en `—` para actividades con medidor | Copia local desincronizada con el repo | Repite el paso 11 (sincronizar máquinas) |
 | `PROFILE BUILD FAILED (non-blocking)` | Fallo en `build_profile.py`, pero `state.md` se entregó igual | Revisa el error impreso; el chat puede seguir con solo `state.md` mientras lo arreglas |
 | `note: no continuity.md here yet` | Primera semana de un atleta/bloque, o se te olvidó guardarlo | Normal en el primer caso; en el segundo, pide el header al coach (paso 7) |
 | `#STATE` con más de 7 días | No corriste `prep` recientemente | `python coach.py prep <id>` antes de continuar — el coach se va a negar a avanzar con un estado viejo |
+| `No data for '<id>'` (en `review`) | Nunca corriste `prep` para este atleta | Corre `python coach.py prep <id>` primero |
+| "No curve history yet" (en `review`) | La captura de snapshots apenas empezó | No es un error — se resuelve solo con el tiempo |
 
 ---
 
-## 12. Referencia rápida de archivos y carpetas
+## 13. Referencia rápida de archivos y carpetas
 
 ```
 infame_elite_endurance_coach/
@@ -287,14 +330,19 @@ infame_elite_endurance_coach/
 ├── data/<id>/                    capa interna del motor — no navegar a mano
 │   ├── athlete_data.json
 │   ├── state.md / state.json
-│   └── profile.md
+│   ├── profile.md
+│   └── history/<fecha>.json      snapshots de curvas fechados — alimenta la
+│                                 comparación de progresión de `review`, lo
+│                                 escribe `prep`
 ├── out/<nombre_atleta>/          lo que arrastras al Proyecto de Claude
 │   ├── state.md
 │   ├── profile.md
-│   └── continuity.md             el único archivo que tú escribes a mano
+│   ├── continuity.md             el único archivo que escribes a mano para #SESSION
+│   ├── race_notes.md             bloques #RACE_RESULT, agregados a mano
+│   └── review.md                 lo escribe `coach.py review`, no se edita a mano
 ├── out/roster.md                 tabla nombre ↔ ID ↔ última actualización
 ├── tests/
-│   ├── run_tests.py               67 pruebas — correr tras cualquier cambio a config/engine
+│   ├── run_tests.py               76 pruebas — correr tras cualquier cambio a config/engine
 │   └── make_fixtures.py
 └── Prompt/
     └── infame_elite_endurance_coach.md   el prompt — vive también en el Proyecto de Claude
@@ -344,7 +392,7 @@ práctica real con tus 16–23 atletas.
 
 8. **Golden test específico para `build_profile.py`.** Los otros dos scripts
    del motor (`fetch_athlete_data.py`, `build_state.py`) están cubiertos por
-   la suite de 67 pruebas; `build_profile.py` se verificó a mano en esta
+   la suite de 76 pruebas; `build_profile.py` se verificó a mano en esta
    sesión pero no tiene un fixture propio en `tests/`. Agregarlo evitaría
    una regresión silenciosa si se vuelve a tocar.
 
@@ -353,7 +401,21 @@ práctica real con tus 16–23 atletas.
    habría detectado el desfase de `intervals_export.py` antes de que
    afectara datos reales de un atleta.
 
-10. **Revisar si conviene retirar `intervals_export.py` y `convert.py` del
-    repo por completo** (o moverlos a una carpeta `legacy/`) una vez que el
-    flujo nuevo lleve unas semanas probado en producción real — hoy siguen
-    ahí como referencia histórica, pero ya no son parte del camino diario.
+10. ~~Revisar si conviene retirar `intervals_export.py` y `convert.py`~~ —
+    **hecho**: movidos a `legacy/` en la limpieza del repo (ver
+    `RESTORE_POINT_v6.4.md`).
+
+11. **`data/<id>/history/` no tiene límite de retención.** `coach.py prep`
+    escribe un snapshot fechado por atleta cada día que corre. Con 16–23
+    atletas corriendo seguido, es una acumulación lenta pero sin límite de
+    archivos pequeños. No es un problema todavía; vale la pena ponerle un
+    tope (por ejemplo, quedarte con uno por semana pasado un año) antes de
+    que se vuelva uno.
+
+12. **Limpiar del historial de git la breve exposición pública de `out/`.**
+    `git rm --cached` (ya hecho) evita que futuros commits la carguen, pero
+    los commits ya subidos durante la ventana en que el repo estuvo público
+    todavía la contienen, hasta que se corra una reescritura de historial
+    (`git filter-repo` o BFG). Queda como decisión tuya — riesgo real bajo
+    dado lo breve de la ventana y que eres el único mantenedor, pero no es
+    automáticamente seguro dejarlo así.

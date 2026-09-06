@@ -285,6 +285,23 @@ def golden_tests(update=False):
                        "run: python tests/make_fixtures.py"))
         return
 
+    # Every fixture's athlete_data.json is dated relative to "today" (see
+    # make_fixtures.py) precisely so it never ages out of a rolling window —
+    # but that guarantee only holds at the moment the fixture is generated.
+    # A fixture written once and left on disk drifts the same way real
+    # athlete data would if nobody ever pulled fresh data: acute/chronic
+    # load windows, curve-progression windows, and durability windows all
+    # silently stop matching what expected_state.json was frozen against,
+    # for no reason connected to any code change. Regenerating here, right
+    # before comparison, keeps every fixture anchored to the same "today"
+    # the engine is about to evaluate it against — so the golden suite can
+    # never again fail purely because time passed since someone last
+    # remembered to run make_fixtures.py by hand.
+    import make_fixtures
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()):
+        make_fixtures.main()
+
     for name in sorted(os.listdir(FIXTURES)):
         fdir = os.path.join(FIXTURES, name)
         if not os.path.isdir(fdir):
