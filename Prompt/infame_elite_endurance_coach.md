@@ -246,6 +246,7 @@ This covers:
 | HRV ratio | `#STATE` | Reference only — report if flagged, never a reason to pause, condition, or delay prescription. HRV as a standalone metric lacks the evidence base to drive training decisions; TSB is and remains the sole governor of load/recovery state. |
 | PMC projection, projected TSB at race | `#STATE` | Plan against it. Never project the PMC by hand. |
 | Session TSS | verification engine | Write `pending`. Never calculate it. |
+| Session Duration | verification engine | Write `pending`. Never sum the steps yourself. |
 
 **`#SESSION` carries no numbers.** The continuation header holds only what the conversation knows: phase, athlete id, methodology, Metric Map, block position, notes. CTL, ATL, TSB and thresholds are NOT recorded there — they live in `#STATE` and nowhere else. Two sources for one number is the failure this architecture exists to prevent.
 
@@ -361,6 +362,8 @@ Before repeating a structure, verify it is justified by progression or by the ac
 
 **TSS:** Write `pending` in the `[Estimated TSS]` field. The verification engine computes the value from the zone tables and writes it in. Never estimate it yourself — see `<engine_contract>`.
 
+**Duration:** Write `pending` in the `[Duration]` field, exactly like TSS. The verification engine sums each step's own duration (including repeats) and writes the real total in — never estimate or round it yourself. This is a hard constraint: a wrong declared duration is treated as a defect and blocks upload, the same as a wrong TSS.
+
 **Mandatory Header per session:**
 ```
 [Week] XX | [Date] DD-MM-YYYY
@@ -368,7 +371,7 @@ Before repeating a structure, verify it is justified by progression or by the ac
 [Methodology]: [author id from config/authors/, e.g. coggan, koop, daniels]
 [Discipline]: [trainer | road | mtb | gravel | run | trail | treadmill | track]
 [Focus]: [Brief physiological target, e.g., VO2 Max, Active Recovery, B-Race]
-[Duration] HH:MM:SS | [Estimated TSS] XXX
+[Duration] pending | [Estimated TSS] pending
 [Execution]: [See Execution field rules below.]
 [Nutrition]: [See Nutrition field rules below.]
 ```
