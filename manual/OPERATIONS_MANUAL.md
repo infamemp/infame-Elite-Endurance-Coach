@@ -1,61 +1,111 @@
-# Operations Manual — Infame Elite Endurance Coach v6.1
+# Operations Manual — Infame Elite Endurance Coach
 
-Step-by-step guide to the daily workflow after the September 2026 redesign
-(extended engine + unified `coach.py` + continuity as a file).
+Step-by-step guide to the daily workflow. Written so that someone who has
+never touched this system before can follow it from the first page to
+running their first athlete, without having to already know what a
+terminal, a repository, or a config file is.
 
-This manual covers **operational use**. For internal architecture, see
-`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`, and `IMPROVEMENT_BACKLOG.md`
-at the repo root — this document complements those, it does not replace them.
+This manual covers **operational use** — what you actually do, day to
+day. For internal architecture (why the system is built the way it is),
+see `ARCHITECTURE_v6.md`. For system setup, maintenance, and adding a new
+coaching methodology, see `WORKFLOW_CHECKLIST.md` — that document
+complements this one, it does not repeat it.
 
-> `WORKFLOW_CHECKLIST.md` specifically covers system setup, maintenance
-> (editing `config/`/`engine/`, regression tests), and adding a coaching
-> methodology. This document covers the day-to-day athlete workflow.
+> **Already know the system and just need a fast reminder?** Use
+> `manual/QUICK_GUIDE.md` instead — a one-page cheat sheet that assumes
+> you've read this manual once already.
+
+---
+
+## Before you start — a few things this manual assumes
+
+If any of this is unfamiliar, read this section once. Everything else in
+the manual builds on it.
+
+**"The terminal" / "PowerShell."** This is a program on Windows where you
+type commands instead of clicking buttons. To open it: press the Windows
+key, type `PowerShell`, and press Enter. A black or blue window opens with
+a blinking cursor — that's where every `python ...` command in this
+manual gets typed, one line at a time, followed by Enter.
+
+**"The repo" / "the repository."** This is the whole project folder —
+all the code, configuration files, and documents that make up Infame
+Elite Endurance Coach. You have a copy of it on each of your two
+machines. "Cloning" or "pulling" the repo means downloading that copy
+through GitHub Desktop.
+
+**"Commit" and "push."** When you change a file in the repo, GitHub
+Desktop lets you save that change with a short description (a "commit"),
+and then send it up to GitHub online (a "push") so both your machines —
+and this system's own backup — have the same version. A change that
+only exists on your computer and hasn't been pushed is not safe yet.
+
+**"The Claude Project."** This is a saved conversation space in
+claude.ai, set up once, that already contains the coach's instructions
+and its knowledge base. Every day-to-day conversation with the coach
+happens by opening a new chat *inside* that Project — never a plain,
+unrelated Claude chat.
+
+**"Dragging files into the chat."** Several steps below tell you to
+"drag `state.md` into the Claude Project." This means: open the folder
+where that file lives (in Windows File Explorer), and drag the file's
+icon into the open chat window in your browser or the Claude desktop
+app, the same way you'd attach a file to an email.
+
+**"Athlete config" / "the YAML file."** Each athlete you coach has one
+file, `config/athletes/<their_id>.yaml`, that stores what *they* told you
+about themselves — age, weight, available equipment, methodology
+preferences. It never stores measured numbers like current fitness or
+race history; those come from Intervals.icu automatically every time you
+run `prep` (explained in section 2).
+
+**Command formatting in this manual.** Anything shown like this:
+```
+python coach.py prep i123456
+```
+is meant to be typed into the terminal exactly as written, replacing
+placeholders like `i123456` with the real value for your situation
+(here, an actual athlete id).
 
 ---
 
 ## 0. Before you start — requirements on each machine
 
 This must be in place on **both** machines (laptop and desktop) before
-running anything in this manual:
+running anything else in this manual.
 
-1. `ICU_API_KEY` set as an environment variable
-2. Python installed, with `pip install -r requirements.txt` run (or at least
-   `requests`, `pyyaml`, `openpyxl`)
-3. The repo up to date — same commit on both machines. If you just received
-   a corrected file from a Claude chat, it has to reach **both** paths
-   before you continue:
+1. **Python installed**, with the project's dependencies installed:
+   ```
+   pip install -r requirements.txt
+   ```
+   Run this from the repo's root folder (where `requirements.txt`
+   lives, next to `coach.py`). It installs everything the daily
+   workflow needs: `requests`, `pyyaml`, and `jsonschema`.
+
+2. **`ICU_API_KEY` set as an environment variable** — this is your
+   Intervals.icu API key, stored so the scripts can use it without you
+   typing it every time:
+   ```
+   setx ICU_API_KEY "your_key_here"
+   ```
+   After running this, close the terminal window completely and open a
+   new one — `setx` only takes effect in terminals opened after it runs.
+
+3. **The repo up to date — same commit on both machines.** If you just
+   received a corrected file from a Claude chat, it has to reach **both**
+   paths before you continue:
    ```
    C:\Dev\Github\infame_elite _endurance_coach\
    E:\Dev\github\infame_elite_endurance_coach\
    ```
-   (the space in the laptop's folder name is real, not a typo)
+   (the space in the first path, between `elite` and `_endurance`, is
+   real — it's how that folder was originally named on that machine, not
+   a typo you need to fix)
 
-**Golden rule:** a fix you got from a Claude chat is not "installed" until
-it exists on both machines and is committed to GitHub. A corrected file
-that only lives in the chat download does not count.
-
-**Optional, once per machine, only if you use §10 (the MCP server) on that
-machine:** Claude Desktop must be installed there — the MCP server never
-connects to the browser Project. Then:
-
-1. `python -m pip install "mcp[cli]" pyyaml requests` — use `python -m pip`,
-   not bare `pip`, if the machine has more than one Python install (check
-   with `python -c "import sys; print(sys.executable)"` and
-   `python -m pip show mcp` — they must point to the same install)
-2. Add an `infame-coach` entry to `claude_desktop_config.json` (Claude
-   Desktop → Settings → Developer → Edit Config) with the full path to that
-   machine's `python.exe`, the full path to `mcp_server\server.py`, and an
-   `"env": {"ICU_API_KEY": "..."}` block — Desktop launches this as a
-   separate process that does not reliably inherit the Windows environment
-   variable, even if `setx` already set it for your own terminal sessions
-3. Quit Claude Desktop completely (system tray icon → Quit, not just
-   closing the window) and reopen it
-4. Confirm it connected: the "+" menu in the chat box → Connectors →
-   Manage connectors → "infame-coach" should be listed and toggled on
-
-Each machine's `claude_desktop_config.json` is local to that machine — it
-is not part of the repo and is not synced by git. Repeat this setup on
-each machine separately, with that machine's own Python path.
+**Golden rule:** a fix you got from a Claude chat is not "installed"
+until it exists on both machines and is committed and pushed to GitHub.
+A corrected file that only lives in a chat download, sitting in your
+Downloads folder, does not count yet.
 
 ---
 
@@ -75,19 +125,27 @@ python coach.py new i123456
 - Otherwise, copies the template and creates `config/athletes/i123456.yaml`
 
 **What you do next:**
-1. Open a new chat in the Claude Project
-2. Run the intake conversation using `config/athletes/ATHLETE_INTAKE.md` as
-   the script — the coach conducts it in the athlete's language
+1. Open a new chat in the Claude Project.
+2. Run the intake conversation using `config/athletes/ATHLETE_INTAKE.md`
+   as the script — the coach conducts it in the athlete's language. You
+   don't need to memorize the questions; just have that file open (or
+   drag it into the chat) and let the coach lead.
 3. The coach delivers a completed profile at the end of intake — copy it
-   into `config/athletes/i123456.yaml`, replacing the template
+   into `config/athletes/i123456.yaml`, replacing the template's
+   contents entirely.
 4. Save the file. The athlete is now ready for their first `prep`
+   (section 2).
 
 There is no need to run `prep` as part of onboarding — intake does not
-depend on any Intervals.icu data, only on what the athlete declares.
+depend on any Intervals.icu data, only on what the athlete declares
+about themselves.
 
 ---
 
 ## 2. Prepare one athlete for a session (daily use)
+
+This is the command you'll run most often — once per athlete, before
+every chat where you'll design or discuss their training.
 
 **Command:**
 ```
@@ -95,12 +153,18 @@ python coach.py prep i123456
 ```
 
 **What it does, in order:**
-1. Pulls fresh data from Intervals.icu (`fetch_athlete_data.py`)
-2. Resolves their training state (`build_state.py`) → `state.md`
-3. Renders their raw context (`build_profile.py`) → `profile.md`
-4. Copies both into `out/<athlete_name>/`
-5. Reports whether `continuity.md` exists in that folder, and how old it is
-6. Refreshes `out/roster.md` with this fetch's date
+1. Pulls fresh data from Intervals.icu (wellness, fitness numbers,
+   recent activities, upcoming calendar).
+2. Resolves their current training state into `state.md` — the
+   authoritative numbers the coach will reason from.
+3. Renders their raw context into `profile.md` — everything else about
+   them (profile details, calendar, activity history).
+4. Copies both files into `out/<athlete_name>/` — the folder you'll drag
+   into the chat.
+5. Tells you whether `continuity.md` exists in that folder already, and
+   how many days old it is.
+6. Refreshes `out/roster.md`, a name-to-id list of every athlete, with
+   today's date.
 
 **Expected console output:**
 ```
@@ -109,7 +173,8 @@ continuity.md last updated 3 day(s) ago
 ```
 
 Seeing `note: no continuity.md here yet` is normal for an athlete's first
-week or a new block — it is not an error.
+week, or the start of a new training block — it is not an error, just a
+statement of fact.
 
 ---
 
@@ -120,118 +185,137 @@ week or a new block — it is not an error.
 python coach.py prep --all
 ```
 
-Runs step 2 for every athlete with data on the account. At the end:
+Runs section 2's steps for every athlete with data on your Intervals.icu
+account. At the end:
 ```
 Done. 21/23 athletes ready in out/
 ```
 
-If any athlete fails (for example, an inactive account), the summary tells
-you how many of how many succeeded — check the per-athlete detail printed
-above it for the specific failure.
+If any athlete fails (for example, an inactive account), the summary
+line tells you how many of how many succeeded — scroll up to see the
+per-athlete detail printed above it for the specific reason.
 
-**To see who's who without fetching anything:**
+**To see who's who without downloading anything new:**
 ```
 python coach.py prep --list
 ```
-Lists every athlete (id + name) and regenerates `out/roster.md` with each
-one's real last-fetch date — useful for spotting who's overdue for a
-refresh without running a full prep.
+Lists every athlete (id and name) and regenerates `out/roster.md` with
+each one's real last-fetch date — useful for spotting, at a glance, who
+is overdue for a refresh.
 
 ---
 
 ## 4. What to drag into the Claude Project, and when
 
 When opening a new chat for an athlete, drag the whole `out/<athlete_name>/`
-folder, or the individual files inside it:
+folder, or the individual files inside it, into the chat window:
 
 | File | Always present? | What it is |
 |---|---|---|
-| `state.md` | Yes | Authoritative state — CTL/ATL/TSB, ACWR, longitudinal, testing |
-| `profile.md` | Yes | Raw context — profile, sport config, calendar, activity history |
-| `continuity.md` | Only once a session has already happened this block | The `#SESSION` header — where the macrocycle stands |
+| `state.md` | Yes | The authoritative numbers — fitness, fatigue, form, testing status, everything the engine has calculated |
+| `profile.md` | Yes | Raw context — the athlete's profile, sport setup, calendar, and recent activity history |
+| `continuity.md` | Only once a session has already happened in this training block | The saved `#SESSION` note — where the current macrocycle stands |
 
-**You don't need to re-drag anything mid-conversation** — once a chat has
-the files, the coach keeps them in context for the rest of that session.
-Only re-drag when opening a **new** chat.
+**You don't need to re-drag anything partway through a conversation** —
+once a chat has the files, the coach keeps them in context for the rest
+of that session. Only re-drag when opening a **brand-new** chat.
 
 ---
 
 ## 5. Generate a plan or follow up (inside the chat)
 
-Once the files are dragged in, just talk to the coach in plain language.
-The system is a 6-phase state machine (Phase 0 through Phase 6) that drives
-itself:
+Once the files are dragged in, just talk to the coach in plain language
+— there's no special syntax to learn. The system moves through a
+sequence of six phases (Phase 0 through Phase 6) that it manages on its
+own, based on what it reads from the files you dragged in:
 
-- **Athlete with no prior `#SESSION`** → starts at Phase 1 (verification and
-  intake if needed), builds the macrocycle, and reaches Phase 4 (block
-  generation)
-- **Athlete with a `continuity.md`** → the coach reads the `#SESSION`,
-  reconstructs where things stood, and resumes directly from there
+- **Athlete with no prior `#SESSION`** (a brand-new macrocycle) → the
+  coach starts at Phase 1 (verification, and intake if that's still
+  needed), builds the overall training plan, and reaches Phase 4 (where
+  it starts generating actual sessions).
+- **Athlete with a `continuity.md`** → the coach reads the saved
+  `#SESSION` note, reconstructs exactly where things stood, and resumes
+  directly from there — you don't need to re-explain anything.
 
-At every phase the coach stops and waits for your explicit confirmation
-before advancing (for example, before generating Intervals.icu code in
-Phase 4). That's intentional — review what it proposes before approving.
+At every phase, the coach stops and waits for your explicit
+confirmation before moving forward — for example, before it generates
+the actual Intervals.icu code in Phase 4. This is intentional: review
+what it proposes before approving it, the same way you'd review a plan
+before telling an athlete to start it.
 
 ---
 
 ## 6. Validate and upload a block to Intervals.icu
 
-When the coach delivers a code block (Intervals.icu syntax), before
-uploading it:
+When the coach delivers a block of sessions (in Intervals.icu's own
+syntax), **before uploading it**, run it through the validator:
 
 **Command:**
 ```
 python coach.py check path\to\block.txt
 ```
 
-This runs the deterministic validator: checks syntax, prescription floors,
-ramp eligibility, and **computes the real TSS** (filling in whatever the
-coach left as `pending`). If it fails, fix it and re-run the command — don't
-upload a block that hasn't passed.
+This checks syntax, prescription limits, whether ramps are allowed for
+that session type, and — importantly — **computes the real training
+load number** (filling in whatever the coach left as `pending`, since
+the coach itself never calculates that number; the code does, so it
+can't be arithmetically wrong). If the check fails, take the specific
+error back to the coach as a correction, fix it, and re-run the command.
+Don't upload a block that hasn't passed.
 
 If the block needs a methodology or discipline different from what its
-header declares:
+own header declares:
 ```
 python coach.py check block.txt --methodology daniels --discipline running
 ```
+
+**Uploading itself is a manual step today:** paste the passed block's
+sessions into Intervals.icu's own Workout Builder, the normal way you'd
+enter any workout by hand. There is currently no automated upload
+command — see `IMPROVEMENT_BACKLOG.md` if you're curious why.
 
 ---
 
 ## 7. Off-calendar mid-week consult
 
-This is the case that drove much of this redesign: you need to resolve
-something for an athlete without waiting for the block to finish.
+This is for the case where you need to resolve something for an athlete
+mid-week, without waiting for their current training block to finish.
 
 **Steps:**
-1. Run `python coach.py prep i123456` to have fresh data
-2. Open that week's **existing** chat if you're still in it — the coach
-   already has full context, nothing else is needed
-3. If you're opening a **new** chat for this one-off question: before
-   closing it, ask the coach *"give me the continuity header"*
-4. The coach delivers a `#SESSION` with `Active Phase: 4` (not a
-   transition value), the real week of the block you're on, and a note of
-   what was just resolved
-5. Copy that whole block and paste it into `out\i123456\continuity.md` (or
-   `out\<athlete_name>\continuity.md`), replacing the previous one
-6. Next time you open a chat for this athlete, drag all three files — this
-   consult's adjustment is already captured in the notes
+1. Run `python coach.py prep i123456` so you're working from fresh data.
+2. If you're still inside that week's existing chat, just ask your
+   question — the coach already has full context, nothing else is
+   needed.
+3. If you're opening a **new** chat for this one-off question instead:
+   before closing the chat you're currently in, ask the coach
+   *"give me the continuity header."*
+4. The coach delivers a `#SESSION` block noting the real week of the
+   block you're on and what was just resolved.
+5. Copy that whole block and paste it into
+   `out\i123456\continuity.md` (or `out\<athlete_name>\continuity.md`),
+   replacing whatever was there before.
+6. Next time you open a chat for this athlete, drag in all three files
+   as usual — this consult's adjustment is already captured in the notes.
 
 ---
 
 ## 8. Block close and recalibration (Phase 5)
 
-When the coach delivers the final session of a block, it automatically
-emits the closing `#SESSION`, with a visual border and instructions to
-copy it.
+When the coach delivers the final session of a training block, it
+automatically shows you the closing `#SESSION` on its own, visually set
+apart with a border, along with an instruction to copy it.
 
 **Steps:**
-1. Copy that block into `out\<athlete_name>\continuity.md`
-2. Before the next conversation with this athlete, run
-   `python coach.py prep <id>` to refresh `state.md`
-3. Open a new chat, drag all three files
-4. The coach recalibrates the next block **from `#STATE` alone** — it will
-   not ask how the athlete felt or their compliance; if you want to share
-   that, it's additional context, never a requirement
+1. Copy that block into `out\<athlete_name>\continuity.md`, replacing
+   the previous contents.
+2. Before your next conversation with this athlete, run
+   `python coach.py prep <id>` to refresh `state.md` with current
+   numbers.
+3. Open a new chat, drag in all three files.
+4. The coach plans the next block **from `state.md` alone** — it won't
+   ask how the athlete felt or how compliant they were with the last
+   block unless you choose to share that; if you do, it's extra context,
+   never a requirement.
 
 ---
 
@@ -243,137 +327,113 @@ python coach.py review <id> --since <block start date>
 ```
 
 **What it does:**
-- Compares CTL/ATL/TSB, ACWR, and durability (median decoupling) between
-  the given date and today — all reconstructable from the 180-day pull
-  `coach.py prep` already fetches, so this works immediately, for any
-  athlete, no waiting required
-- Compares power/pace curve anchors between a dated snapshot near that date
-  and today's curves — see below for why this one takes time to become useful
-- Folds in any `#RACE_RESULT` entries from `out/<athlete_name>/race_notes.md`
-  whose date falls inside the window
-- Writes `out/<athlete_name>/review.md`
+- Compares fitness, fatigue, form, and durability (how much an
+  athlete's efficiency drops late in a session) between the date you
+  gave and today — this works immediately for any athlete, no waiting
+  required, because it's reconstructed from data already pulled by
+  `prep`.
+- Compares an athlete's power/pace curves (their best efforts across
+  different durations) between a saved snapshot near that date and
+  today's — see below for why this part needs patience.
+- Folds in any race results recorded in
+  `out/<athlete_name>/race_notes.md` whose date falls inside the window
+  you asked about.
+- Writes the result to `out/<athlete_name>/review.md`.
 
-**Why curve progression needs patience.** Intervals.icu's curve endpoint
-only ever returns the best value in a window as of *today* — never a
-historical one. `coach.py prep` now saves a dated snapshot
-(`data/<id>/history/<date>.json`) every time it runs, specifically so this
-comparison becomes possible later. Until enough time has passed since
-snapshot capture started, this section will honestly say so instead of
-faking a number:
+**Why curve progress needs patience.** Intervals.icu only ever reports
+an athlete's *current* best effort in a given window — never what it
+was on a specific past date. `coach.py prep` now saves a dated snapshot
+every time it runs, specifically so this comparison becomes possible
+later. Until enough time has passed since snapshot-saving started for a
+given athlete, this section of the report will say so honestly instead
+of making up a number:
 ```
 No curve history yet for this athlete — snapshot capture started with
 the first `coach.py prep` run after this feature shipped.
 ```
-That's expected, not a bug — it clears up on its own as `prep` keeps running.
+That message is expected, not a bug — it resolves on its own the longer
+`prep` keeps running for that athlete.
 
-**Recording a race result.** After a race debrief in Phase 6, the coach
-emits a `#RACE_RESULT` block (see the prompt's Phase 6). Append it — never
-overwrite — to `out/<athlete_name>/race_notes.md`. A season can have
-several races; `review` only pulls in the ones whose date falls inside the
-`--since` window you asked for.
-
----
-
-## 10. Working via the MCP server (Claude Desktop)
-
-An alternative to steps 2-9 above, available only in Claude Desktop (not
-the browser Project). A local server exposes this project's own engine as
-tools the coach can call mid-conversation — no dragging files, no running
-`coach.py` by hand for the athletes you talk about this way.
-
-**One-time setup per machine** — see §0 (updated) for installing the `mcp`
-package and configuring `claude_desktop_config.json`. Once done, any chat
-in Desktop (not just the Project) has access to these 8 tools:
-
-| Tool | Replaces | Notes |
-|---|---|---|
-| `get_athlete_state` | `coach.py prep` + dragging `state.md` | Reuses data fetched within the last hour (`mcp.state_cache_minutes` in `decision_thresholds.yaml`, default 60) instead of re-querying Intervals.icu every time. Say "give me the updated state" to force a fresh pull before the hour is up. |
-| `get_athlete_profile` | dragging `profile.md` | Same hour-long cache, shared with `get_athlete_state` — asking for one right after the other doesn't trigger two fetches. |
-| `list_roster` | `coach.py prep --list` | Reads the existing `out/roster.md`; doesn't contact Intervals.icu itself. |
-| `save_continuity` | copying `#SESSION` into `continuity.md` | The coach calls this itself now — see §8 and the mid-block case in §7. Overwrites, same as the manual version always did. |
-| `save_race_result` | copying `#RACE_RESULT` into `race_notes.md` | The coach calls this itself after a race debrief — see §11. Appends, never overwrites. |
-| `save_block` | saving the generated block to a `.md` file | The coach calls this right after showing you the block, to `out/<athlete_name>/blocks/<today>_bloque.md`. Calling it again the same day (e.g. after a correction) overwrites that day's file. |
-| `validate_block` | `coach.py check <file>` | The coach calls this right after `save_block` and reports PASS/BLOCKED in the same reply — you don't run anything by hand. |
-| `push_block` | pasting sessions into Intervals.icu's Workout Builder | **Not called automatically, by design.** Ask for it explicitly when you want it; it defaults to a dry run (shows exactly what would be uploaded, touches nothing) and only uploads for real once you ask again with that confirmed. Michel's current choice: keep doing this step by hand for now, to catch corrections before anything reaches Intervals.icu — `push_block` stays available but unused until that changes. |
-
-**What doesn't change:** the coach's phases, gates, and STOP-AND-WAIT confirmations are identical either way. The tools only change how state.md/profile.md/continuity.md/race_notes.md/the block file get read and written — never what the coach does with them.
-
-**If a tool call hangs or the connector shows "disconnected":** see §13's MCP-specific rows, and check `%APPDATA%\Claude\logs\mcp-server-infame-coach.log` for the actual error before assuming the athlete id is wrong.
+**Recording a race result.** After a race debrief in Phase 6 (section
+10), the coach gives you a `#RACE_RESULT` block. Add it to the end of
+`out/<athlete_name>/race_notes.md` — never delete or overwrite what's
+already there. A season can have several races; `review` only pulls in
+the ones whose date falls inside the window you asked for with
+`--since`.
 
 ---
 
-## 11. Macrocycle close / race debrief (Phase 6)
+## 10. Macrocycle close / race debrief (Phase 6)
 
-When the macrocycle's final block ends (usually after the A-race), the
-coach enters Phase 6:
+When the macrocycle's final block ends (usually right after the A-race),
+the coach enters Phase 6:
 
-1. If there was a race: share the result in the chat — the coach evaluates
-   it against `#STATE` and tells you whether re-testing thresholds is
-   warranted
-2. If the macrocycle ended without a race (goal change, plan cut short): the
-   coach summarizes the adaptation achieved
-3. To start the next macrocycle: run `prep` again and confirm you want to
-   start a new one — the coach loops back to Phase 1
+1. **If there was a race:** share the result in the chat. The coach
+   evaluates it against the athlete's current state and tells you
+   whether re-testing their training thresholds is warranted.
+2. **If the macrocycle ended without a race** (a goal change, or the
+   plan being cut short): the coach summarizes what the athlete adapted
+   over that time instead.
+3. **To start the next macrocycle:** run `prep` again and confirm to
+   the coach that you want to start a new one — it loops back to Phase 1.
 
 ---
 
-## 12. Maintenance — keeping machines in sync, running tests
+## 11. Maintenance — keeping machines in sync, running tests
 
 **Any time you edit something in `config/` or `engine/`:**
 ```
 python tests/run_tests.py
 ```
-Runs all 67 tests (unit, block validation, state-engine golden comparison).
-If anything fails, don't ship the change until you understand why.
+Runs all 76 tests (unit tests, block validation, and a comparison
+against known-correct results for the state-resolving engine). If
+anything fails, don't consider the change finished until you understand
+why — a failing test doesn't always mean a bug, but it always means the
+output changed, and that's worth reading before moving on.
 
 **Any time Claude delivers a corrected file in a chat:**
-1. Download it
-2. Copy it to **both** machine paths
-3. Confirm it by running the relevant command once on each machine
-4. Push the commit to GitHub from whichever machine you tested first
-5. Pull it on the other machine before your next working session there
+1. Download it.
+2. Copy it to **both** machine paths.
+3. Confirm it worked by running the relevant command once on each
+   machine.
+4. Push the commit to GitHub from whichever machine you tested first.
+5. Pull it on the other machine before your next working session there.
 
-This last point is exactly what failed with `intervals_export.py` and cost
-weeks of empty Avg Power — worth treating as a checklist, not memory.
+This last point is exactly what failed once with an older data pipeline
+and cost weeks of a field silently showing blank — worth treating as a
+checklist you follow every time, not something to remember from memory.
 
-**Public vs. private repo:** if you ever make it public so Claude can review
-it directly (as we did for this session's cross-reference), set it back to
-private as soon as you're done. GitHub → Settings → Danger Zone → Change
-visibility.
+**Public vs. private repo:** if you ever make the repo public so Claude
+can review it directly, set it back to private as soon as you're done —
+GitHub → Settings → Danger Zone → Change visibility.
 
 ---
 
-## 13. Common issues
+## 12. Common issues
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| `Missing environment variable ICU_API_KEY` | Not set in this terminal/machine | `setx ICU_API_KEY "your_key"`, open a new terminal |
-| `Athlete 'iXXXXXX' not found` | Typo in the id, or not a coach for this athlete | `python coach.py prep --list` to see real ids |
-| `config/athletes/iXXXXXX.yaml already exists` | This athlete was already onboarded | Edit the existing YAML directly, don't use `new` again |
-| Avg Power showing `—` for power-meter activities | Local copy out of sync with the repo | Repeat step 12 (sync machines) |
-| `PROFILE BUILD FAILED (non-blocking)` | `build_profile.py` failed, but `state.md` was still delivered | Check the printed error; the chat can proceed with `state.md` alone while you fix it |
-| `note: no continuity.md here yet` | First week for this athlete/block, or it was never saved | Normal in the first case; in the second, request the header from the coach (step 7) |
-| `#STATE` older than 7 days | Haven't run `prep` recently | `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale state |
-| `No data for '<id>'` (on `review`) | Never ran `prep` for this athlete | `python coach.py prep <id>` first — `review` reads `data/<id>/athlete_data.json`, it doesn't fetch |
-| "No curve history yet" (on `review`) | Snapshot capture only just started | Not an error — see section 9. Clears up as `prep` keeps running over time |
-| MCP: "Server disconnected", tool call hangs then times out | Usually `ICU_API_KEY` missing from the process Desktop launched (does not reliably inherit Windows env vars) | Add it to the `"env"` block in `claude_desktop_config.json` — see §0. Check `%APPDATA%\Claude\logs\mcp-server-infame-coach.log` for the exact error rather than guessing |
-| MCP tool not listed under Connectors after editing the config | Config edited but Desktop not fully restarted | Quit from the system tray icon, not just the window, then reopen |
-| MCP: `python` runs but the tool still says module not found | Two Python installs on the machine, `mcp` installed in the other one | `python -m pip install "mcp[cli]"` (not bare `pip`) — see §0 |
+| `Missing environment variable ICU_API_KEY` | Not set in this terminal/machine | `setx ICU_API_KEY "your_key"`, then open a brand-new terminal |
+| `Athlete 'iXXXXXX' not found` | Typo in the id, or you're not the coach for this athlete on Intervals.icu | `python coach.py prep --list` to see the real ids |
+| `config/athletes/iXXXXXX.yaml already exists` | This athlete was already onboarded | Edit the existing YAML directly — don't run `new` again |
+| Avg Power showing `—` for power-meter activities | Your local copy is out of sync with the repo | Repeat section 11 (sync machines) |
+| `PROFILE BUILD FAILED (non-blocking)` | The profile-rendering step failed, but `state.md` was still delivered | Check the printed error; the chat can proceed with `state.md` alone while you fix the underlying issue |
+| `note: no continuity.md here yet` | First week for this athlete or this block, or it was never saved | Normal in the first case; in the second, ask the coach for the header again (section 7) |
+| `#STATE` older than 7 days | Haven't run `prep` recently | Run `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale numbers |
+| `No data for '<id>'` (running `review`) | Never ran `prep` for this athlete | Run `python coach.py prep <id>` first — `review` reads what `prep` already saved, it doesn't fetch new data itself |
+| "No curve history yet" (running `review`) | Snapshot capture only just started for this athlete | Not an error — see section 9. Clears up as `prep` keeps running over time |
 
 ---
 
-## 14. Quick file and folder reference
+## 13. Quick file and folder reference
 
 ```
 infame_elite_endurance_coach/
-├── coach.py                      single entry point: prep / new / check
-├── mcp_server/
-│   └── server.py                 the 8 tools described in §10 — local
-│                                 only, Claude Desktop connects to it via
-│                                 claude_desktop_config.json (not in the repo)
+├── coach.py                      single entry point: prep / new / check / review
+├── requirements.txt               dependencies — pip install -r requirements.txt
 ├── engine/
 │   ├── fetch_athlete_data.py     pulls Intervals.icu data → athlete_data.json
-│   ├── build_state.py            resolves #STATE → state.md / state.json
+│   ├── build_state.py            resolves state → state.md / state.json
 │   ├── build_profile.py          renders profile.md
 │   ├── longitudinal.py           trend/curves module (used by build_state)
 │   └── power_profile.py          power-profile module (used by build_state)
@@ -385,8 +445,8 @@ infame_elite_endurance_coach/
 │   │   ├── ATHLETE_INTAKE.md     script for the onboarding conversation
 │   │   └── <id>.yaml             one file per athlete — declared, not measured
 │   ├── authors/*.yaml            per-methodology zones (Coggan, Daniels, etc.)
-│   ├── tss_classes.yaml          TSS multipliers by physiological class
-│   └── decision_thresholds.yaml  decision bands — no number lives in code
+│   ├── tss_classes.yaml          training-load multipliers by physiological class
+│   └── decision_thresholds.yaml  decision bands — no number lives in code instead
 ├── generated/                    zone tables — never hand-edited
 ├── data/<id>/                    the engine's internal layer — don't browse by hand
 │   ├── athlete_data.json
@@ -397,7 +457,7 @@ infame_elite_endurance_coach/
 ├── out/<athlete_name>/           what you drag into the Claude Project
 │   ├── state.md
 │   ├── profile.md
-│   ├── continuity.md             the only file you write by hand for #SESSION
+│   ├── continuity.md             the only file you write by hand, for #SESSION
 │   ├── race_notes.md             #RACE_RESULT blocks, appended by hand
 │   └── review.md                 written by `coach.py review`, not hand-edited
 ├── out/roster.md                 name ↔ id ↔ last-updated table
@@ -412,66 +472,63 @@ infame_elite_endurance_coach/
 
 ## Future ideas
 
-None of these are required to run the system as delivered — they're
+None of these are required to run the system as it stands today — they're
 possible improvements worth considering once the current workflow has been
-proven in real practice across your 16–23 athletes.
+proven in real practice across your roster of athletes.
 
 1. **Verify the `eW'`/`ePmax` rule against more athletes.** Left out of
-   `profile.md` on purpose because it was only confirmed against one case
-   (Elias). If the pattern (`FFT_CURVES` model, 90d window) holds across
-   3–4 more athletes, it can be added with confidence.
+   `profile.md` on purpose because it was only confirmed against one
+   case. If the pattern holds across 3–4 more athletes, it can be added
+   with confidence.
 
 2. **Automatic flag for stale athlete data.** `roster.md` already shows
    each athlete's last-fetch date — a further step would have
-   `coach.py prep --list` highlight any athlete overdue by more than N days,
-   instead of requiring you to scan the whole table.
+   `coach.py prep --list` highlight any athlete overdue by more than N
+   days, instead of requiring you to scan the whole table.
 
-3. **Detect more calendar entries with a missing `type`.** The "🚗 Trip 🚗" /
-   "REST" case showing `Type: —` revealed that Intervals.icu doesn't always
-   populate that field for generic calendar entries. Worth checking whether
-   other cases (e.g. athlete notes) deserve the same default treatment.
+3. **Detect more calendar entries with a missing `type`.** Some generic
+   calendar entries (like a travel day or a rest-day note) don't come
+   from Intervals.icu with a `type` field populated. Worth checking
+   whether other cases deserve the same default treatment.
 
 4. **Configurable threshold for the stale-`continuity.md` warning.**
-   Currently hardcoded at 10 days inside `coach.py`. Could live in
-   `decision_thresholds.yaml` alongside the rest of the thresholds, instead
-   of a loose number in orchestration code.
+   Currently hardcoded inside `coach.py`. Could live in
+   `decision_thresholds.yaml` alongside the rest of the thresholds,
+   instead of a loose number in orchestration code.
 
-5. **A `coach.py prep --stale` mode** that only refreshes athletes with data
-   older than N days, instead of `--all` hitting all 23 every time — useful
-   as the roster grows.
+5. **A `coach.py prep --stale` mode** that only refreshes athletes with
+   data older than N days, instead of `--all` hitting everyone every
+   time — useful as the roster grows.
 
-6. **Surface missing/stale `continuity.md` in `roster.md` itself.** Right
-   now that information only appears on screen when running `prep` for one
-   athlete at a time — centralizing it in the roster would give an
-   at-a-glance view across all athletes.
+6. **Surface missing/stale `continuity.md` in `roster.md` itself.**
+   Right now that information only appears on screen when running `prep`
+   for one athlete at a time — centralizing it in the roster would give
+   an at-a-glance view across all athletes.
 
-7. **Backlog authors** (Seiler, Pfitzinger, Hansons, Skiba) — content work,
-   not infrastructure, but still open and worth returning to once the
-   operational workflow is stable.
+7. **Backlog authors** (Seiler, Pfitzinger, Hansons, Skiba) — content
+   work, not infrastructure, but still open and worth returning to once
+   the operational workflow is stable. See `IMPROVEMENT_BACKLOG.md` for
+   the reasoning behind each.
 
-8. **A dedicated golden test for `build_profile.py`.** The other two engine
-   scripts (`fetch_athlete_data.py`, `build_state.py`) are covered by the
-   76-test suite; `build_profile.py` was verified by hand this session but
-   has no fixture of its own in `tests/`. Adding one would catch a silent
-   regression the next time it's touched.
+8. **A dedicated golden test for `build_profile.py`.** The other two
+   engine scripts are covered by the regression suite; `build_profile.py`
+   was verified by hand but has no fixture of its own in `tests/`. Adding
+   one would catch a silent regression the next time it's touched.
 
 9. **A sync-check script between machines.** Something as simple as
-   comparing a hash of the `engine/` files on both paths would have caught
-   the `intervals_export.py` drift before it ever touched a real athlete's
-   data.
+   comparing a hash of the `engine/` files on both paths would catch a
+   drift between machines before it ever touches a real athlete's data.
 
-10. ~~Consider retiring `intervals_export.py` and `convert.py`~~ — **done**:
-    moved to `legacy/` when the repo was cleaned up (see `RESTORE_POINT_v6.4.md`).
+10. **`data/<id>/history/` has no retention limit.** `coach.py prep`
+    writes one dated snapshot per athlete per day it runs. With a full
+    roster run regularly, this is a slow but unbounded accumulation of
+    small files. Not a problem yet; worth a cap (e.g. keep one per week
+    beyond a year old) before it becomes one.
 
-11. **`data/<id>/history/` has no retention limit.** `coach.py prep` writes
-    one dated snapshot per athlete per day it runs. With 16–23 athletes run
-    regularly, this is a slow but unbounded accumulation of small files.
-    Not a problem yet; worth a cap (e.g. keep one per week beyond a year
-    old) before it becomes one.
-
-12. **Scrub `out/`'s brief public-repo exposure from git history.**
-    `git rm --cached` (done) stops future commits from carrying it, but the
-    already-pushed commits from the window the repo was public still
-    contain it until a history rewrite (`git filter-repo` or BFG) is run.
-    Left as your call — low realistic risk given the short window and
-    single-maintainer repo, but not automatically safe.
+11. **Scrub `out/`'s brief public-repo exposure from git history.**
+    Untracking it (`git rm --cached`) stops future commits from
+    carrying it, but any already-pushed commits from a window when the
+    repo was public still contain it until a history rewrite
+    (`git filter-repo` or BFG) is run. Left as your call — low realistic
+    risk given a single-maintainer repo and a short exposure window, but
+    not automatically safe to ignore indefinitely.

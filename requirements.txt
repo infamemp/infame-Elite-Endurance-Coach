@@ -1,0 +1,18 @@
+# Infame Elite Endurance Coach — dependencies for the active daily workflow
+# (coach.py, engine/, verify/, build_zone_tables.py, tests/)
+#
+# Confirmed by reading the actual imports in every .py file in the repo —
+# not copied from an old manual. Install with:
+#   pip install -r requirements.txt
+
+requests>=2.31.0     # engine/fetch_athlete_data.py — pulls data from Intervals.icu
+pyyaml>=6.0          # coach.py, build_zone_tables.py, engine/build_state.py,
+                     # engine/longitudinal.py, engine/power_profile.py,
+                     # verify/validate_block.py, tests/run_tests.py — reads all config/*.yaml
+jsonschema>=4.21.0   # build_zone_tables.py — validates config/authors/*.yaml against
+                     # config/schema/author.schema.json
+
+# NOT required for daily use — only needed if you ever run the retired
+# scripts in legacy/ (convert.py, intervals_export.py), which are kept for
+# reference only and are not part of the current workflow:
+#   openpyxl>=3.1.0

@@ -58,13 +58,6 @@ actually did: `python coach.py review <id> --since <date>` — compares
 CTL/ATL/TSB, ACWR, durability, and (once enough history has accumulated)
 curve progression between two dates, folding in `race_notes.md` if present.
 
-**Alternative, Claude Desktop only:** `mcp_server/server.py` exposes this
-same engine as 8 tools the coach can call mid-conversation — no dragging
-files. `push_block` (upload to Intervals.icu) is the one tool never called
-automatically; everything else the coach now does itself when the tools
-are available, falling back to the manual flow above otherwise. Setup and
-tool list in `manual/OPERATIONS_MANUAL.md` §0 and §10.
-
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow) and `WORKFLOW_CHECKLIST.md` (system setup, maintenance, adding a
 methodology). Architecture rationale in `ARCHITECTURE_v6.md`. Current state
@@ -120,8 +113,7 @@ tests/           fixtures, golden baselines, the regression runner
 Prompt/          the coach system prompt, with dated archive
 Knowledge/       8 book-derived methodology KBs
 Syntax/          Intervals.icu workout builder reference
-manual/          OPERATIONS_MANUAL.md + QUICK_GUIDE.md (English) and their
-                 Spanish counterparts
+manual/          OPERATIONS_MANUAL.md + QUICK_GUIDE.md
 legacy/          retired scripts (pre-coach.py Excel pipeline), kept for reference
 archive/         older RESTORE_POINT_*.md and Prompt versions
 ```
@@ -135,30 +127,44 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 
 ## 🔄 Changelog
 
-**v6.5 — MCP server (current)**
+**v6.6 — MCP server removed**
+
+`mcp_server/server.py` caused enough production instability that it was
+removed entirely — code, prompt references, and the `mcp:` config block in
+`decision_thresholds.yaml`. The daily workflow is back to dragging
+`out/<athlete_name>/` into the Claude Project, as described in Daily Use
+above. There is currently no automated upload path to Intervals.icu; a
+verified block is pasted into its Workout Builder by hand. The full
+incident history — what the server did, the two real bugs it surfaced, and
+why it was reverted — is kept in `archive/RESTORE_POINT_v6.5.md` rather
+than deleted, specifically so a future attempt does not start from zero.
+
+**v6.5 — MCP server (built, then removed — see v6.6 above)**
 
 The daily workflow required dragging files into the Claude Project for
 every new chat. What changed:
 
-- **`mcp_server/server.py`** exposes the engine itself as 8 tools a local
-  Claude Desktop connection can call mid-conversation — never a wrapper
+- **`mcp_server/server.py`** exposed the engine itself as 8 tools a local
+  Claude Desktop connection could call mid-conversation — never a wrapper
   around the raw Intervals.icu API, so `#STATE`'s determinism guarantee
-  carries over unchanged: `get_athlete_state`, `get_athlete_profile`,
+  carried over unchanged: `get_athlete_state`, `get_athlete_profile`,
   `list_roster` (reads), `save_continuity`, `save_race_result`,
-  `save_block` (writes), `validate_block` (wraps the existing verifier as
-  a subprocess), and `push_block` (uploads to Intervals.icu via
+  `save_block` (writes), `validate_block` (wrapped the existing verifier as
+  a subprocess), and `push_block` (uploaded to Intervals.icu via
   `POST /events/bulk?upsert=true`, defaulting to a dry run).
-- **The prompt calls these tools itself** — `save_block`, `save_continuity`,
+- **The prompt called these tools itself** — `save_block`, `save_continuity`,
   `save_race_result`, and `validate_block` — when available, falling back
   to the manual copy-paste flow otherwise (e.g. the browser Project,
-  where the server can never connect). `push_block` is deliberately never
-  called automatically.
+  where the server could never connect). `push_block` was deliberately
+  never called automatically.
 - **A real classification bug found and fixed in the process:**
   `[Discipline]: road` is ambiguous — confirmed real for both cycling
   (Coggan) and running (Daniels) methodologies in the repo's own test
-  fixtures. Resolving it now reads the author's own `sport:` field from
+  fixtures. The fix read the author's own `sport:` field from
   `config/authors/<methodology>.yaml` instead of a flat lookup table,
-  which would have silently classified a marathon as a bike ride.
+  which would have silently classified a marathon as a bike ride. This
+  fix lived only inside the now-removed code — see `IMPROVEMENT_BACKLOG.md`
+  §5 for why the underlying lesson still matters.
 
 **v6.4 — results module**
 
