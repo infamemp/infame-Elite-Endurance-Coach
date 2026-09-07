@@ -516,6 +516,39 @@ def compute_tss(steps, author, th, tssc):
     return total, detail, skipped
 
 
+def compute_total_duration(steps):
+    """Total session clock time in seconds — every step's own duration
+    times its repeat count, deliberately independent of TSS classification.
+    A warmup or a between-reps recovery interval costs almost no TSS but
+    still costs real minutes, and this must count them the same as the
+    hardest interval in the set.
+
+    Distance-based steps (a bare "2km" with no time attached) have no
+    fixed duration until the athlete's actual pace is known — they cannot
+    be summed, so they are returned separately rather than silently
+    treated as zero seconds, the same transparency compute_tss already
+    gives its own skipped steps."""
+    total_secs, undetermined = 0, []
+    for s in steps:
+        if s["secs"] is None:
+            undetermined.append(s)
+            continue
+        total_secs += s["secs"] * s["mult"]
+    return total_secs, undetermined
+
+
+def parse_header_duration_secs(dur_str):
+    """[Duration] is HH:MM:SS (already format-checked in check_header).
+    Returns None if missing or malformed rather than guessing."""
+    if not dur_str:
+        return None
+    m = re.fullmatch(r"(\d{1,2}):(\d{2}):(\d{2})", dur_str.strip())
+    if not m:
+        return None
+    h, mi, s = (int(g) for g in m.groups())
+    return h * 3600 + mi * 60 + s
+
+
 # ══════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════
@@ -669,6 +702,33 @@ def main():
                                    f"({div:.1f}% > {tol}%)"))
             else:
                 print(" · no declared TSS to compare")
+
+        if steps:
+            declared_secs = parse_header_duration_secs(header.get("Duration"))
+            total_secs, undetermined = compute_total_duration(steps)
+            mins, secs_rem = divmod(total_secs, 60)
+            print(f"   Computed Duration: {mins}m{secs_rem:02d}s", end="")
+            if undetermined:
+                print(f" (approximate — {len(undetermined)} distance-based "
+                     f"step(s) excluded, no fixed duration until pace is known)")
+            elif declared_secs is None:
+                print(" · no declared [Duration] to compare")
+            else:
+                dur_tol_min = th["tss_rules"].get(
+                    "duration_divergence_tolerance_minutes", 2)
+                diff_secs = abs(total_secs - declared_secs)
+                ok = diff_secs <= dur_tol_min * 60
+                d_mins, d_secs = divmod(declared_secs, 60)
+                print(f" · declared {d_mins}m{d_secs:02d}s · "
+                     f"gap {diff_secs // 60}m{diff_secs % 60:02d}s "
+                     f"{'OK' if ok else 'EXCEEDS TOLERANCE'}")
+                if not ok:
+                    errors.append(("DUR-DIV", "-",
+                                   f"Computed {mins}m{secs_rem:02d}s vs declared "
+                                   f"{d_mins}m{d_secs:02d}s (gap "
+                                   f"{diff_secs // 60}m{diff_secs % 60:02d}s > "
+                                   f"{dur_tol_min}m tolerance) — the header "
+                                   f"doesn't match the sum of its own steps"))
 
         for c, ln, msg in errors:
             print(f"   FAIL [{c}] L{ln}: {msg}")
