@@ -650,7 +650,18 @@ def main():
             failed = True
             continue
 
-        author, _, tssc = load_config(methodology.strip().lower())
+        try:
+            author, _, tssc = load_config(methodology.strip().lower())
+        except SystemExit as e:
+            # load_config() calls sys.exit() on an unknown methodology --
+            # correct for a one-shot CLI run, but fatal here: uncaught, it
+            # would abort the whole week after this one session, hiding
+            # every session that comes after it. Same fix as the
+            # missing-header case just above: report it as this session's
+            # failure and keep validating the rest of the block.
+            print(f"── Session {n}: cannot validate — {e}")
+            failed = True
+            continue
         label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
                  f"{header.get('Focus', '')}".strip(" ·") if header else "block")
         print(f"── Session {n}: {label}")
