@@ -115,6 +115,11 @@ tss_rules:
   rounding: nearest_integer
   divergence_tolerance_pct: 10
   # Maximum permitted gap between a declared and a recomputed session TSS.
+  duration_divergence_tolerance_minutes: 2
+  # Maximum permitted gap between a declared [Duration] and the sum of
+  # every step's own duration (including repeats). Unlike TSS this is pure
+  # arithmetic with no classification judgment involved, so the tolerance
+  # only needs to absorb header rounding — not a margin for disagreement.
 
 # ══════════════════════════════════════════════════════════════════
 # CLASSIFICATION CUTPOINTS
