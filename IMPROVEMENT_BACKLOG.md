@@ -1,6 +1,6 @@
 # Improvement Backlog — Infame Elite Endurance Coach
 
-**Written:** 2026-08-22 · **Revised:** 2026-09-06 (MCP server)
+**Written:** 2026-08-22 · **Revised:** 2026-09-06 (MCP server) · 2026-09-07 (MCP server removed after production instability — history kept in `archive/RESTORE_POINT_v6.5.md`)
 **Status:** Nothing here is committed work. It is a considered list of where the
 system could go, with honest reasoning about what each item costs and what it is
 worth.
@@ -262,39 +262,54 @@ the original architecture document — `new` and `check` joined it as the
 onboarding and verification shortcuts. Removed a step from every day, as
 predicted.
 
-**Upload verified blocks via the Intervals.icu API — resolved, September
-(built as `push_block`, part of the MCP server below).**
-`POST /api/v1/athlete/{id}/events/bulk?upsert=true` accepts the coach's
+**Upload verified blocks via the Intervals.icu API — built in September as
+`push_block`, part of the MCP server; removed along with it.**
+`POST /api/v1/athlete/{id}/events/bulk?upsert=true` accepted the coach's
 native workout-description syntax directly — no format conversion needed
-— and a deterministic `external_id` makes it idempotent: re-pushing a
-corrected block updates it instead of duplicating it. Intervals also
-computes its own TSS from the same description on upload, which is a free
-cross-check against the verifier's — worth revisiting if the two ever
-disagree systematically. Built with a `dry_run` default and deliberately
-never called automatically by the coach — Michel's own choice, to keep
-catching corrections by hand before anything reaches Intervals.icu, until
-that changes.
+— and a deterministic `external_id` would have made it idempotent: re-pushing
+a corrected block would update it instead of duplicating it. Intervals also
+computes its own TSS from the same description on upload, which would have
+been a free cross-check against the verifier's. Built with a `dry_run`
+default and deliberately never called automatically by the coach — Michel's
+own choice, to keep catching corrections by hand before anything reaches
+Intervals.icu. **Currently gone:** when the MCP server was removed after
+production instability, this went with it — there is no automated upload
+path today; getting a verified block into Intervals.icu is a manual paste
+into its Workout Builder. If this is rebuilt, the payload shape, `dry_run`
+default, and idempotent `external_id` design are preserved in
+`archive/RESTORE_POINT_v6.5.md` and do not need to be re-derived from
+scratch.
 
-**A dedicated MCP server exposing this engine — resolved, September.**
-`mcp_server/server.py`, 8 tools, local stdio transport to Claude Desktop
-only (never the browser Project, and never a generic wrapper around the
-raw Intervals.icu API — every tool returns something the engine already
-resolved deterministically, same as `state.md` always has).
-`get_athlete_state`/`get_athlete_profile`/`list_roster` read;
-`save_continuity`/`save_race_result`/`save_block` write locally;
-`validate_block` wraps the existing verifier as a subprocess; `push_block`
-is the item above. The prompt now calls the first seven itself when the
-tools are present, falling back to the manual flow otherwise.
+**A dedicated MCP server exposing this engine — built in September,
+removed after production instability.**
+`mcp_server/server.py` exposed 8 tools over a local stdio transport to
+Claude Desktop only (never the browser Project, and never a generic
+wrapper around the raw Intervals.icu API — every tool returned something
+the engine already resolved deterministically, same as `state.md` always
+has). `get_athlete_state`/`get_athlete_profile`/`list_roster` read;
+`save_continuity`/`save_race_result`/`save_block` wrote locally;
+`validate_block` wrapped the existing verifier as a subprocess; `push_block`
+is the item above. The prompt called the first seven itself when the tools
+were present, falling back to the manual flow otherwise. **Removed** — no
+trace of it remains in `coach.py`, `engine/`, or the prompt today. The full
+build (including the `SystemExit`-kills-the-whole-server bug it surfaced,
+and the `guarded()` pattern that fixed it) is preserved in
+`archive/RESTORE_POINT_v6.5.md`, kept specifically so a future attempt does
+not have to rediscover the same failure modes.
 
 A real bug surfaced while building `push_block`, worth remembering the
-shape of: `[Discipline]: road` looked cycling-only from the first fixture
-checked, and only turned out to be genuinely shared with running
-(confirmed in two separate fixtures, both `daniels` + `road`) because the
-one contradicting example wasn't dismissed as a typo without evidence.
-Resolving it now reads the author's own `sport:` field from
-`config/authors/<methodology>.yaml` rather than a hardcoded table — the
-same principle as everywhere else in this system: the config file is the
-source of truth, not a second list maintained by hand alongside it.
+shape of regardless of whether MCP ever comes back: `[Discipline]: road`
+looked cycling-only from the first fixture checked, and only turned out to
+be genuinely shared with running (confirmed in two separate fixtures, both
+`daniels` + `road`) because the one contradicting example wasn't dismissed
+as a typo without evidence. The fix read the author's own `sport:` field
+from `config/authors/<methodology>.yaml` rather than a hardcoded table —
+the same principle as everywhere else in this system: the config file is
+the source of truth, not a second list maintained by hand alongside it.
+The fix itself lived only inside the now-removed `push_block`, so it has
+no effect on anything currently running — but the same ambiguity (`road`,
+and unconfirmed, `track`) will resurface if any future feature ever maps
+`[Discipline]` to an Intervals.icu activity type again.
 
 **A `.exe` via PyInstaller.** Double-click instead of a terminal. Cheap to build,
 and it makes the tools usable from a machine without Python installed.

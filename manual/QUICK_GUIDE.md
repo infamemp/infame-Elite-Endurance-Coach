@@ -1,86 +1,116 @@
-# Quick Guide — Infame Elite Endurance Coach v6.1
+# Quick Guide — Infame Elite Endurance Coach
 
-One-page reference. Full detail in `OPERATIONS_MANUAL.md`.
+One-page reference for daily use.
+
+**This assumes you've already read `OPERATIONS_MANUAL.md` once.** That's
+where every term below — `out/`, `#SESSION`, `#STATE`, "the Claude
+Project" — is explained the first time, along with the one-time setup.
+Come back here once you know the workflow and just need a fast reminder
+of the exact steps.
+
+---
+
+## Opening a terminal (if you need the reminder)
+
+On Windows: press the Windows key, type `PowerShell`, press Enter. Every
+command below is typed there, one line at a time, followed by Enter.
+
+---
 
 ## Daily commands
 
-| Command | Does |
+| Command | What it does |
 |---|---|
-| `python coach.py new <id>` | Onboard a new athlete (creates config from template) |
-| `python coach.py prep <id>` | Fetch + resolve + render one athlete → `out/<name>/` |
+| `python coach.py new <id>` | Onboard a new athlete — creates their config file from a template |
+| `python coach.py prep <id>` | Pull fresh data for one athlete and build the files you'll use in the chat |
 | `python coach.py prep --all` | Same, for every athlete on the account |
-| `python coach.py prep --list` | List athletes, refresh `out/roster.md`, fetch nothing |
-| `python coach.py check <file>` | Validate a block and fill its TSS before uploading |
-| `python coach.py review <id> --since <date>` | Compare a block's signals against today |
+| `python coach.py prep --list` | List every athlete and when each was last updated — downloads nothing new |
+| `python coach.py check <file>` | Check a generated training block for errors before uploading it |
+| `python coach.py review <id> --since <date>` | Compare an athlete's numbers today against a past date |
 
-## Every new chat with an athlete
+`<id>` is the athlete's Intervals.icu ID — it looks like `i123456`. Find it
+with `python coach.py prep --list` if you don't have it memorized.
 
-Drag from `out/<athlete_name>/`:
+---
+
+## Every time you open a new chat with an athlete
+
+From the folder `out/<athlete_name>/`, drag these files into the Claude
+Project chat window:
 
 - [ ] `state.md` — always
 - [ ] `profile.md` — always
-- [ ] `continuity.md` — only if it exists (means a session already happened this block)
+- [ ] `continuity.md` — only if it exists (means a session already
+      happened during this training block)
 
-No need to re-drag mid-conversation — only when opening a **new** chat.
+Do this once per chat — not again partway through the same conversation.
 
-## Working via MCP (Claude Desktop only, not the browser)
+---
 
-One-time setup per machine: `python -m pip install "mcp[cli]" pyyaml
-requests`, then add `infame-coach` to `claude_desktop_config.json` with an
-`"env": {"ICU_API_KEY": "..."}` block (Desktop doesn't reliably inherit
-`setx` env vars). Full detail: `OPERATIONS_MANUAL.md` §0 and §10.
+## Mid-week question, staying in the same chat
 
-| Tool | Replaces |
-|---|---|
-| `get_athlete_state` / `get_athlete_profile` | dragging `state.md` / `profile.md` (1h cache, say "give me the updated state" to force) |
-| `list_roster` | `coach.py prep --list` |
-| `save_continuity` / `save_race_result` / `save_block` | copy-pasting into `continuity.md` / `race_notes.md` / a block file — coach calls these itself now |
-| `validate_block` | `coach.py check <file>` — coach calls this itself right after `save_block` |
-| `push_block` | pasting into Intervals.icu's Workout Builder — **never automatic**; ask for it, defaults to a dry run |
+1. Run `python coach.py prep <id>` first, so the coach is working from
+   fresh numbers.
+2. Ask your question. Nothing else to do.
 
-## Mid-week off-calendar consult
+## Mid-week question, opening a brand-new chat instead
 
 1. `python coach.py prep <id>`
-2. Staying in the same chat? Nothing else needed.
-3. Opening a **new** chat instead? Before closing this one, ask the coach:
+2. Before closing the chat you're in now, ask the coach:
    *"give me the continuity header"*
-4. Paste the `#SESSION` it returns into `out/<name>/continuity.md`
+3. Copy what it gives you into `out/<athlete_name>/continuity.md`,
+   replacing whatever was already there.
+4. Open the new chat and drag in the files as usual.
 
-## End of block
+---
 
-1. Coach auto-emits a bordered `#SESSION` after the last session
-2. Copy it into `out/<name>/continuity.md` — automatic if `save_continuity`
-   is available as a tool
-3. `python coach.py prep <id>` before the next chat
-4. Optional: `python coach.py review <id> --since <block start>` to see
-   what actually moved (CTL/ATL/TSB, ACWR, durability work now; curve
-   progression needs snapshot history to accumulate first)
+## End of a training block
 
-## After a race (Phase 6)
+1. The coach shows you a boxed `#SESSION` block on its own once the block
+   ends — you don't have to ask for it.
+2. Copy it into `out/<athlete_name>/continuity.md`, replacing the old one.
+3. Run `python coach.py prep <id>` before your next chat with that
+   athlete.
+4. Optional: `python coach.py review <id> --since <block start date>` to
+   see what actually changed.
 
-1. Coach emits a `#RACE_RESULT` block during the debrief
-2. Append (never overwrite) it to `out/<name>/race_notes.md` — automatic
-   if `save_race_result` is available as a tool
-3. `review` picks it up automatically for any window that includes that date
+## After a race
+
+1. During the debrief, the coach gives you a `#RACE_RESULT` block.
+2. Add it to the **end** of `out/<athlete_name>/race_notes.md` — never
+   delete what's already there.
+3. `review` picks it up automatically the next time you use it.
+
+---
 
 ## Golden rules
 
-- A fix isn't "installed" until it's on **both** machines and committed
-- Run `python tests/run_tests.py` after touching `config/` or `engine/`
-- `#STATE` older than 7 days → coach refuses to proceed; re-run `prep`
-- Never hand-edit `continuity.md` except by pasting a fresh `#SESSION`
-- Repo made public for a review? Set it back to private when done
+- A fix isn't real until it exists on **both** machines and is pushed to
+  GitHub — see Manual §0.
+- Run `python tests/run_tests.py` any time you edit anything inside
+  `config/` or `engine/`.
+- If the coach says `#STATE` is more than 7 days old, run `prep` again
+  before continuing — it will refuse to guess with stale data.
+- Never type inside `continuity.md` by hand. The only thing that ever
+  goes in there is a fresh `#SESSION` block, pasted in whole.
+- If you ever make the repo public for a review, set it back to private
+  the same day: GitHub → Settings → Danger Zone → Change visibility.
 
-## Common errors
+---
 
-| Error | Fix |
-|---|---|
-| `Missing environment variable ICU_API_KEY` | `setx ICU_API_KEY "..."`, open a new terminal |
-| `Athlete not found` | `python coach.py prep --list` to check the real id |
-| `...already exists` (on `new`) | Athlete already onboarded — edit the YAML directly |
-| Avg Power blank on power-meter activities | Machines out of sync — recopy the affected file to both |
-| `note: no continuity.md here yet` | Normal for week 1 of a block — not an error |
-| `No data for '<id>'` (on `review`) | Run `python coach.py prep <id>` first |
-| "No curve history yet" (on `review`) | Not an error — snapshot capture just started, clears up over time |
-| MCP: "Server disconnected" / hangs then times out | `ICU_API_KEY` missing from the `env` block in `claude_desktop_config.json` — check `%APPDATA%\Claude\logs\mcp-server-infame-coach.log` |
-| MCP tool missing after config edit | Quit Desktop from the tray icon (not just the window), reopen |
+## Common problems
+
+| You see | It means | What to do |
+|---|---|---|
+| `Missing environment variable ICU_API_KEY` | This terminal doesn't have your Intervals.icu key set | See Manual §0 |
+| `Athlete not found` | Typo in the id | `python coach.py prep --list` to check the real id |
+| `...already exists` (running `new`) | This athlete is already onboarded | Don't run `new` again — edit their existing file directly |
+| Avg Power shows blank | Your two machines have different versions of a file | See Manual §11 (keeping machines in sync) |
+| `note: no continuity.md here yet` | Normal for week 1 of a new athlete or a new block | Nothing to do |
+| `No data for '<id>'` (running `review`) | You haven't run `prep` for this athlete yet | Run `python coach.py prep <id>` first |
+| "No curve history yet" (running `review`) | Not an error — this builds up automatically as `prep` keeps running over time | Nothing to do |
+
+---
+
+Need more than this? Everything above is explained step by step, with the
+reasoning behind it, in `manual/OPERATIONS_MANUAL.md`.
