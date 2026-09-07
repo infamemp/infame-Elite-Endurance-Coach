@@ -57,6 +57,14 @@ Onboarding a new athlete: `python coach.py new <id>`. Measuring what a block
 actually did: `python coach.py review <id> --since <date>` — compares
 CTL/ATL/TSB, ACWR, durability, and (once enough history has accumulated)
 curve progression between two dates, folding in `race_notes.md` if present.
+
+**Alternative, Claude Desktop only:** `mcp_server/server.py` exposes this
+same engine as 8 tools the coach can call mid-conversation — no dragging
+files. `push_block` (upload to Intervals.icu) is the one tool never called
+automatically; everything else the coach now does itself when the tools
+are available, falling back to the manual flow above otherwise. Setup and
+tool list in `manual/OPERATIONS_MANUAL.md` §0 and §10.
+
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow) and `WORKFLOW_CHECKLIST.md` (system setup, maintenance, adding a
 methodology). Architecture rationale in `ARCHITECTURE_v6.md`. Current state
@@ -127,7 +135,32 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 
 ## 🔄 Changelog
 
-**v6.4 — results module (current)**
+**v6.5 — MCP server (current)**
+
+The daily workflow required dragging files into the Claude Project for
+every new chat. What changed:
+
+- **`mcp_server/server.py`** exposes the engine itself as 8 tools a local
+  Claude Desktop connection can call mid-conversation — never a wrapper
+  around the raw Intervals.icu API, so `#STATE`'s determinism guarantee
+  carries over unchanged: `get_athlete_state`, `get_athlete_profile`,
+  `list_roster` (reads), `save_continuity`, `save_race_result`,
+  `save_block` (writes), `validate_block` (wraps the existing verifier as
+  a subprocess), and `push_block` (uploads to Intervals.icu via
+  `POST /events/bulk?upsert=true`, defaulting to a dry run).
+- **The prompt calls these tools itself** — `save_block`, `save_continuity`,
+  `save_race_result`, and `validate_block` — when available, falling back
+  to the manual copy-paste flow otherwise (e.g. the browser Project,
+  where the server can never connect). `push_block` is deliberately never
+  called automatically.
+- **A real classification bug found and fixed in the process:**
+  `[Discipline]: road` is ambiguous — confirmed real for both cycling
+  (Coggan) and running (Daniels) methodologies in the repo's own test
+  fixtures. Resolving it now reads the author's own `sport:` field from
+  `config/authors/<methodology>.yaml` instead of a flat lookup table,
+  which would have silently classified a marathon as a bike ride.
+
+**v6.4 — results module**
 
 The system could generate and verify plans but never measured whether they
 worked. What changed:

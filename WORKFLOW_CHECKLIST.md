@@ -35,7 +35,30 @@ Then close the terminal and open a new one — `setx` only affects new sessions.
 python build_zone_tables.py validate
 python tests\run_tests.py
 ```
-Expect `8/8 author files valid` and `67/67 passed`.
+Expect `8/8 author files valid` and `76/76 passed`.
+
+**A4 (optional — only if this machine will run the MCP server via Claude
+Desktop).** The MCP server never connects to the browser Project, only to
+Desktop:
+```
+python -m pip install "mcp[cli]" pyyaml requests
+```
+Use `python -m pip`, not bare `pip`, if this machine has more than one
+Python install — check with `python -c "import sys; print(sys.executable)"`
+and `python -m pip show mcp`; they must point to the same install.
+
+Then add an `infame-coach` entry to `claude_desktop_config.json` (Claude
+Desktop → Settings → Developer → Edit Config) with this machine's full
+`python.exe` path, the full path to `mcp_server\server.py`, and an
+`"env": {"ICU_API_KEY": "..."}` block — Desktop launches the server as a
+separate process that does not reliably inherit the environment variable
+from A2. Quit Desktop completely (system tray → Quit, not just the window)
+and reopen it. Confirm via the "+" menu in the chat box → Connectors →
+Manage connectors — "infame-coach" should be listed and on.
+
+`claude_desktop_config.json` is local to each machine, not part of the
+repo — repeat A4 separately on each machine that will use it. Full detail
+in `manual/OPERATIONS_MANUAL.md` §0 and §10.
 
 ---
 
