@@ -473,7 +473,8 @@ def check_header(header):
         errors.append(("HC-CAT", "-", f"Category '{cat}' must be one of "
                                       f"{sorted(VALID_CATEGORIES)}"))
     dur = header.get("Duration", "")
-    if dur and not re.fullmatch(r"\d{1,2}:\d{2}:\d{2}", dur):
+    if dur and dur.strip().lower() not in ("pending", "tbd") \
+            and not re.fullmatch(r"\d{1,2}:\d{2}:\d{2}", dur):
         warns.append(("CHK-DUR", "-", f"Duration '{dur}' is not HH:MM:SS"))
     for req in ("Week", "Date", "Category", "Focus"):
         if req not in header:
@@ -553,29 +554,55 @@ def parse_header_duration_secs(dur_str):
 # MAIN
 # ══════════════════════════════════════════════════════════════════
 
-def fill_tss(path, text, computed_by_session):
-    """Replace each [Estimated TSS] value with the computed figure, in session
-    order. The file is rewritten in place; only the TSS field changes."""
+def format_hhmmss(secs):
+    """Seconds -> HH:MM:SS, matching the [Duration] header format exactly."""
+    secs = int(round(secs))
+    h, rem = divmod(secs, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def fill_tss(path, text, computed_by_session, duration_by_session=None):
+    """Replace each [Estimated TSS] value with the computed figure, and each
+    [Duration] value with the computed HH:MM:SS (when the session's steps are
+    fully determined), in session order. The file is rewritten in place; only
+    these two fields change. Returns (tss_written, duration_written)."""
     starts = [m.start() for m in HEADER_START_RE.finditer(text)]
     if not starts:
-        return 0
+        return 0, 0
 
-    field = re.compile(r"(\[Estimated TSS\]\s*:?\s*)([^\[|\n]*)")
-    pieces, written = [], 0
+    tss_field = re.compile(r"(\[Estimated TSS\]\s*:?\s*)([^\[|\n]*)")
+    dur_field = re.compile(r"(\[Duration\]\s*)([^\[|\n]*)")
+    duration_by_session = duration_by_session or {}
+    pieces, tss_written, dur_written = [], 0, 0
     for i, st in enumerate(starts):
         if i == 0 and st > 0:
             pieces.append(text[:st])
         end = starts[i + 1] if i + 1 < len(starts) else len(text)
         chunk = text[st:end]
-        value = computed_by_session.get(i + 1)
-        if value is not None and field.search(chunk):
-            chunk = field.sub(lambda m: f"{m.group(1)}{value}", chunk, count=1)
-            written += 1
+
+        tss_value = computed_by_session.get(i + 1)
+        if tss_value is not None and tss_field.search(chunk):
+            chunk = tss_field.sub(lambda m: f"{m.group(1)}{tss_value}", chunk, count=1)
+            tss_written += 1
+
+        dur_value = duration_by_session.get(i + 1)
+        if dur_value is not None and dur_field.search(chunk):
+            # Preserve whatever trailing whitespace separated the old value
+            # from the next field (e.g. the space before " | [Estimated..."),
+            # regardless of whether the old value was a time or "pending".
+            def dur_sub(m, dur_value=dur_value):
+                old_val = m.group(2)
+                trailing_ws = old_val[len(old_val.rstrip()):]
+                return f"{m.group(1)}{dur_value}{trailing_ws}"
+            chunk = dur_field.sub(dur_sub, chunk, count=1)
+            dur_written += 1
+
         pieces.append(chunk)
 
     with open(path, "w", encoding="utf-8") as f:
         f.write("".join(pieces))
-    return written
+    return tss_written, dur_written
 
 
 def main():
@@ -614,6 +641,7 @@ def main():
 
     failed = False
     computed_by_session = {}
+    computed_duration_by_session = {}
     for n, (header, code) in enumerate(sessions, 1):
         category = header.get("Category", "Training")
         # A Rest or Travel day carries no exercise block by design -- it has
@@ -741,6 +769,9 @@ def main():
                                    f"{dur_tol_min}m tolerance) — the header "
                                    f"doesn't match the sum of its own steps"))
 
+            if not undetermined:
+                computed_duration_by_session[n] = format_hhmmss(total_secs)
+
         for c, ln, msg in errors:
             print(f"   FAIL [{c}] L{ln}: {msg}")
         for c, ln, msg in warns:
@@ -757,9 +788,11 @@ def main():
         print("RESULT: BLOCKED — hard-constraint violations. Do not upload.")
         sys.exit(1)
 
-    if args.fill_tss and computed_by_session:
-        written = fill_tss(args.file, text, computed_by_session)
-        print(f"Wrote computed TSS into {written} header(s) in "
+    if args.fill_tss and (computed_by_session or computed_duration_by_session):
+        tss_written, dur_written = fill_tss(
+            args.file, text, computed_by_session, computed_duration_by_session)
+        print(f"Wrote computed TSS into {tss_written} header(s) and "
+              f"Duration into {dur_written} header(s) in "
               f"{os.path.basename(args.file)}")
 
     print("RESULT: PASS — verified against config. Upload-safe.")
