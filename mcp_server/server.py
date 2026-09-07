@@ -38,6 +38,53 @@ import yaml
 
 from mcp.server.fastmcp import FastMCP
 
+
+def _patch_mcp_cancellation_bug():
+    """Works around modelcontextprotocol/python-sdk#2610: when Claude
+    Desktop gives up on one slow tool call and sends notifications/cancelled
+    for it, this SDK version's RequestResponder.__exit__ lets that
+    cancellation's CancelledError escape into the task group that runs the
+    server's stdio receive loop — killing it. The process stays alive
+    (Desktop still sees it as "connected") but never reads another request
+    again, so every later call from a fresh conversation about a different
+    athlete hangs indefinitely, however fast that call would normally be.
+    This is exactly what turned Elías's one slow cold-fetch into José
+    Ángel's ten-minute hang on a call that only reads a local file.
+
+    Confirmed present in mcp 1.26.0 (installed here) and 1.27.1, reproduced
+    on Windows 11 with Claude as the host — this server's exact
+    environment. Not fixed upstream as of 2026-09-07 (PR #2624 open).
+
+    Self-gated, matching the fix the issue's own downstream reporter
+    ships: only swallows the exception when this responder had already
+    sent its cancellation response AND the escaping exception is the
+    generic cancellation anyio raises — a real error from anywhere else
+    still propagates normally. Once a fix lands upstream, the condition
+    this checks for stops occurring and this becomes an inert no-op safe
+    to delete, rather than silently masking something new."""
+    import anyio
+    from mcp.shared.session import RequestResponder
+
+    def patched_exit(self, exc_type, exc_val, exc_tb):
+        try:
+            if self._completed:
+                self._on_complete(self)
+        finally:
+            self._entered = False
+            if not self._cancel_scope:
+                raise RuntimeError("No active cancel scope")
+            try:
+                self._cancel_scope.__exit__(exc_type, exc_val, exc_tb)
+            except BaseException as exc:
+                if self._completed and isinstance(exc, anyio.get_cancelled_exc_class()):
+                    return
+                raise
+
+    RequestResponder.__exit__ = patched_exit
+
+
+_patch_mcp_cancellation_bug()
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 sys.path.insert(0, ROOT)                       # for `import coach`
