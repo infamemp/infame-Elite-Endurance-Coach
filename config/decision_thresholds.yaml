@@ -692,3 +692,16 @@ longitudinal:
     declining_threshold_pct: 15
     # Drop in peak depletion between window halves that indicates the athlete
     # is no longer able to reach the same anaerobic depth.
+
+# ══════════════════════════════════════════════════════════════════
+# MCP SERVER
+# ══════════════════════════════════════════════════════════════════
+# The MCP server's tools call the same engine functions coach.py does.
+# This threshold prevents a tool asked about the same athlete repeatedly in
+# one conversation from hitting the Intervals.icu API every time — athletes
+# sync roughly once a day, so a fresh fetch has a real shelf life.
+mcp:
+  # Minutes before get_athlete_state() re-fetches instead of reusing the
+  # existing data/<id>/athlete_data.json. The coach can always ask for an
+  # immediate refresh in conversation, bypassing this.
+  state_cache_minutes: 60
