@@ -336,7 +336,16 @@ def validate_block(athlete_id: str, fill_tss: bool = True,
         cmd += ["--discipline", discipline]
 
     import subprocess
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return (f"validate_block.py did not finish within 60 seconds and was "
+                f"killed — this points to a real problem (not normal for a "
+                f"local file check), not a stale server. Check "
+                f"%APPDATA%\\Claude\\logs\\mcp-server-infame-coach.log.")
+    except Exception as e:
+        return f"Could not run the validator: {type(e).__name__}: {e}"
+
     verdict = "PASS" if result.returncode == 0 else "BLOCKED"
     return f"{verdict}\n\n{result.stdout}{result.stderr}"
 
