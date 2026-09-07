@@ -25,6 +25,22 @@ Arrastra desde `out/<nombre_atleta>/`:
 No hace falta volver a arrastrar a media conversación — solo al abrir un
 chat **nuevo**.
 
+## Trabajar vía MCP (solo Claude Desktop, no el navegador)
+
+Instalación única por máquina: `python -m pip install "mcp[cli]" pyyaml
+requests`, luego agrega `infame-coach` a `claude_desktop_config.json` con
+un bloque `"env": {"ICU_API_KEY": "..."}` (Desktop no siempre hereda las
+variables de `setx`). Detalle completo: `manual_operativo_infame_coach.md`
+Secciones 0 y 10.
+
+| Herramienta | Reemplaza |
+|---|---|
+| `get_athlete_state` / `get_athlete_profile` | arrastrar `state.md` / `profile.md` (caché de 1h, di "dame el estado actualizado" para forzar) |
+| `list_roster` | `coach.py prep --list` |
+| `save_continuity` / `save_race_result` / `save_block` | copiar y pegar en `continuity.md` / `race_notes.md` / un archivo de bloque — el coach las llama solo ahora |
+| `validate_block` | `coach.py check <archivo>` — el coach la llama sola justo después de `save_block` |
+| `push_block` | pegar en el Workout Builder de Intervals.icu — **nunca automática**; pídela tú, por default hace vista previa |
+
 ## Consulta a media semana, fuera de calendario
 
 1. `python coach.py prep <id>`
@@ -37,7 +53,8 @@ chat **nuevo**.
 
 1. El coach emite automáticamente un `#SESSION` con borde visual al terminar
    la última sesión
-2. Cópialo en `out/<nombre>/continuity.md`
+2. Cópialo en `out/<nombre>/continuity.md` — automático si `save_continuity`
+   está disponible como herramienta
 3. `python coach.py prep <id>` antes del siguiente chat
 4. Opcional: `python coach.py review <id> --since <inicio del bloque>` para
    ver qué se movió de verdad (CTL/ATL/TSB, ACWR y durability ya funcionan;
@@ -46,7 +63,8 @@ chat **nuevo**.
 ## Después de una carrera (Fase 6)
 
 1. El coach emite un bloque `#RACE_RESULT` durante el debrief
-2. Agrégalo (nunca reemplaces) a `out/<nombre>/race_notes.md`
+2. Agrégalo (nunca reemplaces) a `out/<nombre>/race_notes.md` — automático
+   si `save_race_result` está disponible como herramienta
 3. `review` lo toma automáticamente para cualquier ventana que incluya esa fecha
 
 ## Reglas de oro
@@ -70,3 +88,5 @@ chat **nuevo**.
 | `note: no continuity.md here yet` | Normal en la semana 1 de un bloque — no es un error |
 | `No data for '<id>'` (en `review`) | Corre `python coach.py prep <id>` primero |
 | "No curve history yet" (en `review`) | No es un error — la captura apenas empezó, se resuelve con el tiempo |
+| MCP: "Server disconnected" / se queda pensando y expira | Falta `ICU_API_KEY` en el bloque `env` de `claude_desktop_config.json` — revisa `%APPDATA%\Claude\logs\mcp-server-infame-coach.log` |
+| Herramienta MCP no aparece tras editar el config | Cierra Desktop desde el ícono de la bandeja (no solo la ventana), vuelve a abrirlo |

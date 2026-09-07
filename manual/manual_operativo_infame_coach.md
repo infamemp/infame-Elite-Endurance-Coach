@@ -30,6 +30,29 @@ cualquier comando de este manual:
 "instalado" hasta que existe en las dos máquinas y está comiteado en GitHub.
 Un archivo corregido que solo vive en la descarga del chat no cuenta.
 
+**Opcional, una vez por máquina, solo si vas a usar la Sección 10 (el
+servidor MCP) en esa máquina:** ahí debe estar instalado Claude Desktop —
+el servidor MCP nunca se conecta al Proyecto del navegador. Después:
+
+1. `python -m pip install "mcp[cli]" pyyaml requests` — usa `python -m pip`,
+   no `pip` a secas, si la máquina tiene más de un Python instalado
+   (confírmalo con `python -c "import sys; print(sys.executable)"` y
+   `python -m pip show mcp` — deben apuntar al mismo Python)
+2. Agrega una entrada `infame-coach` a `claude_desktop_config.json` (Claude
+   Desktop → Settings → Developer → Edit Config) con la ruta completa al
+   `python.exe` de esa máquina, la ruta completa a `mcp_server\server.py`,
+   y un bloque `"env": {"ICU_API_KEY": "..."}` — Desktop lanza esto como un
+   proceso aparte que no siempre hereda la variable de entorno de Windows,
+   aunque ya la hayas configurado con `setx` para tus propias terminales
+3. Cierra Claude Desktop por completo (ícono en la bandeja del sistema →
+   Salir, no solo cerrar la ventana) y vuelve a abrirlo
+4. Confirma que conectó: menú "+" en la caja de texto → Connectors →
+   Manage connectors → "infame-coach" debe aparecer listado y activado
+
+El `claude_desktop_config.json` de cada máquina es local a esa máquina —
+no es parte del repo, git no lo sincroniza. Repite esta instalación en
+cada máquina por separado, con la ruta de Python de esa máquina.
+
 ---
 
 ## 1. Dar de alta un atleta nuevo
@@ -248,7 +271,43 @@ que pediste.
 
 ---
 
-## 10. Cierre de macrociclo / debrief de carrera (Fase 6)
+## 10. Trabajar vía el servidor MCP (Claude Desktop)
+
+Una alternativa a los pasos 2-9 de arriba, disponible solo en Claude
+Desktop (no en el navegador). Un servidor local expone el motor de este
+proyecto como herramientas que el coach puede llamar a media conversación
+— sin arrastrar archivos, sin correr `coach.py` a mano para los atletas
+con los que trabajas así.
+
+**Instalación única por máquina** — ver la Sección 0 (actualizada) para
+instalar el paquete `mcp` y configurar `claude_desktop_config.json`. Una
+vez hecho, cualquier chat en Desktop (no solo el Proyecto) tiene acceso a
+estas 8 herramientas:
+
+| Herramienta | Reemplaza | Notas |
+|---|---|---|
+| `get_athlete_state` | `coach.py prep` + arrastrar `state.md` | Reutiliza datos descargados en la última hora (`mcp.state_cache_minutes` en `decision_thresholds.yaml`, default 60) en vez de volver a consultar Intervals.icu cada vez. Di "dame el estado actualizado" para forzar una descarga fresca antes de que pase la hora. |
+| `get_athlete_profile` | arrastrar `profile.md` | Misma caché de una hora, compartida con `get_athlete_state` — pedir una justo después de la otra no dispara dos descargas. |
+| `list_roster` | `coach.py prep --list` | Lee el `out/roster.md` ya existente; no contacta a Intervals.icu por sí sola. |
+| `save_continuity` | copiar el `#SESSION` a `continuity.md` | El coach la llama solo ahora — ver Sección 8 y el caso a media semana en la Sección 7. Sobrescribe, igual que siempre hizo la versión manual. |
+| `save_race_result` | copiar el `#RACE_RESULT` a `race_notes.md` | El coach la llama sola después de un debrief de carrera — ver Sección 11. Agrega, nunca sobrescribe. |
+| `save_block` | guardar el bloque generado en un `.md` | El coach la llama justo después de mostrarte el bloque, hacia `out/<nombre_atleta>/blocks/<fecha>_bloque.md`. Llamarla otra vez el mismo día (por ejemplo, tras una corrección) sobrescribe el archivo de ese día. |
+| `validate_block` | `coach.py check <archivo>` | El coach la llama justo después de `save_block` y te reporta PASS/BLOCKED en la misma respuesta — no corres nada a mano. |
+| `push_block` | pegar sesiones en el Workout Builder de Intervals.icu | **No se llama automáticamente, a propósito.** Pídela explícitamente cuando la quieras; por default hace una vista previa (`dry_run`, muestra exactamente qué se subiría, sin tocar nada) y solo sube de verdad si vuelves a pedirlo confirmando eso. Decisión actual de Michel: seguir haciendo este paso a mano por ahora, para detectar correcciones antes de que algo llegue a Intervals.icu — `push_block` queda disponible pero sin usarse hasta que eso cambie. |
+
+**Lo que no cambia:** las fases, los gates y las confirmaciones "STOP AND
+WAIT" del coach son idénticos en los dos caminos. Las herramientas solo
+cambian cómo se leen y escriben `state.md`/`profile.md`/`continuity.md`/
+`race_notes.md`/el archivo del bloque — nunca qué hace el coach con ellos.
+
+**Si una herramienta se queda pensando o el conector dice "disconnected":**
+ver las filas específicas de MCP en la Sección 13, y revisar
+`%APPDATA%\Claude\logs\mcp-server-infame-coach.log` para el error real
+antes de suponer que el ID del atleta está mal.
+
+---
+
+## 11. Cierre de macrociclo / debrief de carrera (Fase 6)
 
 Cuando el bloque final del macrociclo termina (normalmente después de la
 carrera A), el coach entra en Fase 6:
@@ -262,7 +321,7 @@ carrera A), el coach entra en Fase 6:
 
 ---
 
-## 11. Mantenimiento — sincronizar máquinas y correr pruebas
+## 12. Mantenimiento — sincronizar máquinas y correr pruebas
 
 **Cada vez que edites algo en `config/` o en `engine/`:**
 ```
@@ -289,27 +348,34 @@ Danger Zone → Change visibility.
 
 ---
 
-## 12. Solución de problemas comunes
+## 13. Solución de problemas comunes
 
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
 | `Missing environment variable ICU_API_KEY` | No configurada en esta terminal/máquina | `setx ICU_API_KEY "tu_key"`, abre una terminal nueva |
 | `Athlete 'iXXXXXX' not found` | Typo en el ID, o no es coach de ese atleta | `python coach.py prep --list` para ver los IDs reales |
 | `config/athletes/iXXXXXX.yaml already exists` | Ya diste de alta a este atleta antes | Edita el YAML existente, no uses `new` de nuevo |
-| Avg Power en `—` para actividades con medidor | Copia local desincronizada con el repo | Repite el paso 11 (sincronizar máquinas) |
+| Avg Power en `—` para actividades con medidor | Copia local desincronizada con el repo | Repite el paso 12 (sincronizar máquinas) |
 | `PROFILE BUILD FAILED (non-blocking)` | Fallo en `build_profile.py`, pero `state.md` se entregó igual | Revisa el error impreso; el chat puede seguir con solo `state.md` mientras lo arreglas |
 | `note: no continuity.md here yet` | Primera semana de un atleta/bloque, o se te olvidó guardarlo | Normal en el primer caso; en el segundo, pide el header al coach (paso 7) |
 | `#STATE` con más de 7 días | No corriste `prep` recientemente | `python coach.py prep <id>` antes de continuar — el coach se va a negar a avanzar con un estado viejo |
 | `No data for '<id>'` (en `review`) | Nunca corriste `prep` para este atleta | Corre `python coach.py prep <id>` primero |
 | "No curve history yet" (en `review`) | La captura de snapshots apenas empezó | No es un error — se resuelve solo con el tiempo |
+| MCP: "Server disconnected", la herramienta se queda pensando y expira | Normalmente `ICU_API_KEY` no le llegó al proceso que Desktop lanzó (no siempre hereda variables de Windows) | Agrégala al bloque `"env"` en `claude_desktop_config.json` — ver Sección 0. Revisa `%APPDATA%\Claude\logs\mcp-server-infame-coach.log` para el error exacto, sin adivinar |
+| La herramienta MCP no aparece en Connectors tras editar el config | Config editado pero Desktop no se reinició del todo | Ciérralo desde el ícono de la bandeja del sistema, no solo la ventana, y vuelve a abrirlo |
+| MCP: `python` corre pero la herramienta dice módulo no encontrado | Dos instalaciones de Python en la máquina, `mcp` instalado en la otra | `python -m pip install "mcp[cli]"` (no `pip` a secas) — ver Sección 0 |
 
 ---
 
-## 13. Referencia rápida de archivos y carpetas
+## 14. Referencia rápida de archivos y carpetas
 
 ```
 infame_elite_endurance_coach/
 ├── coach.py                      punto de entrada único: prep / new / check
+├── mcp_server/
+│   └── server.py                 las 8 herramientas de la Sección 10 —
+│                                 solo local, Claude Desktop se conecta vía
+│                                 claude_desktop_config.json (no está en el repo)
 ├── engine/
 │   ├── fetch_athlete_data.py     descarga de Intervals.icu → athlete_data.json
 │   ├── build_state.py            resuelve #STATE → state.md / state.json

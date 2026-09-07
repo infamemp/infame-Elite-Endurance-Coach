@@ -1,6 +1,6 @@
 # Improvement Backlog — Infame Elite Endurance Coach
 
-**Written:** 2026-08-22 · **Revised:** 2026-09-06
+**Written:** 2026-08-22 · **Revised:** 2026-09-06 (MCP server)
 **Status:** Nothing here is committed work. It is a considered list of where the
 system could go, with honest reasoning about what each item costs and what it is
 worth.
@@ -262,27 +262,39 @@ the original architecture document — `new` and `check` joined it as the
 onboarding and verification shortcuts. Removed a step from every day, as
 predicted.
 
-**Upload verified blocks via the Intervals.icu API.** The last manual step in
-the daily loop. `POST /api/v1/athlete/{id}/events/bulk?upsert=true` accepts
-the coach's native workout-description syntax directly — no format
-conversion needed — and an `external_id` makes it idempotent: re-uploading a
-corrected block updates it instead of duplicating it, which today requires
-deleting by hand in Intervals.icu. A secondary benefit: Intervals computes
-its own TSS from the same description on upload, which is a free,
-independent check against the verifier's — if they disagree systematically,
-that is worth investigating on its own. Natural fit as a `coach.py push`
-subcommand once `check` has passed.
+**Upload verified blocks via the Intervals.icu API — resolved, September
+(built as `push_block`, part of the MCP server below).**
+`POST /api/v1/athlete/{id}/events/bulk?upsert=true` accepts the coach's
+native workout-description syntax directly — no format conversion needed
+— and a deterministic `external_id` makes it idempotent: re-pushing a
+corrected block updates it instead of duplicating it. Intervals also
+computes its own TSS from the same description on upload, which is a free
+cross-check against the verifier's — worth revisiting if the two ever
+disagree systematically. Built with a `dry_run` default and deliberately
+never called automatically by the coach — Michel's own choice, to keep
+catching corrections by hand before anything reaches Intervals.icu, until
+that changes.
 
-**A dedicated MCP server exposing this engine — scoped, deferred in favor of
-the results module, September.** Not a generic wrapper around the raw
-Intervals.icu API — several already exist and hand the model unresolved
-data, reintroducing exactly the interpretation risk the `#STATE` contract
-exists to prevent. The version worth building exposes the engine's own
-functions as tools (`get_athlete_state`, `get_athlete_profile`,
-`validate_block`, `push_block`, `list_roster`), so the Project could call
-them mid-conversation without losing determinism — closer to a lower-friction
-alternative to dragging files than to the "automate the reasoning layer" item
-below, which is a much larger and different change.
+**A dedicated MCP server exposing this engine — resolved, September.**
+`mcp_server/server.py`, 8 tools, local stdio transport to Claude Desktop
+only (never the browser Project, and never a generic wrapper around the
+raw Intervals.icu API — every tool returns something the engine already
+resolved deterministically, same as `state.md` always has).
+`get_athlete_state`/`get_athlete_profile`/`list_roster` read;
+`save_continuity`/`save_race_result`/`save_block` write locally;
+`validate_block` wraps the existing verifier as a subprocess; `push_block`
+is the item above. The prompt now calls the first seven itself when the
+tools are present, falling back to the manual flow otherwise.
+
+A real bug surfaced while building `push_block`, worth remembering the
+shape of: `[Discipline]: road` looked cycling-only from the first fixture
+checked, and only turned out to be genuinely shared with running
+(confirmed in two separate fixtures, both `daniels` + `road`) because the
+one contradicting example wasn't dismissed as a typo without evidence.
+Resolving it now reads the author's own `sport:` field from
+`config/authors/<methodology>.yaml` rather than a hardcoded table — the
+same principle as everywhere else in this system: the config file is the
+source of truth, not a second list maintained by hand alongside it.
 
 **A `.exe` via PyInstaller.** Double-click instead of a terminal. Cheap to build,
 and it makes the tools usable from a machine without Python installed.
