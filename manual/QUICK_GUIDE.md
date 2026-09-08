@@ -83,6 +83,26 @@ Do this once per chat — not again partway through the same conversation.
 
 ---
 
+## Validating a block before upload
+
+1. From the coach's message, copy only the training block — from the
+   first `[Week]` line through the `[Nutrition]:` line of the last
+   session. **Never** copy the one-line instruction to run the
+   validator, or the `───`-bordered `#SESSION ... #END` header that
+   follows — that header goes in `continuity.md` instead (see above),
+   not in the block file.
+2. Paste it into Notepad, save it anywhere under
+   `out/<athlete_name>/blocks/` (`.txt` or `.md`, doesn't matter).
+3. `python coach.py check path\to\file`
+4. Seeing `pending` in the coach's chat message is always normal — the
+   coach never fills that in, only `check` does, directly in your file.
+   If a block that already passed shows `pending` again, you likely
+   pasted a fresh, unprocessed copy over it — just run `check` again.
+5. Don't upload anything until the result says `PASS`. Full detail in
+   Manual §6.
+
+---
+
 ## Golden rules
 
 - A fix isn't real until it exists on **both** machines and is pushed to
@@ -109,6 +129,9 @@ Do this once per chat — not again partway through the same conversation.
 | `note: no continuity.md here yet` | Normal for week 1 of a new athlete or a new block | Nothing to do |
 | `No data for '<id>'` (running `review`) | You haven't run `prep` for this athlete yet | Run `python coach.py prep <id>` first |
 | "No curve history yet" (running `review`) | Not an error — this builds up automatically as `prep` keeps running over time | Nothing to do |
+| `cannot validate — Unknown methodology 'X'` (running `check`) | The `[Methodology]` field doesn't match a real file in `config/authors/` | Take it back to the coach as a correction — see Manual §6 |
+| `FAIL [HC-DUAL] ... missing quoted cue` (running `check`) | A line is missing its quoted coaching phrase — some methodologies require one on every line | Take it back to the coach as a correction — see Manual §6 |
+| A passed block shows `pending` again after re-running `check` | You pasted an unprocessed copy over an already-validated file | Not a bug — run `check` again on the file as it is now |
 
 ---
 

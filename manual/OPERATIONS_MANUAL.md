@@ -247,21 +247,73 @@ before telling an athlete to start it.
 
 ## 6. Validate and upload a block to Intervals.icu
 
-When the coach delivers a block of sessions (in Intervals.icu's own
-syntax), **before uploading it**, run it through the validator:
+When the coach delivers a block of sessions, its message has up to three
+distinct parts, always in this order. **Only the first one goes into a
+file.**
+
+1. **The training block itself.** Starts at the first line that begins
+   with `[Week]`, and runs through every session's fields (`[Category]`,
+   `[Methodology]`, `[Discipline]`, `[Focus]`, `[Duration]`/
+   `[Estimated TSS]`, `[Execution]`, `[Nutrition]`) plus its code snippet,
+   repeating session after session. **It ends at the `[Nutrition]:` line
+   of the very last session.**
+2. **A one-line instruction telling you to run the validator.** Never
+   copy this — it's a note to you, not training content.
+3. **A row of `───` characters, followed by a boxed `#SESSION ... #END`
+   header.** This is the continuity header, covered in sections 7 and 8
+   — a completely different file (`continuity.md`), never the block file.
+
+**How to spot the boundary, for any block the coach ever gives you —
+not just this one:** the block is nothing but repeating
+`[Week]` → `[Nutrition]:` sessions, one after another. The instant the
+text stops looking like that — a plain sentence, or a row of `───` —
+you've reached the end. Stop copying there, every time, regardless of
+the dates or the number of sessions involved.
+
+**Getting it into a file:**
+1. Open Notepad (Windows key → type `notepad` → Enter).
+2. Select and copy only the block, using the boundary above.
+3. Paste it into Notepad.
+4. Save As, into `out\<athlete_name>\blocks\` (create that folder if it
+   doesn't exist yet), with any name you like. The file extension
+   doesn't matter — `.txt` and `.md` both work identically; the
+   validator only ever reads it as plain text.
+
+**Before uploading anything**, run it through the validator:
 
 **Command:**
 ```
 python coach.py check path\to\block.txt
 ```
 
-This checks syntax, prescription limits, whether ramps are allowed for
-that session type, and — importantly — **computes the real training
-load number** (filling in whatever the coach left as `pending`, since
-the coach itself never calculates that number; the code does, so it
-can't be arithmetically wrong). If the check fails, take the specific
-error back to the coach as a correction, fix it, and re-run the command.
-Don't upload a block that hasn't passed.
+This checks syntax, prescription limits, and whether ramps are allowed
+for that session type. Two things it does are easy to misread the first
+few times, so they're worth knowing up front:
+
+- **It computes the real training load number and writes it into the
+  file on disk.** The coach itself never calculates TSS or Duration —
+  only the code does, and the only place the real number ever appears is
+  inside your file, the moment `check` runs successfully on it. This
+  means the coach's own chat message will *always* show
+  `[Duration] pending | [Estimated TSS] pending`, every single time,
+  even for a block that has already passed — because the coach's copy of
+  the text never gets that calculation done to it. Seeing "pending" in
+  the chat, or in something you just copied from the chat, is never a
+  sign that something is broken.
+
+- **Re-running `check` is always safe — but watch what you paste over
+  what.** If you go back to the coach for a correction, the corrected
+  block it gives you will *also* say "pending" — as always, per the
+  point above. If you paste that fresh copy over a file that had
+  *already passed* `check`, you erase the real numbers that were written
+  into it, and the file goes back to looking un-validated. That's
+  expected, not a bug — it only means you haven't run `check` on the
+  corrected version yet. Do that, and it resolves the same way it did
+  the first time.
+
+If the check fails for any other reason, take the specific error back
+to the coach as a correction, fix it, and re-run the command. Don't
+upload a block that hasn't passed.
 
 If the block needs a methodology or discipline different from what its
 own header declares:
@@ -422,6 +474,9 @@ GitHub → Settings → Danger Zone → Change visibility.
 | `#STATE` older than 7 days | Haven't run `prep` recently | Run `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale numbers |
 | `No data for '<id>'` (running `review`) | Never ran `prep` for this athlete | Run `python coach.py prep <id>` first — `review` reads what `prep` already saved, it doesn't fetch new data itself |
 | "No curve history yet" (running `review`) | Snapshot capture only just started for this athlete | Not an error — see section 9. Clears up as `prep` keeps running over time |
+| `cannot validate — Unknown methodology 'X'` (running `check`) | The `[Methodology]` field in that session doesn't match a real file in `config/authors/` — e.g. plain `friel` instead of `friel_cycling`/`friel_running` | Take it back to the coach as a correction — see section 6 |
+| `FAIL [HC-DUAL] ... missing quoted cue` (running `check`) | A line is missing its short quoted coaching phrase — some methodologies (e.g. Koop for trail) require one on *every* line, not only the Main Set | Take it back to the coach as a correction — see section 6 |
+| A block that already showed `RESULT: PASS` shows `pending` again after running `check` once more | You pasted a fresh, unprocessed copy of the block (straight from the coach) over a file that had already been validated, erasing the real numbers that were written into it | Not a bug — see section 6. Just run `check` again on the file as it is now |
 
 ---
 
