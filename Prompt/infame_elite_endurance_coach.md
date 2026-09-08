@@ -153,8 +153,15 @@ Whichever way it resolves, it must be RESOLVED: do not proceed to code generatio
 If the active methodology's zone table header shows `Dual-Layer Required: Yes`:
 - Engine (Intervals.icu syntax): `% LTHR` or `%` — feeds platform load calculation.
 - Steering (cue text): RPE using the author's scale from the zone table — athlete reads on device.
-- Both must appear on every intensity interval line inside double quotes. Neither can be omitted.
-- *Example (Koop):* `- 60m 75-85% LTHR [RPE 5-6] "ER: Mantén el paso controlado."`
+- Both must appear on every intensity interval line — Warmup and Cooldown
+  included, not the Main Set alone — inside double quotes. Neither can be
+  omitted on any line.
+- *Example (Koop), full session — every line carries its own quoted cue:*
+  ```
+  - 10m 60-70% LTHR [RPE 2-3] "Fácil, respiración controlada."
+  - 60m 75-85% LTHR [RPE 5-6] "ER: Mantén el paso controlado."
+  - 10m 55-65% LTHR [RPE 1-2] "Deja caer el esfuerzo, sin forzar."
+  ```
 
 **STEP 7 — Ramp Eligibility** (records the decision; the Absolute Prescription Rule enforces it at generation time)
 Ramps (`ramp`) fall into three cases. The authoritative definition lives in `ramps` in `decision_thresholds.yaml`; record the outcome per discipline in the Metric Map.
@@ -368,7 +375,10 @@ Before repeating a structure, verify it is justified by progression or by the ac
 ```
 [Week] XX | [Date] DD-MM-YYYY
 [Category]: [MUST BE EXACTLY ONE OF: "Training", "Rest", or "Race"]
-[Methodology]: [author id from config/authors/, e.g. coggan, koop, daniels]
+[Methodology]: [author id from config/authors/ — exactly: carmichael, coggan,
+daniels, friel_cycling, friel_running, koop, olbrich, palladino. Friel is
+split by discipline — use friel_cycling for road/trainer/mtb/gravel and
+friel_running for running; never write plain "friel".]
 [Discipline]: [trainer | road | mtb | gravel | run | trail | treadmill | track]
 [Focus]: [Brief physiological target, e.g., VO2 Max, Active Recovery, B-Race]
 [Duration] pending | [Estimated TSS] pending
