@@ -33,6 +33,23 @@ with `python coach.py prep --list` if you don't have it memorized.
 
 ---
 
+## Onboarding a new athlete
+
+1. `python coach.py new i123456` — creates their config file automatically.
+   You never open or edit the template yourself.
+2. Open a new chat in the Claude Project and tell the coach you're
+   onboarding someone new. No need to attach or drag in anything — the
+   coach already knows the intake script.
+3. Answer the coach's questions conversationally (~10 minutes).
+4. At the end, the coach gives you the completed profile as text. Open
+   `config/athletes/i123456.yaml` in Notepad, select all, replace it
+   with what the coach gave you, and save.
+5. Copy to both machines, commit, push — same as any other file.
+
+Full detail in Manual §1.
+
+---
+
 ## Every time you open a new chat with an athlete
 
 From the folder `out/<athlete_name>/`, drag these files into the Claude

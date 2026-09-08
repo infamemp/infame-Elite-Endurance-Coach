@@ -111,34 +111,58 @@ Downloads folder, does not count yet.
 
 ## 1. Onboard a new athlete
 
-**Command:**
+Three things are worth knowing before you start, because the words
+"template" and "profile" suggest a form you'd fill in yourself — that's
+not how this works.
+
+- **You never open or edit the template directly.** It already lives in
+  your repo at `config/athletes/_template.yaml`. The command below
+  copies it for you automatically — you don't fetch it from anywhere,
+  and you don't need to find it first.
+- **You don't fill it in — a conversation with the coach does.** The
+  athlete's answers go in through a normal back-and-forth chat, and the
+  coach hands you the finished file at the end. You never write YAML by
+  hand for this.
+- **"Uploading" it just means saving it in place.** There's no separate
+  destination — it's the same file the command already created,
+  overwritten with real content, then committed and pushed like any
+  other file in the repo.
+
+**Step 1 — create the empty profile.**
 ```
 python coach.py new i123456
 ```
+This confirms the id is real on your Intervals.icu account (catching a
+typo before anything is created), then copies the template to
+`config/athletes/i123456.yaml`. If that file already exists for this
+athlete, the command stops and changes nothing — it never overwrites a
+real profile.
 
-**What it does:**
-- Confirms the id is real on your Intervals.icu account (catches typos
-  before creating anything)
-- If the athlete already has a profile (`config/athletes/i123456.yaml`
-  already exists), it stops without touching anything — it never
-  overwrites a real profile
-- Otherwise, copies the template and creates `config/athletes/i123456.yaml`
+**Step 2 — run the intake conversation.**
+Open a new chat in the Claude Project and tell the coach you're
+onboarding a new athlete (or just start describing the situation). You
+don't need to open, attach, or drag in `config/athletes/ATHLETE_INTAKE.md`
+— that file was already uploaded to the Project once, when it was set
+up, so the coach already knows the full interview script and will
+conduct it for you, in the athlete's own language. It's eight short
+parts — identity, goal, injuries, weekly availability, training
+environment, history, devices, preferences — roughly ten minutes for
+someone with a training history, less for a complete beginner.
 
-**What you do next:**
-1. Open a new chat in the Claude Project.
-2. Run the intake conversation using `config/athletes/ATHLETE_INTAKE.md`
-   as the script — the coach conducts it in the athlete's language. You
-   don't need to memorize the questions; just have that file open (or
-   drag it into the chat) and let the coach lead.
-3. The coach delivers a completed profile at the end of intake — copy it
-   into `config/athletes/i123456.yaml`, replacing the template's
-   contents entirely.
-4. Save the file. The athlete is now ready for their first `prep`
-   (section 2).
+**Step 3 — save what the coach gives you.**
+At the end of the conversation, the coach delivers the completed profile
+as plain text, already in the right format. Open
+`config/athletes/i123456.yaml` in Notepad, select everything, and
+replace it with what the coach gave you — the whole file, not a partial
+edit. Save.
 
-There is no need to run `prep` as part of onboarding — intake does not
-depend on any Intervals.icu data, only on what the athlete declares
-about themselves.
+**Step 4 — treat it like any other repo file.**
+Copy it to both machines, commit, and push — same as every other
+correction in this manual. There is no other place this file needs to
+go. The athlete is now ready for their first `prep` (section 2); running
+`prep` is not part of onboarding itself, since intake never depends on
+any Intervals.icu data — only on what the athlete declares about
+themselves.
 
 ---
 
