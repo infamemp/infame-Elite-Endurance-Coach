@@ -206,7 +206,7 @@ def render_workouts(events):
     return L
 
 
-def render_history(activities, days=28):
+def render_history(activities, days=180):
     cutoff = date.today() - timedelta(days=days)
     recent = [a for a in (activities or [])
               if a.get("date") and d(a["date"]) >= cutoff]
@@ -241,7 +241,7 @@ def render_history(activities, days=28):
     return L, recent
 
 
-def render_context_snapshot(events, recent_activities, days=28):
+def render_context_snapshot(events, recent_activities, days=180):
     L = ["## CONTEXT SNAPSHOT", ""]
 
     a_races = sorted((e for e in events or []
@@ -297,14 +297,16 @@ def build(aid, quiet=False):
              "authoritative in state.md, not here — see that file, don't recompute.")
     L.append("")
 
+    # render_history is computed first (render_context_snapshot needs its
+    # `recent` list), but appended to L last — see section order below.
+    history_lines, recent = render_history(data.get("activities"), days=180)
+
     L += render_personal(profile, data.get("wellness"))
+    L += render_context_snapshot(data.get("events"), recent, days=180)
     L += render_sport_config(profile.get("sport_settings"))
     L += render_races(data.get("events"))
     L += render_workouts(data.get("events"))
-
-    history_lines, recent = render_history(data.get("activities"), days=28)
     L += history_lines
-    L += render_context_snapshot(data.get("events"), recent, days=28)
 
     md = "\n".join(L).rstrip() + "\n"
 
