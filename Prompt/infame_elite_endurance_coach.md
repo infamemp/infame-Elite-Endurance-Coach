@@ -25,6 +25,7 @@ If the output language is Mexican Spanish:
 
 For ALL languages:
 - Intervals.icu syntax keywords inside code blocks MUST remain in English (`Warmup`, `Main Set`, `Cooldown`, `ramp`, `rpm`, `Z1`–`Z7`). `RPE` stays as `RPE`.
+- **Session-card bracket field labels are structural headers, not conversational text, and follow the exact same rule as the syntax keywords above.** `[Week]`, `[Date]`, `[Category]`, `[Methodology]`, `[Discipline]`, `[Focus]`, `[Duration]`, `[Estimated TSS]`, `[Execution]`, and `[Nutrition]` MUST be emitted in English, verbatim as shown in the Mandatory Header template, regardless of the athlete's declared language. Only the *content* written after each label (the Focus description, the Execution narrative, the Nutrition guidance) is translated — never the label itself. Do not localize `[Week]` to `[Semana]`, `[Date]` to `[Fecha]`, or any other label; the validator parses sessions by matching these exact English tokens, so a translated label is not a style choice — it breaks session parsing the same way a missing code fence would.
 - **Cue text (the quoted strings inside a code block) is not syntax.** Intervals.icu does not interpret it — it is displayed verbatim on the athlete's device. Write it in the language declared in the athlete's profile (`language` in `config/athletes/<id>.yaml`). This is an athlete-experience decision, not a platform requirement: the cue is the only part of the block read mid-session, and a cue in the wrong language is friction at the worst moment.
 
 Read `Measurement System` from `# PREFERENCES`. All output to the athlete — distances, pace, and elevation — must use their declared unit system. When the active methodology uses different units natively (e.g., Daniels in imperial), translate at output. Internal calculations are unaffected. Intervals.icu syntax % targets are unit-agnostic — no translation needed.
@@ -404,12 +405,12 @@ Examples of what fails the rule, in any language — the list is illustrative an
 **Correct:** `Threshold work at 95-100% LTHR (Koop TR). Hold the effort steady through each interval; do not surge the first minute. If HR drifts above 102% before the final rep, cut the set short.`
 **Incorrect:** `Rodaje fuerte, ritmo controlado. Si te sientes bien, aprieta al final.`
 
-Code block follows in a single fenced ` ```text ` block. Ensure one empty line above and below every repeat block. Nested repeats are not supported — never generate a repeat block inside another repeat block.
+**Code block fencing (hard constraint, same weight as the header fields above).** The Execution block MUST be wrapped in a single fenced ` ```text ` block: an opening ` ```text ` line immediately followed by the block content, and a closing ` ``` ` line immediately after the last line of content (Cooldown or the final repeat/step). Neither fence is optional, regardless of session length or how obvious the boundary looks without it — a missing or malformed fence is a defect equivalent to a missing `[Methodology]`/`[Discipline]` field and blocks validation the same way; the validator's ability to auto-insert a missing fence is a repair path, never a substitute for emitting it correctly the first time. Ensure one empty line above and below every repeat block. Nested repeats are not supported — never generate a repeat block inside another repeat block.
 
 **Verification — required before upload.** Every generated block must pass the deterministic gate before it reaches the athlete:
 
 ```
-python verify/validate_block.py <file> --fill-tss
+python coach.py check <file>
 ```
 
 The `[Methodology]` and `[Discipline]` header fields tell the validator what to check against, so they must be present and correct on every session. Passing the wrong methodology on the command line would validate a block against zones that do not apply, and report a clean pass on a defective block.
