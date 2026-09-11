@@ -21,14 +21,24 @@ that rule has only been confirmed against a single athlete. It needs
 checking against a few more athletes before it can be trusted as a general
 rule — until then, showing a wrong number is worse than showing none.
 
+Since v1.1 it also embeds the athlete's DECLARED profile — goals,
+availability, equipment, limitations, preferences — from
+config/athletes/<athlete_id>.yaml. Before this, that file never reached the
+Claude Project at all: prep only delivers state.md and profile.md, so the
+coach worked without any of what the athlete declared. The file is shown
+verbatim (full-line comments removed) so no field is lost or reinterpreted;
+the only computed value is the weekly availability total. A missing,
+unreadable or unfilled file is stated plainly in profile.md, never hidden.
+
 Input:  data/<athlete_id>/athlete_data.json   (written by fetch_athlete_data.py)
+        config/athletes/<athlete_id>.yaml     (declared profile, optional)
 Output: data/<athlete_id>/profile.md
 
 Usage:
     python engine/build_profile.py --athlete i18969
     python engine/build_profile.py --all
 
-Version: 1.0
+Version: 1.1
 """
 
 import argparse
@@ -39,6 +49,12 @@ from datetime import date, datetime, timedelta
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
+ATHLETES_CFG = os.path.join(ROOT, "config", "athletes")
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 # Broad sport groupings for the context snapshot's distribution line.
 SPORT_GROUP = {
@@ -278,6 +294,112 @@ def render_context_snapshot(events, recent_activities, days=180):
 
 
 # ══════════════════════════════════════════════════════════════════
+# DECLARED PROFILE — config/athletes/<id>.yaml
+# ══════════════════════════════════════════════════════════════════
+
+DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def _is_number(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def availability_line(declared):
+    """One deterministic line: minutes per day and the weekly total, so the
+    coach never adds them up by hand. Non-numeric entries are shown as written
+    and excluded from the total, which is then marked partial."""
+    days = ((declared or {}).get("availability") or {}).get("days")
+    if not isinstance(days, dict):
+        return None
+    parts, total, partial = [], 0, False
+    for k in DAY_ORDER:
+        v = days.get(k)
+        if _is_number(v):
+            total += v
+            parts.append(f"{k.capitalize()} {v:g}m")
+        elif v in (None, "", 0):
+            parts.append(f"{k.capitalize()} —")
+        else:
+            partial = True
+            parts.append(f"{k.capitalize()} {v}")
+    h, m = divmod(int(round(total)), 60)
+    label = "partial total" if partial else "total"
+    return (f"**Declared weekly availability:** {' · '.join(parts)} — "
+            f"**{label} {h}h {m:02d}m**")
+
+
+def render_declared(aid, config_dir=None):
+    """Returns (lines, status). status is one of: included, missing,
+    unreadable — for the console line prep shows."""
+    config_dir = config_dir or ATHLETES_CFG
+    rel = f"config/athletes/{aid}.yaml"
+    path = os.path.join(config_dir, f"{aid}.yaml")
+    L = [f"## DECLARED PROFILE ({rel})", ""]
+
+    if not os.path.exists(path):
+        L.append(f"> **No declared profile exists for this athlete** — `{rel}` "
+                 f"was not found. Goals, availability, equipment, limitations "
+                 f"and preferences are UNKNOWN. Do not assume them: ask the "
+                 f"head coach. To create it: `python coach.py new {aid}`, then "
+                 f"run the intake.")
+        L.append("")
+        return L, "missing"
+
+    with open(path, encoding="utf-8") as f:
+        raw = f.read()
+
+    declared, problem = None, None
+    if yaml is None:
+        problem = "pyyaml is not installed, so the file could not be checked"
+    else:
+        try:
+            declared = yaml.safe_load(raw)
+            if not isinstance(declared, dict):
+                problem = "the file does not contain a YAML mapping"
+                declared = None
+        except yaml.YAMLError as e:
+            problem = f"the file is not valid YAML ({str(e).splitlines()[0]})"
+
+    L.append("> Everything the athlete or head coach DECLARED: goals, "
+             "availability, equipment, limitations, metric and ramp overrides, "
+             "preferences. This is the file the instructions call "
+             f"`{rel}`. Measured numbers are never here — they live in "
+             "state.md and in the sections below.")
+    L.append("")
+
+    status = "included"
+    if problem:
+        status = "unreadable"
+        L.append(f"> **Warning:** {problem}. Shown as written; treat any field "
+                 f"you cannot read clearly as unknown and ask the head coach.")
+        L.append("")
+    else:
+        if str(declared.get("id") or "") != str(aid):
+            L.append(f"> **Warning:** the file's `id` is "
+                     f"`{declared.get('id')}`, but it was loaded for `{aid}`. "
+                     f"It may be a copy of another athlete or the unfilled "
+                     f"template — confirm with the head coach before using it.")
+            L.append("")
+        if not (declared.get("intake") or {}).get("completed"):
+            L.append("> **Note:** `intake.completed` is empty — some fields may "
+                     "still hold template defaults rather than real answers.")
+            L.append("")
+        avail = availability_line(declared)
+        if avail:
+            L.append(avail)
+            L.append("")
+
+    body = [ln for ln in raw.splitlines() if not ln.lstrip().startswith("#")]
+    while body and not body[0].strip():
+        body.pop(0)
+    L.append("```yaml")
+    L += [ln.rstrip() for ln in body]
+    L.append("```")
+    L.append("")
+    return L, status
+
+
+# ══════════════════════════════════════════════════════════════════
 # BUILD
 # ══════════════════════════════════════════════════════════════════
 
@@ -301,6 +423,8 @@ def build(aid, quiet=False):
     # `recent` list), but appended to L last — see section order below.
     history_lines, recent = render_history(data.get("activities"), days=180)
 
+    declared_lines, declared_status = render_declared(aid)
+    L += declared_lines
     L += render_personal(profile, data.get("wellness"))
     L += render_context_snapshot(data.get("events"), recent, days=180)
     L += render_sport_config(profile.get("sport_settings"))
@@ -319,6 +443,14 @@ def build(aid, quiet=False):
     if not quiet:
         print(md)
     print(f"Wrote data/{aid}/profile.md")
+    print({
+        "included": f"   declared profile: included from config/athletes/{aid}.yaml",
+        "missing": f"   WARNING: no config/athletes/{aid}.yaml — the coach will "
+                   f"not know goals, availability or equipment "
+                   f"(create it with: python coach.py new {aid})",
+        "unreadable": f"   WARNING: config/athletes/{aid}.yaml could not be read "
+                      f"cleanly — see the warning at the top of profile.md",
+    }[declared_status])
     return path
 
 

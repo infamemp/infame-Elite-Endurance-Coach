@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "fetched_at": "2026-09-07",
+  "fetched_at": "2026-09-10",
   "window_days": 180,
   "profile": {
     "id": "TEST",
@@ -25,24 +25,6 @@
   },
   "wellness": [
     {
-      "date": "2026-05-10",
-      "hrv": 36,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
-      "date": "2026-05-11",
-      "hrv": 36,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
-      "date": "2026-05-12",
-      "hrv": 36,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
       "date": "2026-05-13",
       "hrv": 36,
       "resting_hr": 48,
@@ -740,6 +722,24 @@
     },
     {
       "date": "2026-09-06",
+      "hrv": 36,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-07",
+      "hrv": 36,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-08",
+      "hrv": 36,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-09",
       "hrv": 36,
       "resting_hr": 48,
       "sleep_secs": 27000
@@ -747,840 +747,840 @@
   ],
   "pmc_series": [
     {
-      "date": "2026-05-10",
+      "date": "2026-05-13",
       "ctl": 60.0,
       "atl": 77.0,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-05-11",
-      "ctl": 60.1,
-      "atl": 77.1,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-12",
-      "ctl": 60.1,
-      "atl": 77.1,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-13",
-      "ctl": 60.2,
-      "atl": 77.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-05-14",
-      "ctl": 60.2,
-      "atl": 77.2,
+      "ctl": 60.1,
+      "atl": 77.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-05-15",
-      "ctl": 60.3,
-      "atl": 77.3,
+      "ctl": 60.1,
+      "atl": 77.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-05-16",
+      "ctl": 60.2,
+      "atl": 77.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-17",
+      "ctl": 60.2,
+      "atl": 77.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-18",
       "ctl": 60.3,
       "atl": 77.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-05-17",
-      "ctl": 60.4,
-      "atl": 77.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-18",
-      "ctl": 60.4,
-      "atl": 77.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-05-19",
-      "ctl": 60.5,
-      "atl": 77.5,
+      "ctl": 60.3,
+      "atl": 77.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-05-20",
+      "ctl": 60.4,
+      "atl": 77.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-21",
+      "ctl": 60.4,
+      "atl": 77.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-22",
       "ctl": 60.5,
       "atl": 77.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-05-21",
-      "ctl": 60.6,
-      "atl": 77.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-22",
-      "ctl": 60.6,
-      "atl": 77.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-05-23",
-      "ctl": 60.7,
-      "atl": 77.7,
+      "ctl": 60.5,
+      "atl": 77.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-05-24",
+      "ctl": 60.6,
+      "atl": 77.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-25",
+      "ctl": 60.6,
+      "atl": 77.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-26",
       "ctl": 60.7,
       "atl": 77.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-05-25",
-      "ctl": 60.8,
-      "atl": 77.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-26",
-      "ctl": 60.8,
-      "atl": 77.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-05-27",
-      "ctl": 60.9,
-      "atl": 77.9,
+      "ctl": 60.7,
+      "atl": 77.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-05-28",
+      "ctl": 60.8,
+      "atl": 77.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-29",
+      "ctl": 60.8,
+      "atl": 77.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-05-30",
       "ctl": 60.9,
       "atl": 77.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-05-29",
-      "ctl": 61.0,
-      "atl": 78.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-05-30",
-      "ctl": 61.0,
-      "atl": 78.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-05-31",
-      "ctl": 61.1,
-      "atl": 78.1,
+      "ctl": 60.9,
+      "atl": 77.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-01",
+      "ctl": 61.0,
+      "atl": 78.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-02",
+      "ctl": 61.0,
+      "atl": 78.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-03",
       "ctl": 61.1,
       "atl": 78.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-02",
-      "ctl": 61.2,
-      "atl": 78.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-03",
-      "ctl": 61.2,
-      "atl": 78.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-04",
-      "ctl": 61.3,
-      "atl": 78.3,
+      "ctl": 61.1,
+      "atl": 78.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-05",
+      "ctl": 61.2,
+      "atl": 78.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-06",
+      "ctl": 61.2,
+      "atl": 78.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-07",
       "ctl": 61.3,
       "atl": 78.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-06",
-      "ctl": 61.4,
-      "atl": 78.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-07",
-      "ctl": 61.4,
-      "atl": 78.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-08",
-      "ctl": 61.5,
-      "atl": 78.5,
+      "ctl": 61.3,
+      "atl": 78.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-09",
+      "ctl": 61.4,
+      "atl": 78.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-10",
+      "ctl": 61.4,
+      "atl": 78.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-11",
       "ctl": 61.5,
       "atl": 78.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-10",
-      "ctl": 61.6,
-      "atl": 78.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-11",
-      "ctl": 61.6,
-      "atl": 78.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-12",
-      "ctl": 61.7,
-      "atl": 78.7,
+      "ctl": 61.5,
+      "atl": 78.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-13",
+      "ctl": 61.6,
+      "atl": 78.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-14",
+      "ctl": 61.6,
+      "atl": 78.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-15",
       "ctl": 61.7,
       "atl": 78.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-14",
-      "ctl": 61.8,
-      "atl": 78.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-15",
-      "ctl": 61.8,
-      "atl": 78.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-16",
-      "ctl": 61.9,
-      "atl": 78.9,
+      "ctl": 61.7,
+      "atl": 78.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-17",
+      "ctl": 61.8,
+      "atl": 78.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-18",
+      "ctl": 61.8,
+      "atl": 78.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-19",
       "ctl": 61.9,
       "atl": 78.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-18",
-      "ctl": 62.0,
-      "atl": 79.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-19",
-      "ctl": 62.0,
-      "atl": 79.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-20",
-      "ctl": 62.1,
-      "atl": 79.1,
+      "ctl": 61.9,
+      "atl": 78.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-21",
+      "ctl": 62.0,
+      "atl": 79.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-22",
+      "ctl": 62.0,
+      "atl": 79.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-23",
       "ctl": 62.1,
       "atl": 79.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-22",
-      "ctl": 62.2,
-      "atl": 79.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-23",
-      "ctl": 62.2,
-      "atl": 79.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-24",
-      "ctl": 62.3,
-      "atl": 79.3,
+      "ctl": 62.1,
+      "atl": 79.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-25",
+      "ctl": 62.2,
+      "atl": 79.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-26",
+      "ctl": 62.2,
+      "atl": 79.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-27",
       "ctl": 62.3,
       "atl": 79.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-26",
-      "ctl": 62.4,
-      "atl": 79.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-06-27",
-      "ctl": 62.4,
-      "atl": 79.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-06-28",
-      "ctl": 62.5,
-      "atl": 79.5,
+      "ctl": 62.3,
+      "atl": 79.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-06-29",
+      "ctl": 62.4,
+      "atl": 79.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-06-30",
+      "ctl": 62.4,
+      "atl": 79.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-01",
       "ctl": 62.5,
       "atl": 79.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-06-30",
-      "ctl": 62.6,
-      "atl": 79.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-01",
-      "ctl": 62.6,
-      "atl": 79.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-02",
-      "ctl": 62.7,
-      "atl": 79.7,
+      "ctl": 62.5,
+      "atl": 79.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-03",
+      "ctl": 62.6,
+      "atl": 79.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-04",
+      "ctl": 62.6,
+      "atl": 79.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-05",
       "ctl": 62.7,
       "atl": 79.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-04",
-      "ctl": 62.8,
-      "atl": 79.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-05",
-      "ctl": 62.8,
-      "atl": 79.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-06",
-      "ctl": 62.9,
-      "atl": 79.9,
+      "ctl": 62.7,
+      "atl": 79.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-07",
+      "ctl": 62.8,
+      "atl": 79.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-08",
+      "ctl": 62.8,
+      "atl": 79.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-09",
       "ctl": 62.9,
       "atl": 79.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-08",
-      "ctl": 63.0,
-      "atl": 80.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-09",
-      "ctl": 63.0,
-      "atl": 80.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-10",
-      "ctl": 63.1,
-      "atl": 80.1,
+      "ctl": 62.9,
+      "atl": 79.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-11",
+      "ctl": 63.0,
+      "atl": 80.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-12",
+      "ctl": 63.0,
+      "atl": 80.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-13",
       "ctl": 63.1,
       "atl": 80.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-12",
-      "ctl": 63.2,
-      "atl": 80.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-13",
-      "ctl": 63.2,
-      "atl": 80.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-14",
-      "ctl": 63.3,
-      "atl": 80.3,
+      "ctl": 63.1,
+      "atl": 80.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-15",
+      "ctl": 63.2,
+      "atl": 80.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-16",
+      "ctl": 63.2,
+      "atl": 80.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-17",
       "ctl": 63.3,
       "atl": 80.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-16",
-      "ctl": 63.4,
-      "atl": 80.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-17",
-      "ctl": 63.4,
-      "atl": 80.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-18",
-      "ctl": 63.5,
-      "atl": 80.5,
+      "ctl": 63.3,
+      "atl": 80.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-19",
+      "ctl": 63.4,
+      "atl": 80.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-20",
+      "ctl": 63.4,
+      "atl": 80.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-21",
       "ctl": 63.5,
       "atl": 80.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-20",
-      "ctl": 63.6,
-      "atl": 80.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-21",
-      "ctl": 63.6,
-      "atl": 80.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-22",
-      "ctl": 63.7,
-      "atl": 80.7,
+      "ctl": 63.5,
+      "atl": 80.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-23",
+      "ctl": 63.6,
+      "atl": 80.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-24",
+      "ctl": 63.6,
+      "atl": 80.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-25",
       "ctl": 63.7,
       "atl": 80.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-24",
-      "ctl": 63.8,
-      "atl": 80.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-25",
-      "ctl": 63.8,
-      "atl": 80.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-26",
-      "ctl": 63.9,
-      "atl": 80.9,
+      "ctl": 63.7,
+      "atl": 80.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-27",
+      "ctl": 63.8,
+      "atl": 80.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-28",
+      "ctl": 63.8,
+      "atl": 80.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-07-29",
       "ctl": 63.9,
       "atl": 80.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-07-28",
-      "ctl": 64.0,
-      "atl": 81.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-07-29",
-      "ctl": 64.0,
-      "atl": 81.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-07-30",
-      "ctl": 64.1,
-      "atl": 81.1,
+      "ctl": 63.9,
+      "atl": 80.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-07-31",
+      "ctl": 64.0,
+      "atl": 81.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-01",
+      "ctl": 64.0,
+      "atl": 81.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-02",
       "ctl": 64.1,
       "atl": 81.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-01",
-      "ctl": 64.2,
-      "atl": 81.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-02",
-      "ctl": 64.2,
-      "atl": 81.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-03",
-      "ctl": 64.3,
-      "atl": 81.3,
+      "ctl": 64.1,
+      "atl": 81.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-04",
+      "ctl": 64.2,
+      "atl": 81.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-05",
+      "ctl": 64.2,
+      "atl": 81.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-06",
       "ctl": 64.3,
       "atl": 81.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-05",
-      "ctl": 64.4,
-      "atl": 81.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-06",
-      "ctl": 64.4,
-      "atl": 81.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-07",
-      "ctl": 64.5,
-      "atl": 81.5,
+      "ctl": 64.3,
+      "atl": 81.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-08",
+      "ctl": 64.4,
+      "atl": 81.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-09",
+      "ctl": 64.4,
+      "atl": 81.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-10",
       "ctl": 64.5,
       "atl": 81.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-09",
-      "ctl": 64.6,
-      "atl": 81.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-10",
-      "ctl": 64.6,
-      "atl": 81.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-11",
-      "ctl": 64.7,
-      "atl": 81.7,
+      "ctl": 64.5,
+      "atl": 81.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-12",
+      "ctl": 64.6,
+      "atl": 81.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-13",
+      "ctl": 64.6,
+      "atl": 81.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-14",
       "ctl": 64.7,
       "atl": 81.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-13",
-      "ctl": 64.8,
-      "atl": 81.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-14",
-      "ctl": 64.8,
-      "atl": 81.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-15",
-      "ctl": 64.9,
-      "atl": 81.9,
+      "ctl": 64.7,
+      "atl": 81.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-16",
+      "ctl": 64.8,
+      "atl": 81.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-17",
+      "ctl": 64.8,
+      "atl": 81.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-18",
       "ctl": 64.9,
       "atl": 81.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-17",
-      "ctl": 65.0,
-      "atl": 82.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-18",
-      "ctl": 65.0,
-      "atl": 82.0,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-19",
-      "ctl": 65.1,
-      "atl": 82.1,
+      "ctl": 64.9,
+      "atl": 81.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-20",
+      "ctl": 65.0,
+      "atl": 82.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-21",
+      "ctl": 65.0,
+      "atl": 82.0,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-22",
       "ctl": 65.1,
       "atl": 82.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-21",
-      "ctl": 65.2,
-      "atl": 82.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-22",
-      "ctl": 65.2,
-      "atl": 82.2,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-23",
-      "ctl": 65.3,
-      "atl": 82.3,
+      "ctl": 65.1,
+      "atl": 82.1,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-24",
+      "ctl": 65.2,
+      "atl": 82.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-25",
+      "ctl": 65.2,
+      "atl": 82.2,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-26",
       "ctl": 65.3,
       "atl": 82.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-25",
-      "ctl": 65.4,
-      "atl": 82.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-26",
-      "ctl": 65.4,
-      "atl": 82.4,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-27",
-      "ctl": 65.5,
-      "atl": 82.5,
+      "ctl": 65.3,
+      "atl": 82.3,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-08-28",
+      "ctl": 65.4,
+      "atl": 82.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-29",
+      "ctl": 65.4,
+      "atl": 82.4,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-08-30",
       "ctl": 65.5,
       "atl": 82.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-29",
-      "ctl": 65.6,
-      "atl": 82.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-08-30",
-      "ctl": 65.6,
-      "atl": 82.6,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-08-31",
-      "ctl": 65.7,
-      "atl": 82.7,
+      "ctl": 65.5,
+      "atl": 82.5,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-09-01",
+      "ctl": 65.6,
+      "atl": 82.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-09-02",
+      "ctl": 65.6,
+      "atl": 82.6,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-09-03",
       "ctl": 65.7,
       "atl": 82.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-02",
-      "ctl": 65.8,
-      "atl": 82.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
-      "date": "2026-09-03",
-      "ctl": 65.8,
-      "atl": 82.8,
-      "tsb": -17.0,
-      "ramp_rate": 1.5
-    },
-    {
       "date": "2026-09-04",
-      "ctl": 65.9,
-      "atl": 82.9,
+      "ctl": 65.7,
+      "atl": 82.7,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
       "date": "2026-09-05",
+      "ctl": 65.8,
+      "atl": 82.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-09-06",
+      "ctl": 65.8,
+      "atl": 82.8,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-09-07",
       "ctl": 65.9,
       "atl": 82.9,
       "tsb": -17.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-06",
+      "date": "2026-09-08",
+      "ctl": 65.9,
+      "atl": 82.9,
+      "tsb": -17.0,
+      "ramp_rate": 1.5
+    },
+    {
+      "date": "2026-09-09",
       "ctl": 66.0,
       "atl": 83.0,
       "tsb": -17.0,
@@ -1589,7 +1589,7 @@
   ],
   "activities": [
     {
-      "date": "2026-05-12",
+      "date": "2026-05-15",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -1598,17 +1598,6 @@
       "decoupling": 7.0,
       "w_prime": 20000,
       "max_wbal_depletion": 16000
-    },
-    {
-      "date": "2026-05-15",
-      "type": "Ride",
-      "moving_time": 3600,
-      "training_load": 95,
-      "average_watts": 200,
-      "weighted_avg_watts": 210,
-      "decoupling": 6.5,
-      "w_prime": 20000,
-      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-05-18",
@@ -1617,9 +1606,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-05-21",
@@ -1628,9 +1617,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-05-24",
@@ -1639,9 +1628,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-05-27",
@@ -1650,9 +1639,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-05-30",
@@ -1661,9 +1650,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-06-02",
@@ -1672,9 +1661,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-06-05",
@@ -1683,9 +1672,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-06-08",
@@ -1694,9 +1683,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-06-11",
@@ -1705,9 +1694,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-06-14",
@@ -1716,9 +1705,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-06-17",
@@ -1727,9 +1716,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-06-20",
@@ -1738,9 +1727,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-06-23",
@@ -1749,9 +1738,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-06-26",
@@ -1760,9 +1749,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-06-29",
@@ -1771,9 +1760,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-07-02",
@@ -1782,9 +1771,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-07-05",
@@ -1793,9 +1782,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-07-08",
@@ -1804,9 +1793,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-07-11",
@@ -1815,9 +1804,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-07-14",
@@ -1826,9 +1815,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-07-17",
@@ -1837,9 +1826,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-07-20",
@@ -1848,9 +1837,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-07-23",
@@ -1859,9 +1848,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-07-26",
@@ -1870,9 +1859,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-07-29",
@@ -1881,9 +1870,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-08-01",
@@ -1892,9 +1881,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-08-04",
@@ -1903,9 +1892,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.0,
+      "decoupling": 6.8,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-08-07",
@@ -1914,9 +1903,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.5,
+      "decoupling": 7.0,
       "w_prime": 20000,
-      "max_wbal_depletion": 17000
+      "max_wbal_depletion": 15500
     },
     {
       "date": "2026-08-10",
@@ -1925,9 +1914,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 7.2,
+      "decoupling": 6.5,
       "w_prime": 20000,
-      "max_wbal_depletion": 16000
+      "max_wbal_depletion": 17000
     },
     {
       "date": "2026-08-13",
@@ -1936,9 +1925,9 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
-      "decoupling": 6.8,
+      "decoupling": 7.2,
       "w_prime": 20000,
-      "max_wbal_depletion": 15500
+      "max_wbal_depletion": 16000
     },
     {
       "date": "2026-08-16",
@@ -1947,12 +1936,23 @@
       "training_load": 95,
       "average_watts": 200,
       "weighted_avg_watts": 210,
+      "decoupling": 6.8,
+      "w_prime": 20000,
+      "max_wbal_depletion": 15500
+    },
+    {
+      "date": "2026-08-19",
+      "type": "Ride",
+      "moving_time": 3600,
+      "training_load": 95,
+      "average_watts": 200,
+      "weighted_avg_watts": 210,
       "decoupling": 7.0,
       "w_prime": 20000,
       "max_wbal_depletion": 17000
     },
     {
-      "date": "2026-08-19",
+      "date": "2026-08-22",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -1963,7 +1963,7 @@
       "max_wbal_depletion": 16000
     },
     {
-      "date": "2026-08-22",
+      "date": "2026-08-25",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -1974,7 +1974,7 @@
       "max_wbal_depletion": 15500
     },
     {
-      "date": "2026-08-25",
+      "date": "2026-08-28",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -1985,7 +1985,7 @@
       "max_wbal_depletion": 17000
     },
     {
-      "date": "2026-08-28",
+      "date": "2026-08-31",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -1996,7 +1996,7 @@
       "max_wbal_depletion": 16000
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-03",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -2007,7 +2007,7 @@
       "max_wbal_depletion": 15500
     },
     {
-      "date": "2026-09-03",
+      "date": "2026-09-06",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -2018,7 +2018,7 @@
       "max_wbal_depletion": 17000
     },
     {
-      "date": "2026-09-06",
+      "date": "2026-09-09",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 95,
@@ -2056,8 +2056,8 @@
         },
         "window": {
           "id": "",
-          "from": "2026-07-27",
-          "to": "2026-09-07"
+          "from": "2026-07-30",
+          "to": "2026-09-10"
         }
       },
       "90d": {
@@ -2085,8 +2085,8 @@
         },
         "window": {
           "id": "",
-          "from": "2026-07-27",
-          "to": "2026-09-07"
+          "from": "2026-07-30",
+          "to": "2026-09-10"
         }
       },
       "1y": {
@@ -2114,8 +2114,8 @@
         },
         "window": {
           "id": "",
-          "from": "2026-07-27",
-          "to": "2026-09-07"
+          "from": "2026-07-30",
+          "to": "2026-09-10"
         }
       }
     }

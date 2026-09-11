@@ -254,6 +254,51 @@ def unit_tests():
     equal("taper: TSB targets are labelled as heuristic, not evidence",
           tp["target_tsb_source"], "coach_heuristic")
 
+    # ── Declared profile reaches profile.md ───────────────────────
+    # config/athletes/<id>.yaml must be embedded in profile.md, because
+    # profile.md is what actually reaches the Claude Project.
+    import tempfile
+    import build_profile as bpf
+    cfg_dir = os.path.join(ROOT, "config", "athletes")
+
+    lines, status = bpf.render_declared("TESTRAMP", cfg_dir)
+    text = "\n".join(lines)
+    equal("declared: committed TESTRAMP profile is included", status, "included")
+    check("declared: section title names the yaml path",
+          "## DECLARED PROFILE (config/athletes/TESTRAMP.yaml)" in text)
+    check("declared: fields are embedded verbatim",
+          "treadmill_ramps_requested: true" in text)
+    check("declared: full-line comments are removed",
+          "TEST FIXTURE" not in text)
+    check("declared: an empty intake date is flagged",
+          "intake.completed" in text)
+
+    lines, status = bpf.render_declared("i_does_not_exist", cfg_dir)
+    equal("declared: a missing yaml is reported, not hidden", status, "missing")
+    check("declared: a missing yaml tells the coach not to assume",
+          "Do not assume them" in "\n".join(lines))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
+            f.write("id: iTEST\navailability:\n  days: {mon: null, tue: 90, "
+                    "wed: 60, thu: null, fri: 60, sat: 120, sun: null}\n")
+        lines, _ = bpf.render_declared("iTEST", tmp)
+        check("declared: weekly availability total is computed (5h 30m)",
+              "total 5h 30m" in "\n".join(lines))
+
+        with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
+            f.write("id: i000000\navailability:\n  days: {mon: 60, tue: \"varies\"}\n")
+        text = "\n".join(bpf.render_declared("iTEST", tmp)[0])
+        check("declared: an id that does not match the athlete is flagged",
+              "may be a copy of another athlete" in text)
+        check("declared: a non-numeric day marks the total as partial",
+              "partial total 1h 00m" in text)
+
+        with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
+            f.write("id: iTEST\ngoals: [unclosed\n")
+        _, status = bpf.render_declared("iTEST", tmp)
+        equal("declared: invalid YAML is reported as unreadable", status, "unreadable")
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture
@@ -354,6 +399,12 @@ BLOCK_CASES = [
     # Carmichael anchors on his own field test, not on threshold. A block written
     # on the threshold scale must still match his zones, via the declared factor.
     ("carmichael_ss.md", 0, []),
+    # Header labels translated to Spanish ([Semana], [Fecha], [Categoría]...) and
+    # one header wrapped in markdown bold. The validator must translate them and
+    # pass, instead of reading the whole file as one session with no header.
+    ("spanish_labels.md", 0, ["translated header label [Semana] -> [Week]",
+                              "translated header label [Metodología] -> [Methodology]",
+                              "removed markdown bold"]),
     # A real Infame delivery, pasted exactly as the coach receives it -- missing
     # code fences, a Duration with "(estimado)" and a leading ~, a Rest day with
     # "--" as methodology, and a race session titled with a bare distance line.
@@ -363,12 +414,20 @@ BLOCK_CASES = [
 
 
 def block_tests():
+    import shutil
+    import tempfile
     script = os.path.join(ROOT, "verify", "validate_block.py")
+    tmpdir = tempfile.mkdtemp(prefix="infame_blocks_")
     for fname, want_code, want_errors in BLOCK_CASES:
-        path = os.path.join(BLOCKS, fname)
-        if not os.path.exists(path):
+        src = os.path.join(BLOCKS, fname)
+        if not os.path.exists(src):
             FAILED.append((f"block: {fname}", "fixture not found"))
             continue
+        # The validator rewrites the file it checks when it auto-corrects
+        # something. Validate a temporary copy, so a fixture that exists to
+        # test those corrections is never repaired on disk by its own test.
+        path = os.path.join(tmpdir, fname)
+        shutil.copy2(src, path)
         # On Windows a captured subprocess inherits the locale encoding (cp1252),
         # not UTF-8, and the validator prints em dashes and middle dots. Without
         # this the child crashes on encoding rather than on anything real.
@@ -385,6 +444,7 @@ def block_tests():
         for code in want_errors:
             check(f"block: {fname} reports {code}", code in out,
                   "not found in validator output")
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 # ══════════════════════════════════════════════════════════════════
