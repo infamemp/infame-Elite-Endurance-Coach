@@ -113,7 +113,6 @@ metric_overrides:
   treadmill: null
   track_run: null
 ramp_overrides:
-  disable_ramps: []                  # canonical disciplines where ramps are eligible but unwanted
   disable_ramps: []            # ramps are only possible on the trainer; list it
                                # here if the athlete does not want them
 
