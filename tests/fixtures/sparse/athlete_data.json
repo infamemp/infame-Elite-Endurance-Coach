@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "fetched_at": "2026-09-07",
+  "fetched_at": "2026-09-10",
   "window_days": 180,
   "profile": {
     "id": "TEST",
@@ -25,24 +25,6 @@
   },
   "wellness": [
     {
-      "date": "2026-08-28",
-      "hrv": 40,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
-      "date": "2026-08-29",
-      "hrv": 40,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
-      "date": "2026-08-30",
-      "hrv": 40,
-      "resting_hr": 48,
-      "sleep_secs": 27000
-    },
-    {
       "date": "2026-08-31",
       "hrv": 40,
       "resting_hr": 48,
@@ -80,6 +62,24 @@
     },
     {
       "date": "2026-09-06",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-07",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-08",
+      "hrv": 40,
+      "resting_hr": 48,
+      "sleep_secs": 27000
+    },
+    {
+      "date": "2026-09-09",
       "hrv": 40,
       "resting_hr": 48,
       "sleep_secs": 27000
@@ -87,70 +87,70 @@
   ],
   "pmc_series": [
     {
-      "date": "2026-08-28",
+      "date": "2026-08-31",
       "ctl": 8.0,
       "atl": 11.0,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-29",
+      "date": "2026-09-01",
       "ctl": 8.1,
       "atl": 11.1,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-30",
+      "date": "2026-09-02",
       "ctl": 8.2,
       "atl": 11.2,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-03",
       "ctl": 8.3,
       "atl": 11.3,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-01",
+      "date": "2026-09-04",
       "ctl": 8.4,
       "atl": 11.4,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-02",
+      "date": "2026-09-05",
       "ctl": 8.6,
       "atl": 11.6,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-03",
+      "date": "2026-09-06",
       "ctl": 8.7,
       "atl": 11.7,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-04",
+      "date": "2026-09-07",
       "ctl": 8.8,
       "atl": 11.8,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-05",
+      "date": "2026-09-08",
       "ctl": 8.9,
       "atl": 11.9,
       "tsb": -3.0,
       "ramp_rate": 1.5
     },
     {
-      "date": "2026-09-06",
+      "date": "2026-09-09",
       "ctl": 9.0,
       "atl": 12.0,
       "tsb": -3.0,
@@ -159,7 +159,7 @@
   ],
   "activities": [
     {
-      "date": "2026-08-16",
+      "date": "2026-08-19",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 30,
@@ -167,7 +167,7 @@
       "weighted_avg_watts": 210
     },
     {
-      "date": "2026-08-23",
+      "date": "2026-08-26",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 30,
@@ -175,7 +175,7 @@
       "weighted_avg_watts": 210
     },
     {
-      "date": "2026-08-30",
+      "date": "2026-09-02",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 30,
@@ -183,7 +183,7 @@
       "weighted_avg_watts": 210
     },
     {
-      "date": "2026-09-06",
+      "date": "2026-09-09",
       "type": "Ride",
       "moving_time": 3600,
       "training_load": 30,

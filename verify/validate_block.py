@@ -34,13 +34,14 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.1
+Version: 2.2
 """
 
 import argparse
 import os
 import re
 import sys
+import unicodedata
 
 try:
     import yaml
@@ -113,6 +114,64 @@ RESTDAY_PLACEHOLDER_RE = re.compile(
     r"(\[(?:Methodology|Discipline)\]\s*:?\s*)[—–-]\s*(?=\n)")
 
 
+# Header labels are structural tokens and must be emitted in English, but a
+# translated label is a common, unambiguous slip (e.g. [Semana] for [Week]).
+# Keys are compared lowercase and without accents, so "Categoría" and
+# "categoria" both match. Only whole bracketed labels on header lines are
+# touched -- never text inside the code block or the narrative fields.
+HEADER_LABEL_TRANSLATIONS = {
+    "semana": "Week",
+    "fecha": "Date",
+    "categoria": "Category",
+    "metodologia": "Methodology",
+    "disciplina": "Discipline",
+    "enfoque": "Focus",
+    "duracion": "Duration",
+    "tss estimado": "Estimated TSS",
+    "ejecucion": "Execution",
+    "nutricion": "Nutrition",
+}
+HEADER_LABEL_RE = re.compile(r"\[([^\[\]\n]+)\]")
+
+
+def _fold(label):
+    """Lowercase and strip accents, so label matching ignores both."""
+    decomposed = unicodedata.normalize("NFD", label.strip().lower())
+    return "".join(c for c in decomposed if unicodedata.category(c) != "Mn")
+
+
+def _is_header_line(line):
+    return line.lstrip().lstrip("*").startswith("[")
+
+
+def normalize_header_labels(text):
+    """Translate Spanish header labels to their canonical English form and
+    remove markdown bold wrapped around header labels (**[Week]** -> [Week]).
+    Returns (text, notes)."""
+    counts, bold_lines, out = {}, 0, []
+
+    def translate(m):
+        english = HEADER_LABEL_TRANSLATIONS.get(_fold(m.group(1)))
+        if not english:
+            return m.group(0)
+        key = f"[{m.group(1)}] -> [{english}]"
+        counts[key] = counts.get(key, 0) + 1
+        return f"[{english}]"
+
+    for line in text.split("\n"):
+        if _is_header_line(line):
+            if "**" in line:
+                line = line.replace("**", "")
+                bold_lines += 1
+            line = HEADER_LABEL_RE.sub(translate, line)
+        out.append(line)
+
+    notes = [f"translated header label {k} ({n}x)" for k, n in counts.items()]
+    if bold_lines:
+        notes.append(f"removed markdown bold from {bold_lines} header line(s)")
+    return "\n".join(out), notes
+
+
 def normalize_block(text):
     """Repair formatting mistakes that are common and unambiguous to fix,
     rather than blocking on them. Applied once, before any parsing, so every
@@ -120,6 +179,9 @@ def normalize_block(text):
     without duplicating this logic.
 
     Handled here:
+      - Header labels written in Spanish ([Semana], [Fecha], [Categoría]...)
+        or wrapped in markdown bold (**[Week]**) -- see
+        normalize_header_labels().
       - A bare 'text' line where a fenced code block should open (the fence
         markers are lost easily when a session is copied out of a chat).
       - A [Duration] header carrying a leading '~' or a trailing parenthetical
@@ -134,6 +196,9 @@ def normalize_block(text):
     """
     notes = []
 
+    text, label_notes = normalize_header_labels(text)
+    notes.extend(label_notes)
+
     def add_fence(m):
         notes.append("added missing ```text fence")
         return "```text\n"
@@ -145,8 +210,12 @@ def normalize_block(text):
         pass  # handled below by re-closing per-session in split_sessions
 
     def fix_dur(m):
-        notes.append(f"normalized [Duration] to {m.group(2)}")
-        return f"{m.group(1)}{m.group(2)}"
+        fixed = f"{m.group(1)}{m.group(2)}"
+        # The pattern also matches a Duration that is already clean (e.g. one
+        # a previous --fill-tss run wrote). Only report a real change.
+        if m.group(0) != fixed:
+            notes.append(f"normalized [Duration] to {m.group(2)}")
+        return fixed
     new_text = DUR_HEADER_RE.sub(fix_dur, new_text)
 
     def fix_dash(m):
@@ -632,7 +701,7 @@ def main():
     tol = args.tolerance if args.tolerance is not None else \
         th["tss_rules"].get("divergence_tolerance_pct", 10)
 
-    print(f"validate_block v2.1 — {os.path.basename(args.file)}")
+    print(f"validate_block v2.2 — {os.path.basename(args.file)}")
     if fixes:
         print("Auto-corrected before validating (file updated on disk):")
         for note in fixes:
@@ -671,10 +740,17 @@ def main():
                 missing.append("[Methodology]")
             if not discipline:
                 missing.append("[Discipline]")
-            print(f"── Session {n}: cannot validate — header is missing "
-                  f"{' and '.join(missing)}")
-            print(f"   Add the field(s) to the session header, or pass "
-                  f"--methodology / --discipline for a raw block.\n")
+            if not header:
+                print(f"── Session {n}: cannot validate — no session header found")
+                print("   Every session must start with a line beginning with [Week]. "
+                      "None was found,\n   so the whole file was read as one "
+                      "session without a header. Check that the\n   header labels "
+                      "are the English ones from the prompt's template.\n")
+            else:
+                print(f"── Session {n}: cannot validate — header is missing "
+                      f"{' and '.join(missing)}")
+                print(f"   Add the field(s) to the session header, or pass "
+                      f"--methodology / --discipline for a raw block.\n")
             failed = True
             continue
 
