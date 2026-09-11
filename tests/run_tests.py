@@ -186,9 +186,135 @@ def unit_tests():
           rd("trainer", "running", th)[2] is not None)
     check("disciplines: cycling methodology on 'run' is an error",
           rd("run", "cycling", th)[2] is not None)
-    check("ramps: treadmill is override-eligible, not forbidden",
-          "treadmill" in (r.get("override_eligible") or {})
-          and "treadmill" not in r["forbidden_disciplines"])
+
+    # ── Validator hardening: targets, metrics, equipment, RPE ─────
+    # Each case is a code block the validator used to pass silently even
+    # though Intervals.icu would execute a different workout (or none).
+    def findings(code, methodology, discipline, profile=None):
+        author, th_, tss_ = vb.load_config(methodology)
+        steps, found = vb.parse_block(code)
+        errs, warns_ = vb.check_constraints(steps, code, author, th_, discipline, profile)
+        return found + errs + warns_
+
+    def hc_codes(code, methodology, discipline, profile=None):
+        return {c for c, _, _ in findings(code, methodology, discipline, profile)
+                if c.startswith("HC-")}
+
+    def all_codes(code, methodology, discipline, profile=None):
+        return {c for c, _, _ in findings(code, methodology, discipline, profile)}
+
+    check("hardening: zone shorthand (Z2) is rejected",
+          "HC-ZONE" in hc_codes("- 20m Z2 [RPE 3]", "coggan", "trainer"))
+    check("hardening: zone shorthand with suffix (Z3 Pace) is rejected",
+          "HC-ZONE" in hc_codes("- 20m Z3 Pace [RPE 3]", "daniels", "road_run"))
+    check("hardening: raw bpm is rejected",
+          "HC-FORMAT" in hc_codes("- 20m 150-160bpm [RPE 3]", "friel_running", "road_run"))
+    check("hardening: a step with no target is rejected",
+          "HC-TARGET" in hc_codes("- 20m 90rpm", "coggan", "trainer"))
+    check("hardening: a % inside the cue does not count as the target",
+          "HC-TARGET" in hc_codes('- 20m "sube al 90%"', "coggan", "trainer"))
+    check("hardening: an RPE-only step is accepted (no HR, no power case)",
+          not hc_codes('- 20m [RPE 5] "Conversacional."', "koop", "trail_run"))
+    check("hardening: freeride needs no target",
+          not hc_codes("- 20m freeride [RPE 3]", "coggan", "trainer"))
+    check("hardening: a clean trainer block has no hard-constraint findings",
+          not hc_codes('- 10m ramp 50-70% 90rpm [RPE 2-3] "a"\n- 20m 88-92% [RPE 4] "b"',
+                       "coggan", "trainer"))
+
+    # Any methodology, any metric of its sport
+    check("metrics: running power with a pace-only methodology is accepted",
+          not hc_codes("- 20m 75-80% [RPE 2]", "daniels", "treadmill"))
+    check("metrics: ...and reported as classified by generic ranges",
+          "CHK-METRIC" in all_codes("- 20m 75-80% [RPE 2]", "daniels", "treadmill"))
+    check("metrics: LTHR with a power-first cycling methodology is accepted",
+          not hc_codes("- 20m 75-80% LTHR [RPE 2]", "coggan", "road_bike"))
+    check("metrics: pace on a cycling discipline is rejected",
+          "HC-METRIC" in hc_codes("- 20m 75-80% Pace [RPE 2]", "coggan", "road_bike"))
+    check("metrics: running power with a power methodology is accepted, no warning",
+          not all_codes("- 20m 75-80% [RPE 3]", "palladino", "road_run"))
+    check("metrics: Olbrich's native metric reports HC-SOR, not HC-METRIC",
+          "HC-METRIC" not in hc_codes("- 20m 70% HRmax [RPE 2]", "olbrich", "trail_run"))
+    pace_map = {"metric_overrides": {"road_run": "pace"}}
+    check("metrics: a bare % against a declared pace Metric Map is rejected",
+          "HC-METRIC" in hc_codes("- 20m 75-80% [RPE 2]", "daniels", "road_run", pace_map))
+    check("metrics: the declared metric passes the Metric Map",
+          not hc_codes("- 20m 75-80% Pace [RPE 2]", "daniels", "road_run", pace_map))
+
+    # Equipment: blocked only when every device for the metric is false
+    check("equipment: running power with run_power_meter false is rejected",
+          "HC-METRIC" in hc_codes("- 20m 75-80% [RPE 3]", "palladino", "road_run",
+                                  {"equipment": {"run_power_meter": False}}))
+    check("equipment: an undeclared device (null) never blocks",
+          not hc_codes("- 20m 75-80% [RPE 3]", "palladino", "road_run",
+                       {"equipment": {"run_power_meter": None}}))
+    check("equipment: LTHR with hr_monitor false is rejected",
+          "HC-METRIC" in hc_codes("- 20m 80-85% LTHR [RPE 2]", "friel_running", "road_run",
+                                  {"equipment": {"hr_monitor": False}}))
+    check("equipment: pace on a treadmill needs no device",
+          not hc_codes("- 20m 78-82% Pace [RPE 2]", "daniels", "treadmill",
+                       {"equipment": {"run_power_meter": False, "hr_monitor": False}}))
+    check("equipment: trainer power from a smart trainer alone is accepted",
+          not hc_codes("- 20m 60-65% [RPE 3]", "friel_cycling", "trainer",
+                       {"equipment": {"bike_power_meter": False, "smart_trainer": True}}))
+    check("equipment: outdoor bike power needs the power meter, not the trainer",
+          "HC-METRIC" in hc_codes("- 20m 60-65% [RPE 3]", "friel_cycling", "road_bike",
+                                  {"equipment": {"bike_power_meter": False,
+                                                 "smart_trainer": True}}))
+
+    # RPE: always present, and consistent with the author's table
+    check("rpe: a step without RPE is rejected",
+          "HC-RPE" in hc_codes("- 20m 60-65%", "friel_cycling", "trainer"))
+    check("rpe: an RPE outside the author's zone is rejected (Friel Z2 is 3-4)",
+          "HC-RPE" in hc_codes("- 20m 58-62% [RPE 2]", "friel_cycling", "trainer"))
+    check("rpe: an RPE inside the author's zone is accepted",
+          not hc_codes("- 20m 58-62% [RPE 3]", "friel_cycling", "trainer"))
+    check("rpe: a range spanning two zones accepts either zone's RPE",
+          not hc_codes("- 20m 70-80% [RPE 5]", "friel_cycling", "trainer"))
+    check("rpe: a metric the author lacks is checked by physiological class",
+          "HC-RPE" in hc_codes("- 20m 99-101% [RPE 1]", "daniels", "treadmill"))
+    check("rpe: an open lower bound does not stretch a zone's RPE to zero",
+          not hc_codes("- 10m 40% [RPE 1]", "carmichael", "trainer"))
+
+    # Dual layer still demands the engine metric and the cue
+    check("dual layer: a Koop step without its cue is rejected",
+          "HC-DUAL" in hc_codes("- 20m 80-85% LTHR [RPE 5]", "koop", "trail_run"))
+
+    # Ramps
+    check("ramps: a ramp on a treadmill is rejected (write steps)",
+          "HC-RAMP" in hc_codes("- 10m ramp 80-95% Pace [RPE 3-5]", "daniels", "treadmill"))
+    check("ramps: disable_ramps in the profile blocks a trainer ramp",
+          "HC-RAMP" in hc_codes("- 10m ramp 50-70% [RPE 2-3]", "coggan", "trainer",
+                                {"ramp_overrides": {"disable_ramps": ["trainer"]}}))
+
+    author, th_, tss_ = vb.load_config("daniels")
+    steps, _ = vb.parse_block("- 10m 75-80% Pace\n- 2km 88-92% Pace")
+    total, _, skipped = vb.compute_tss(steps, author, th_, tss_)
+    equal("hardening: a distance step is reported as not costed", len(skipped), 1)
+
+    # A partial TSS is written as such, and still re-validates cleanly
+    import shutil, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        blk = os.path.join(tmp, "partial.md")
+        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "vianey_bloque1.md"), blk)
+        script = os.path.join(ROOT, "verify", "validate_block.py")
+        # Same guard as block_tests(): on Windows a captured child inherits the
+        # locale encoding (cp1252) and crashes printing "—" or "─".
+        env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        subprocess.run([sys.executable, script, blk, "--fill-tss", "--quiet"],
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", env=env)
+        with open(blk, encoding="utf-8") as f:
+            written = f.read()
+        check("hardening: TSS with uncosted steps is written as '(partial)'",
+              "(partial)" in written)
+        again = subprocess.run([sys.executable, script, blk, "--quiet"],
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", env=env)
+        equal("hardening: a '(partial)' TSS re-validates without divergence",
+              again.returncode, 0)
+    check("ramps: only the trainer can follow a continuous ramp",
+          r["allowed_disciplines"] == ["trainer"]
+          and "treadmill" in r["forbidden_disciplines"])
     check("ramps: no magnitude cap is imposed",
           "no_magnitude_limit" in r,
           "a cap would prohibit a progressive ramp test")
@@ -297,7 +423,7 @@ def unit_tests():
     check("declared: section title names the yaml path",
           "## DECLARED PROFILE (config/athletes/TESTRAMP.yaml)" in text)
     check("declared: fields are embedded verbatim",
-          "treadmill_ramps_requested: true" in text)
+          "run_power_meter: true" in text)
     check("declared: full-line comments are removed",
           "TEST FIXTURE" not in text)
     check("declared: an empty intake date is flagged",
@@ -466,17 +592,20 @@ def golden_tests(update=False):
 
 # file, expected exit code, error codes that must appear.
 #
-# The two treadmill cases are the same block pointed at different athletes, and
-# together they prove the override works in both directions: permitted when the
-# profile asks for it, blocked when it does not. They reference the committed
-# TESTRAMP profile rather than a real athlete, because a real profile is
-# gitignored and the test would then pass on one machine and fail on another.
+# The treadmill cases prove that a continuous ramp is rejected on a treadmill
+# whether or not the athlete has a profile, while a stepped progression passes.
+# They reference the committed TESTRAMP profile rather than a real athlete,
+# because a real profile is gitignored and the test would then pass on one
+# machine and fail on another.
 BLOCK_CASES = [
     ("good_trainer_coggan.md", 0, []),
     ("bad_road.md", 1, ["HC-LANG", "HC-NESTED", "HC-FORMAT", "HC-RAMP",
                         "HC-FLOOR", "HC-CAT"]),
-    ("koop_trail.md", 1, ["HC-DUAL", "HC-RAMP"]),
-    ("treadmill_ramp.md", 0, []),
+    ("koop_trail.md", 1, ["HC-RPE", "HC-RAMP"]),
+    # A continuous ramp is impossible on a treadmill even when the athlete's
+    # profile exists; a progression there is a staircase of ordinary steps.
+    ("treadmill_ramp.md", 1, ["HC-RAMP"]),
+    ("treadmill_steps.md", 0, []),
     ("treadmill_ramp_denied.md", 1, ["HC-RAMP"]),
     # Carmichael anchors on his own field test, not on threshold. A block written
     # on the threshold scale must still match his zones, via the declared factor.

@@ -105,41 +105,47 @@ race_priorities:
 # ══════════════════════════════════════════════════════════════════
 # RAMP ELIGIBILITY
 # ══════════════════════════════════════════════════════════════════
-# Ramp steps depend on the discipline and the metric, not on the methodology.
-# A ramp requires a device that can steer a continuously changing target, which
-# in practice means a smart trainer under power control.
-#
-# Resolution order:
-#   1. If the athlete or coach explicitly sets ramps_allowed for a discipline
-#      in the intake, that decision wins.
-#   2. Otherwise a ramp is permitted only when the discipline appears in
-#      allowed_disciplines AND the session metric appears in required_metrics.
+# A ramp (`ramp` in the syntax) is a CONTINUOUSLY changing target. Only a smart
+# trainer under power (ERG) control can follow one. Every other discipline
+# steers its target by hand — the athlete adjusts speed or effort — so a
+# progression there is written as discrete steps, which are ordinary steps and
+# always valid. On a treadmill, a progressive protocol is a staircase of steps,
+# never a `ramp`.
+# An athlete can also switch ramps off for an eligible discipline with
+# ramp_overrides.disable_ramps in config/athletes/<id>.yaml.
 
 ramps:
-  # Ramps require a device that can steer a continuously changing target.
   allowed_disciplines: [trainer]
   required_metrics: [power]
-
-  # Treadmill CAN steer a changing target — speed and gradient adjust
-  # progressively, the same way a smart trainer adjusts resistance. It is not
-  # forbidden, only off by default: a ramp on a moving belt asks the athlete to
-  # physically accelerate, which is a different demand from a resistance ramp.
-  # Enable per athlete via ramp_overrides.treadmill_ramps_requested in
-  # config/athletes/<id>.yaml.
-  override_eligible:
-    treadmill:
-      requires: athlete_profile_flag
-      flag: ramp_overrides.treadmill_ramps_requested
-      permitted_metrics: [pace, lthr]
-
-  # Device cannot steer a changing target outdoors. Not overridable.
-  forbidden_disciplines: [road_bike, mtb, gravel, road_run, trail_run, track_run]
-
-  athlete_override_permitted: true
+  forbidden_disciplines: [road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
   no_magnitude_limit: >
     No cap is placed on ramp duration or delta. A progressive ramp test is a
     legitimate protocol, and any numeric ceiling would prohibit it. Magnitude is
     the coach's judgement.
+
+# ══════════════════════════════════════════════════════════════════
+# METRIC EQUIPMENT — which device a metric depends on
+# ══════════════════════════════════════════════════════════════════
+# Any methodology may be prescribed in any metric of its sport; the metric is
+# the athlete's choice, limited only by the equipment they have. A metric is
+# blocked only when EVERY device listed for it is declared false in the athlete
+# profile (equipment.*). null means "not asked yet" and never blocks.
+#
+# Lookup order for a metric: the discipline's own entry, then the sport's, then
+# `any`. An empty list means the metric needs no extra device.
+#   - Pace on runs needs nothing extra: a GPS watch or phone outdoors, the
+#     treadmill's own display indoors.
+#   - Power on a trainer is available from a smart trainer or a power meter.
+
+metric_equipment:
+  power:
+    trainer: [bike_power_meter, smart_trainer]
+    cycling: [bike_power_meter]
+    running: [run_power_meter]
+  lthr:
+    any: [hr_monitor]
+  pace:
+    running: []
 
 # ══════════════════════════════════════════════════════════════════
 # TSS COMPUTATION RULES

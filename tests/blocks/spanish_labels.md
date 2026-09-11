@@ -14,7 +14,7 @@ Warmup
 
 Main Set
 
-- 10m 60-65% 75rpm [RPE 2] "Cadencia baja."
+- 10m 60-65% 75rpm [RPE 3] "Cadencia baja."
 - 10m 62-68% 95rpm [RPE 3] "Cadencia alta."
 
 Cooldown

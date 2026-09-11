@@ -34,7 +34,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.3
+Version: 2.5
 """
 
 import argparse
@@ -100,8 +100,9 @@ DIST_RE = re.compile(r"^(\d+(?:\.\d+)?)(km|mtr)$", re.I)
 TARGET_RE = re.compile(
     r"(?P<lo>\d+(?:\.\d+)?)(?:\s*-\s*(?P<hi>\d+(?:\.\d+)?))?\s*%"
     r"(?:\s*(?P<metric>FTP|CP|LTHR|Pace|HRmax|HR)\b)?", re.I)
-RPE_RE = re.compile(r"\[\s*RPE\s+\d+(?:\s*-\s*\d+)?\s*\]", re.I)
+RPE_RE = re.compile(r"\[\s*RPE\s+(\d+)(?:\s*-\s*(\d+))?\s*\]", re.I)
 CUE_RE = re.compile(r'"[^"]*"')
+ZONE_SHORTHAND_RE = re.compile(r"\bZ[1-7][abc]?\b", re.I)
 FENCE_RE = re.compile(r"```(?:text)?\n(.*?)```", re.S)
 HEADER_START_RE = re.compile(r"^\[Week\]", re.M)
 FIELD_RE = re.compile(r"\[(\w[\w ]*)\]\s*([^\[|]*)")
@@ -243,6 +244,15 @@ def parse_duration(tokens):
     return (secs, None, used) if used else (None, None, 0)
 
 
+def _rpe_range(line):
+    m = RPE_RE.search(line)
+    if not m:
+        return None
+    a = int(m.group(1))
+    b = int(m.group(2)) if m.group(2) else a
+    return (min(a, b), max(a, b))
+
+
 def parse_block(text):
     """Parse one code block into steps plus structural findings."""
     steps, findings = [], []
@@ -308,10 +318,14 @@ def parse_block(text):
             is_ramp = bool(re.match(r"^ramp\b", rest, re.I))
             if is_ramp:
                 rest = rest[4:].strip()
-            tgt = TARGET_RE.search(rest)
+            # The target is read from the step itself, never from the cue: a
+            # cue mentioning "90%" must not stand in for a missing target.
+            rest_nocue = CUE_RE.sub(" ", rest)
+            tgt = TARGET_RE.search(rest_nocue)
             step = {"line": ln, "raw": s, "secs": secs, "dist": dist, "ramp": is_ramp,
                     "mult": mult if in_repeat else 1,
                     "rpe": bool(RPE_RE.search(s)), "cue": bool(CUE_RE.search(s)),
+                    "rpe_range": _rpe_range(s),
                     "freeride": "freeride" in s.lower()}
             if tgt:
                 lo = float(tgt.group("lo"))
@@ -322,6 +336,16 @@ def parse_block(text):
             steps.append(step)
             if secs is None and dist is None and not step["freeride"]:
                 findings.append(("SYN-DUR", ln, f"Unparseable duration: '{body[:40]}'"))
+            zone = ZONE_SHORTHAND_RE.search(rest_nocue)
+            if zone:
+                findings.append(("HC-ZONE", ln,
+                                 f"Zone shorthand '{zone.group(0)}' — Intervals.icu would "
+                                 f"apply its own zones, not the author's. Write a "
+                                 f"percentage target"))
+            elif not tgt and not step["freeride"] and not step["rpe"]:
+                findings.append(("HC-TARGET", ln,
+                                 "Step has no target — every step needs a percentage "
+                                 "target (or, only for RPE-only prescription, an [RPE] tag)"))
             prev_blank = False
             continue
 
@@ -459,14 +483,60 @@ def load_profile(athlete_id):
         return yaml.safe_load(f) or {}
 
 
-def profile_flag(profile, dotted):
-    """Read a dotted path such as ramp_overrides.treadmill_ramps_requested."""
-    node = profile
-    for part in (dotted or "").split("."):
-        if not isinstance(node, dict) or part not in node:
-            return False
-        node = node[part]
-    return bool(node)
+def _zone_rpe(zone):
+    """Numeric RPE values of one author zone, as a set (empty if the zone has
+    only a label, e.g. Coggan's 'Maximal')."""
+    r = zone.get("rpe") or {}
+    lo, hi = r.get("min"), r.get("max")
+    if lo is None and hi is None:
+        return set()
+    lo = 1 if lo is None else int(lo)
+    hi = 10 if hi is None else int(hi)
+    return set(range(lo, hi + 1))
+
+
+def expected_rpe(step, metric, author, th):
+    """RPE values the active author's table allows for this step's target.
+
+    The RPE of every author zone that the target range touches. When the author
+    has no zone for the target (a metric the author does not publish, or a
+    value outside every zone), the zones of the same physiological class are
+    used instead. An empty set means the table cannot say — no check."""
+    lo, hi = step["pct"]
+    anc = author.get("anchor")
+    factor = anc["factor_from_threshold"] if anc and anc.get("metric") == metric else 1.0
+    cuts = ((th.get("classification_cutpoints") or {})
+            .get(author.get("sport")) or {}).get(metric) or {}
+    allowed = set()
+    for z in author["zones"]:
+        r = (z.get("ranges") or {}).get(metric)
+        if not r:
+            continue
+        if r.get("min") is not None:
+            zlo = r["min"] * factor
+        else:
+            # An open lower bound ("< 73%") says where the zone begins, not that
+            # its RPE extends down to zero. Below the generic floor of the
+            # zone's class, the zone does not govern the RPE.
+            zlo = (cuts.get(z.get("physiological_class")) or {}).get("min") or 0
+        zhi = r["max"] * factor if r.get("max") is not None else None
+        if zlo <= hi and (zhi is None or lo <= zhi):
+            allowed |= _zone_rpe(z)
+    if allowed:
+        return allowed
+    cls, _ = classify((lo + hi) / 2, metric, author, th)
+    for z in author["zones"]:
+        if cls and z.get("physiological_class") == cls:
+            allowed |= _zone_rpe(z)
+    return allowed
+
+
+def _equipment_for(metric, disc, sport, th):
+    spec = (th.get("metric_equipment") or {}).get(metric) or {}
+    for key in (disc, sport, "any"):
+        if key in spec:
+            return spec[key] or []
+    return []
 
 
 def check_constraints(steps, code, author, th, discipline, profile=None):
@@ -481,7 +551,7 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
     for metric, spec in of.items():
         for suf in spec.get("forbidden_suffixes", []):
             esc = re.escape(suf)
-            if suf.lower() in ("w", "watts"):
+            if suf.lower() in ("w", "watts", "bpm"):
                 pat = re.compile(r"\b\d+\s?" + esc + r"\b", re.I)
             elif "/" in suf:
                 pat = re.compile(r"\b\d{1,2}:\d{2}\s*" + esc + r"\b", re.I)
@@ -495,7 +565,18 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
     dl = author.get("dual_layer") or {}
     sor = author.get("special_output_rule") or {}
 
+    sport = author.get("sport")
+    equipment = profile.get("equipment") or {}
+    declared_metric = (profile.get("metric_overrides") or {}).get(disc)
+    disabled = [str(x).lower() for x in
+                ((profile.get("ramp_overrides") or {}).get("disable_ramps") or [])]
+    cutpoints = (th.get("classification_cutpoints") or {}).get(sport) or {}
+
     for s in steps:
+        # RPE on every step, from the author's scale
+        if not s["rpe"]:
+            errors.append(("HC-RPE", s["line"],
+                           f"Every step needs [RPE a-b] from {author['name']}'s table"))
         if s["freeride"] or "pct" not in s:
             continue
         suffix = s["suffix"]
@@ -515,49 +596,68 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
                            f"{of[sor['output_metric']]['syntax']}, never "
                            f"{of[sor['native_metric']]['table_label']}"))
 
-        # Metric must belong to this author
-        if metric not in author["available_metrics"] and metric != "power":
-            warns.append(("CHK-METRIC", s["line"],
-                          f"{author['name']} does not define {metric}"))
+        # Metric — any methodology may use any metric of its sport. Where the
+        # author publishes no zones in that metric, the step is classified by
+        # physiological class with the generic ranges of the sport.
+        if metric != sor.get("native_metric"):
+            if metric not in author["available_metrics"] and metric not in cutpoints:
+                errors.append(("HC-METRIC", s["line"],
+                               f"{metric} is not a {sport} training metric"))
+            elif metric not in author["available_metrics"]:
+                warns.append(("CHK-METRIC", s["line"],
+                              f"{author['name']} publishes no {metric} zones — "
+                              f"classified by physiological class with the generic "
+                              f"{sport} {metric} ranges"))
 
-        # Ramp eligibility — three cases, per `ramps` in decision_thresholds.yaml
+        # The athlete's declared Metric Map governs the discipline
+        if declared_metric in ("power", "lthr", "pace") and metric != declared_metric:
+            errors.append(("HC-METRIC", s["line"],
+                           f"The athlete's Metric Map sets {declared_metric} for "
+                           f"'{discipline}', found {metric}"
+                           + (" — a bare % is power; did the target lose its "
+                              "suffix?" if metric == "power" else "")))
+
+        # Equipment — blocked only when every device for the metric is declared
+        # false (null means not asked, never a block)
+        devices = _equipment_for(metric, disc, sport, th)
+        if devices and all(equipment.get(d) is False for d in devices):
+            errors.append(("HC-METRIC", s["line"],
+                           f"{metric} needs {' or '.join(devices)}, and the athlete "
+                           f"profile declares {'them' if len(devices) > 1 else 'it'} false"))
+
+        # RPE must agree with the author's table for this target
+        if s["rpe_range"]:
+            allowed = expected_rpe(s, metric, author, th)
+            a, b = s["rpe_range"]
+            if allowed and not (set(range(a, b + 1)) & allowed):
+                errors.append(("HC-RPE", s["line"],
+                               f"RPE {a}-{b} does not match {author['name']}'s table "
+                               f"for this target (RPE {min(allowed)}-{max(allowed)})"))
+
+        # Ramps — a continuously changing target needs a smart trainer under
+        # power control; everywhere else a progression is written as steps
         if s["ramp"]:
-            allowed = [x.lower() for x in ramps.get("allowed_disciplines", [])]
-            forbidden = [x.lower() for x in ramps.get("forbidden_disciplines", [])]
-            override = {k.lower(): v for k, v in
-                        (ramps.get("override_eligible") or {}).items()}
-
-            if disc in forbidden:
+            allowed_d = [x.lower() for x in ramps.get("allowed_disciplines", [])]
+            if disc in disabled:
                 errors.append(("HC-RAMP", s["line"],
-                               f"Ramps are forbidden for discipline '{discipline}' "
-                               f"— no device control over a changing target"))
-            elif disc in allowed:
+                               f"Ramps in '{discipline}' are disabled in the athlete "
+                               f"profile (ramp_overrides.disable_ramps)"))
+            elif disc in allowed_d:
                 if metric not in ramps.get("required_metrics", []):
                     errors.append(("HC-RAMP", s["line"],
                                    f"Ramps in '{discipline}' require metric "
                                    f"{'/'.join(ramps['required_metrics'])}, found {metric}"))
-            elif disc in override:
-                spec = override[disc]
-                if not profile_flag(profile, spec.get("flag", "")):
-                    errors.append(("HC-RAMP", s["line"],
-                                   f"Ramps in '{discipline}' require express request — "
-                                   f"set {spec.get('flag')} in the athlete profile"))
-                elif metric not in spec.get("permitted_metrics", []):
-                    errors.append(("HC-RAMP", s["line"],
-                                   f"Ramps in '{discipline}' permit metric "
-                                   f"{'/'.join(spec.get('permitted_metrics', []))}, "
-                                   f"found {metric}"))
             else:
                 errors.append(("HC-RAMP", s["line"],
-                               f"Discipline '{discipline}' is not ramp-eligible"))
+                               f"Ramps are not possible in '{discipline}' — only a smart "
+                               f"trainer can follow a continuously changing target. "
+                               f"Write the progression as discrete steps"))
 
         # Dual-layer completeness
         if dl.get("required"):
             missing = []
             if metric != dl["engine_metric"]:
                 missing.append(f"{of[dl['engine_metric']]['syntax']} engine metric")
-            if not s["rpe"]:
-                missing.append("[RPE x-y]")
             if not s["cue"]:
                 missing.append("quoted cue")
             if missing:
@@ -601,6 +701,8 @@ def compute_tss(steps, author, th, tssc):
         if s["freeride"] or "pct" not in s or s["dist"] or s["secs"] is None:
             if s["freeride"] or s["dist"]:
                 skipped.append((s, "distance-based or freeride — no duration to cost"))
+            elif "pct" not in s and s["secs"] is not None:
+                skipped.append((s, "no percentage target (RPE-only) — no load to cost"))
             continue
         lo, hi = s["pct"]
         mid = {"midpoint": (lo + hi) / 2, "low": lo, "high": hi}[point]
@@ -735,7 +837,7 @@ def main():
     tol = args.tolerance if args.tolerance is not None else \
         th["tss_rules"].get("divergence_tolerance_pct", 10)
 
-    print(f"validate_block v2.3 — {os.path.basename(args.file)}")
+    print(f"validate_block v2.5 — {os.path.basename(args.file)}")
     if fixes:
         print("Auto-corrected before validating (file updated on disk):")
         for note in fixes:
@@ -783,8 +885,8 @@ def main():
             else:
                 print(f"── Session {n}: cannot validate — header is missing "
                       f"{' and '.join(missing)}")
-                print(f"   Add the field(s) to the session header, or pass "
-                      f"--methodology / --discipline for a raw block.\n")
+                print("   Add the field(s) to the session header, or pass "
+                      "--methodology / --discipline for a raw block.\n")
             failed = True
             continue
 
@@ -834,7 +936,14 @@ def main():
                 for s, why in skipped:
                     print(f"   L{s['line']:>3}  not costed: {why}")
 
-            computed_by_session[n] = computed
+            # Steps the engine cannot cost (distance, freeride, RPE-only) leave
+            # their load out of the total. Say so where the number is written,
+            # so a partial TSS is never read as the full session load.
+            computed_by_session[n] = f"{computed} (partial)" if skipped else computed
+            if skipped:
+                warns.append(("CHK-TSS-PARTIAL", "-",
+                              f"TSS {computed} excludes {len(skipped)} step(s) the "
+                              f"engine cannot cost — the real load is higher"))
             declared = args.tss
             raw_field = (header.get("Estimated TSS") or "").strip().lower()
             if raw_field in ("pending", "tbd", "", "—", "-"):

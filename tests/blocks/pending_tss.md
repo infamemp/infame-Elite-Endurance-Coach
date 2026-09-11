@@ -13,7 +13,7 @@ Warmup
 Main Set
 
 3x
-- 10m 88-92% [RPE 6-7]
+- 10m 88-92% [RPE 4-5]
 - 5m 55-60% [RPE 2]
 
 Cooldown
