@@ -258,6 +258,7 @@ def parse_block(text):
     steps, findings = [], []
     in_repeat, mult, prev_blank = False, 1, True
     seen_any_line = False
+    section = "warmup"  # steps before any header are treated as warmup
 
     for ln, raw in enumerate(text.splitlines(), 1):
         s = raw.strip()
@@ -286,6 +287,13 @@ def parse_block(text):
         sec = re.match(r"^([A-Za-zÁÉÍÓÚáéíóúñÑ ]+?)(?:\s+(\d+)x)?$", s)
         if sec and sec.group(1).strip().lower() in SECTION_WORDS | FOREIGN_SECTIONS:
             name = sec.group(1).strip()
+            key = name.lower()
+            if key in ("warmup", "warm up") or key == "calentamiento":
+                section = "warmup"
+            elif key in ("cooldown", "cool down") or key in ("enfriamiento", "enfriar"):
+                section = "cooldown"
+            elif key in ("main set", "main") or key == "principal":
+                section = "main"
             if name.lower() in FOREIGN_SECTIONS:
                 findings.append(("HC-LANG", ln,
                                  f"Section keyword not canonical English: '{name}'"))
@@ -323,7 +331,7 @@ def parse_block(text):
             rest_nocue = CUE_RE.sub(" ", rest)
             tgt = TARGET_RE.search(rest_nocue)
             step = {"line": ln, "raw": s, "secs": secs, "dist": dist, "ramp": is_ramp,
-                    "mult": mult if in_repeat else 1,
+                    "mult": mult if in_repeat else 1, "section": section,
                     "rpe": bool(RPE_RE.search(s)), "cue": bool(CUE_RE.search(s)),
                     "rpe_range": _rpe_range(s),
                     "freeride": "freeride" in s.lower()}
@@ -437,6 +445,88 @@ def classify(mid, metric, author, thresholds):
 # ══════════════════════════════════════════════════════════════════
 # DISCIPLINE — one vocabulary, from `disciplines` in decision_thresholds.yaml
 # ══════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════
+# MONOTONY — CHK-MONO, a warning only, never a hard-constraint failure
+# ══════════════════════════════════════════════════════════════════
+# The check works on the Main Set only (warmup/cooldown are excluded on
+# purpose -- their similarity across sessions is normal). It deliberately
+# ignores cadence, cue text and the exact target value: those are the
+# variables a design can vary without changing the architecture, and
+# including them would hide the exact repetition this check exists to find.
+# What is kept: how many segments, their rough duration, whether each is a
+# ramp, and whether it is the work or the rest of the interval.
+
+CLASS_ORDER = ["recovery", "endurance", "tempo", "sub_threshold", "threshold",
+               "vo2max", "anaerobic", "neuromuscular"]
+CLASS_RANK = {c: i for i, c in enumerate(CLASS_ORDER)}
+
+# Seconds -> a coarse duration bucket. A structural comparison, not a
+# prescription: two segments a minute apart are "the same length" here.
+_DURATION_BUCKETS = [90, 180, 300, 600, 1200, 2400, 4800]
+
+
+def _duration_bucket(secs):
+    if secs is None:
+        return None
+    for edge in _DURATION_BUCKETS:
+        if secs < edge:
+            return edge
+    return "long"
+
+
+def outdoor_bike_mtb_exempt(discipline, cls):
+    """Road and MTB rides outdoors depend on traffic, group riding and real
+    terrain -- a specific, repeatable architecture is often not possible by
+    default, and prescribing one anyway would be the wrong coaching call, not
+    monotony. Sub-threshold and above are never exempt: those are only
+    written when conditions genuinely allow something specific."""
+    return (str(discipline).lower() in ("road_bike", "mtb")
+            and cls in ("recovery", "endurance", "tempo"))
+
+
+def session_monotony_profile(steps, author, th):
+    """Reduce one session's Main Set to what monotony detection needs.
+
+    Returns None when the Main Set has nothing classifiable (no session to
+    compare). Otherwise a dict with:
+      class:       the session's physiological class -- the highest-ranked
+                   class found among its Main Set steps.
+      fingerprint: tuple of (mult, duration_bucket, role, is_ramp) per Main
+                   Set step, in order. role is "work" for a step at the
+                   session's own class, "rest" for anything lower (or
+                   unclassifiable, e.g. an RPE-only or freeride step).
+      dose:        total work-role seconds (mult * duration), the quantity a
+                   progression must increase to avoid the flag.
+    """
+    main = [s for s in steps if s.get("section") == "main"]
+    if not main:
+        return None
+
+    classified = []
+    for s in main:
+        cls = None
+        if "pct" in s:
+            lo, hi = s["pct"]
+            metric = SUFFIX_TO_METRIC.get(s["suffix"], "power")
+            cls, _ = classify((lo + hi) / 2, metric, author, th)
+        classified.append(cls)
+
+    ranked = [c for c in classified if c in CLASS_RANK]
+    if not ranked:
+        return None
+    session_class = max(ranked, key=lambda c: CLASS_RANK[c])
+
+    fingerprint, dose = [], 0
+    for s, cls in zip(main, classified):
+        secs = s["secs"] if s["secs"] is not None else 0
+        role = "work" if cls == session_class else "rest"
+        fingerprint.append((s["mult"], _duration_bucket(s["secs"]), role, s["ramp"]))
+        if role == "work":
+            dose += s["mult"] * secs
+
+    return {"class": session_class, "fingerprint": tuple(fingerprint), "dose": dose}
+
 
 def resolve_discipline(raw, sport, th):
     """Map a [Discipline] value to its canonical name.
@@ -847,6 +937,13 @@ def main():
     failed = False
     computed_by_session = {}
     computed_duration_by_session = {}
+    # Monotony state, carried across sessions in file order (see CHK-MONO
+    # below): the last non-exempt profile seen per (sport, class). Whether a
+    # flat Recovery/Endurance session was the right call is a coaching
+    # judgement this validator does not have the context to make -- only
+    # Tempo-and-above, where repetition without progression is objectively
+    # checkable, is verified here.
+    mono_last = {}
     for n, (header, code) in enumerate(sessions, 1):
         category = header.get("Category", "Training")
         # A Rest or Travel day carries no exercise block by design -- it has
@@ -925,6 +1022,28 @@ def main():
         e, w = check_header(header)
         errors += e
         warns += w
+
+        # CHK-MONO — never blocks. Compared against the last non-exempt
+        # session of the same class seen so far in this file; exempt
+        # sessions (outdoor road/mtb, Recovery-Endurance-Tempo) are neither
+        # flagged nor kept as a reference point for what follows. Only
+        # Tempo-and-above is checked: whether a flat Recovery/Endurance
+        # session was the right call is a coaching judgement, not something
+        # this validator has the context to verify.
+        if header.get("Category", "Training") == "Training":
+            mprof = session_monotony_profile(steps, author, th)
+            if (mprof and CLASS_RANK[mprof["class"]] >= CLASS_RANK["tempo"]
+                    and not outdoor_bike_mtb_exempt(discipline, mprof["class"])):
+                key = (author["sport"], mprof["class"])
+                prev = mono_last.get(key)
+                if (prev and prev["fingerprint"] == mprof["fingerprint"]
+                        and mprof["dose"] <= prev["dose"]):
+                    warns.append(("CHK-MONO", "-",
+                                  f"Repeats the architecture of {prev['label']} "
+                                  f"({mprof['class']}) with no increase in dose "
+                                  f"— declare a design variable, or a progression"))
+                mono_last[key] = {"fingerprint": mprof["fingerprint"],
+                                  "dose": mprof["dose"], "label": label}
 
         if steps and header.get("Category", "Training") == "Training":
             computed, detail, skipped = compute_tss(steps, author, th, tssc)
