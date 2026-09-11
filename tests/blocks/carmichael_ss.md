@@ -8,15 +8,15 @@
 ```text
 Warmup
 
-- 15m 55-70% [RPE 3-4]
+- 15m 55-70% [RPE 5]
 
 Main Set
 
 2x
 - 12m 95-99% [RPE 7]
-- 5m 55-60% [RPE 2]
+- 5m 55-60% [RPE 5]
 
 Cooldown
 
-- 10m 50-55% [RPE 2]
+- 10m 50-55% [RPE 5]
 ```

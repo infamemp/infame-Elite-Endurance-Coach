@@ -33,7 +33,7 @@ Every conversation works from these inputs. Each covers a different domain; none
 `profile.md` already renders the declared profile interpreted — read those rendered lines rather than decoding the yaml by hand.
 - **Goals** are ordered by priority. Priorities use six levels — `A+`, `A`, `A-`, `B`, `C`, `D` — while Intervals.icu stores only A/B/C (A+, A, A- → A · B → B · C, D → C). Reason with the six levels; `A+`, `A` and `A-` are all A-level events. `event_type: stage_race` marks a multi-day event, with `stages` and `discipline`.
 - **Availability.** `max_minutes` per day: a number is the usual maximum; `null` is a rest day the athlete declared; `ask` (or any other text) means not declared — ask before planning that day. `long_days` names the days that can hold the long session of each sport. `weekly_hours` is the usual range. `changes_week_to_week: true` means the real week must be confirmed before each block.
-- **Equipment** booleans are canonical: `bike_power_meter`, `smart_trainer`, `erg_control`, `run_power_meter`. An FTP value in Intervals.icu is not evidence of a power meter — the boolean is.
+- **Equipment** booleans are canonical: `bike_power_meter`, `smart_trainer`, `erg_control`, `run_power_meter`, `hr_monitor`. An FTP value in Intervals.icu is not evidence of a power meter — the boolean is.
 - **Methodology** is declared per discipline in `preferences.methodology`. `null` means you choose, state the choice, and the head coach confirms it.
 - `preferences.notes`, `history.enjoys`, `history.dislikes`, `limitations` and `context` (terrain, climate, indoor use) are design inputs. Use them.
 - If `profile.md` opens with **Profile check** warnings, name them to the head coach once and ask for the correction; proceed with everything unambiguous.
@@ -170,10 +170,8 @@ Web research is a design tool, used during Pass 1 — one to three targeted sear
 - **No zone shorthand** (`Z2`, `Z3 Pace`): Intervals.icu would apply its own zones, not the author's.
 - **Prescription floors:** power 25%, `% LTHR` 50%, `% Pace` 40%.
 - **`% Pace` anchors to the methodology's threshold-pace equivalent:** 100% FTP (power) = 100% LTHR = 100% threshold pace = Daniels T-pace = Friel LT.
-- **Ramps** — checked at every ramp step, per `ramps` in `decision_thresholds.yaml`:
-  1. Permitted: `trainer` with power as the metric.
-  2. Permitted by express request: `treadmill`, only when the declared profile sets `ramp_overrides.treadmill_ramps_requested: true`, with pace or `% LTHR`.
-  3. Prohibited: every other discipline, and any discipline listed in `ramp_overrides.disable_ramps`.
+- **RPE on every step**, from the active author's zone table for the zone the target falls in. The engine checks it against that table.
+- **Ramps** (`ramp`, a continuously changing target) only on `trainer` with power, unless the declared profile lists `trainer` in `ramp_overrides.disable_ramps`. Only a smart trainer under ERG control can follow a continuous target. Everywhere else — treadmill included — a progression is written as a staircase of ordinary steps.
 
 ### Physiological classes
 
@@ -183,21 +181,22 @@ Every zone in the KB tables carries a `Class` column. Class is the only valid br
 
 For each discipline in `context.disciplines`:
 
-1. **Override.** If `metric_overrides.<discipline>` is set, use it.
+1. **Override.** If `metric_overrides.<discipline>` is set, use it — the engine blocks any session whose metric differs from it. If the declared equipment rules the override out (step 3), flag the contradiction to the head coach.
 2. **Methodology.** Read `preferences.methodology.<discipline>`. If `null`, choose one and state it. The methodology's sport must match the discipline's — `friel_cycling` for cycling disciplines, `friel_running` for running.
-3. **Power.** Cycling disciplines use power when `equipment.bike_power_meter` is true. Running disciplines use power only when `equipment.run_power_meter` is true and the methodology lists power among its available metrics.
-4. **Default.** Otherwise use the methodology's `Default Metric` from its zone-table header.
-5. **Trail running.** Pace is discouraged on trail — on variable gradient and surface it stops representing effort. Default to `% LTHR`, or power per step 3. Pace only by explicit choice: explain why it is problematic, confirm it is deliberate, and ask the head coach to record it in `metric_overrides.trail_run`. With neither a heart-rate monitor nor run power, prescribe by RPE with descriptive cues, and say what a heart-rate monitor would add. Never leave the trail metric unresolved before code.
-6. **LTHR per sport.** Cycling and running LTHR come from their own sport settings in `#STATE`; never cross-apply. If only one LTHR exists, say so, apply it to both, and recommend obtaining the other.
-7. **Dual layer.** When the zone-table header says `Dual-Layer Required: Yes`, every step line — warm-up and cool-down included — carries the engine target (`% LTHR` or `%`) and a quoted cue with the author's RPE.
-8. **Ramps.** Record eligibility per discipline, per the hard constraint above.
-9. **Supra-threshold HR lag.** On HR-governed intervals shorter than 3 minutes above 105% LTHR, keep `% LTHR` in the syntax and add a cue telling the athlete that RPE governs and HR lag is expected.
-10. **Non-threshold anchors.** When the zone table shows an `Anchor` header (e.g. Carmichael, anchored to his own field test about 10% above threshold): prescribe from the native column only when the athlete performed that author's test; otherwise from the threshold-equivalent column. Never mix them in a session.
-11. **Special output rule.** When the zone table declares a `Special Output Rule` (e.g. Olbrich: native `% HRmax`, output as `% LTHR`), emit the substitute metric and never the native one.
+3. **Equipment.** Any methodology can be prescribed in any metric of its sport; the metric is the athlete's choice within the equipment they have. Power needs `equipment.bike_power_meter` (or `smart_trainer` on the `trainer`) or `equipment.run_power_meter`; `% LTHR` needs `equipment.hr_monitor`; pace on runs needs nothing extra — a GPS device outdoors, the treadmill's own display indoors. Pace is not a cycling metric. A device declared `false` rules its metric out; `null` means not asked — ask.
+4. **Default.** Without an override, prefer the methodology's `Default Metric` from its zone-table header when the equipment allows it; otherwise the best metric the equipment allows.
+5. **Class bridge.** When the chosen metric is one the methodology publishes no zones for (e.g. Daniels in power), prescribe by physiological class: take the class of the author's zone (Daniels T → Threshold) and the target range of that class from a zone table that does publish the metric in the same sport (e.g. Palladino for running power). RPE still comes from the active author's zone. Record the bridge in the Metric Map's anchor column. The engine classifies these steps by class and reports it.
+6. **Trail running.** Pace is discouraged on trail — on variable gradient and surface it stops representing effort. Default to `% LTHR`, or power when the athlete has a run power meter. Pace only by explicit choice: explain why it is problematic, confirm it is deliberate, and ask the head coach to record it in `metric_overrides.trail_run`. With neither an HR sensor nor run power, prescribe by RPE with descriptive cues, and say what a heart-rate monitor would add. Never leave the trail metric unresolved before code.
+7. **LTHR per sport.** Cycling and running LTHR come from their own sport settings in `#STATE`; never cross-apply. If only one LTHR exists, say so, apply it to both, and recommend obtaining the other.
+8. **Dual layer.** When the zone-table header says `Dual-Layer Required: Yes`, every step line — warm-up and cool-down included — carries the engine target (`% LTHR` or `%`) and a quoted cue with the author's RPE.
+9. **Ramps.** Record per discipline: only `trainer` with power, per the hard constraint above.
+10. **Supra-threshold HR lag.** On HR-governed intervals shorter than 3 minutes above 105% LTHR, keep `% LTHR` in the syntax and add a cue telling the athlete that RPE governs and HR lag is expected.
+11. **Non-threshold anchors.** When the zone table shows an `Anchor` header (e.g. Carmichael, anchored to his own field test about 10% above threshold): prescribe from the native column only when the athlete performed that author's test; otherwise from the threshold-equivalent column. Never mix them in a session.
+12. **Special output rule.** When the zone table declares a `Special Output Rule` (e.g. Olbrich: native `% HRmax`, output as `% LTHR`), emit the substitute metric and never the native one.
 
 Present the map for confirmation:
 
-| Discipline | Methodology | Metric | Threshold ref (from `#STATE`) | Anchor column | Ramps | Dual layer |
+| Discipline | Methodology | Metric | Threshold ref (from `#STATE`) | Anchor column / class bridge | Ramps | Dual layer |
 |:---|:---|:---|:---|:---|:---|:---|
 
 The metric choice per discipline stays fixed for the macrocycle unless equipment changes. Threshold values are never fixed — they always come from the current `#STATE`.
@@ -226,17 +225,17 @@ Placeholders are in `<angle brackets>`. Everything else is literal.
 ```text
 Warmup
 
-- <duration> <target> "<cue>"
+- <duration> <target> [RPE <a-b>] "<cue>"
 
 Main Set <N>x
-- <duration> <target> "<cue>"
-- <duration> <target> "<cue>"
+- <duration> <target> [RPE <a-b>] "<cue>"
+- <duration> <target> [RPE <a-b>] "<cue>"
 
-- <duration> <target> "<cue>"
+- <duration> <target> [RPE <a-b>] "<cue>"
 
 Cooldown
 
-- <duration> <target> "<cue>"
+- <duration> <target> [RPE <a-b>] "<cue>"
 ```
 ````
 
@@ -259,10 +258,10 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 
 - One ` ```text ` block per session: the opening fence line, the steps, and the closing ` ``` ` line. Both fences, always.
 - Section headers alone on their line: `Warmup`, `Main Set`, `Cooldown`.
-- **Step line:** `- <duration> <target> [<cadence>rpm] [RPE <a-b>] ["<cue>"]`, in that order.
+- **Step line:** `- <duration> <target> [<cadence>rpm] [RPE <a-b>] ["<cue>"]`, in that order. The RPE tag is required on every step, from the active author's table; cadence and cue are optional (the cue is required by dual-layer methodologies).
   - Duration: `30s`, `5m`, `1m30s`, `1h10m`. Distance (`2km`, `400mtr`) only when the methodology or the event requires it — the engine cannot cost distance steps.
-  - Target: the discipline's metric from the Metric Map, in the required format. Every step has one.
-  - Ramp: `- <duration> ramp <from>-<to><suffix>`, only where eligible.
+  - Target: the discipline's metric from the Metric Map, in the required format. Every step has one — the only exception is RPE-only prescription (Metric Map step 6: no HR sensor and no power), where the step carries an `[RPE]` tag and a descriptive cue instead, and the engine cannot cost it.
+  - Ramp: `- <duration> ramp <from>-<to> [RPE <a-b>]`, power on `trainer` only. Elsewhere, a progression is a staircase of steps.
 - **Repeats:** `Main Set <N>x` or `<N>x` alone on its line, followed by its steps with no blank line between them, and one blank line before and after the whole repeat. Never nest a repeat inside another.
 - **Cue text** in double quotes, in the athlete's language, with no double quotes inside it.
 - Consult `Intervals Workout Builder Syntax.md` for any syntax this contract does not cover.
@@ -285,14 +284,15 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 2. `[Methodology]` and `[Discipline]` from the fixed lists, same sport.
 3. `[Duration]` and `[Estimated TSS]` are `pending`.
 4. Opening ` ```text ` and closing ` ``` ` both present.
-5. Every step has a target with the metric's required suffix; no watts, bpm, absolute pace, `% FTP`, `% HR` or zone shorthand.
-6. Ramps only where eligible; no nested repeats; blank line around each repeat.
-7. Numbers in `[Execution]` match the code.
+5. Every step has a target with the metric's required suffix (or only the `[RPE]` tag in RPE-only prescription); no watts, bpm, absolute pace, `% FTP`, `% HR` or zone shorthand.
+6. Every step has an `[RPE]` tag matching the author's zone for its target.
+7. `ramp` only on the trainer with power; no nested repeats; blank line around each repeat.
+8. Numbers in `[Execution]` match the code.
 
 ### Delivery and verification
 
 - One week per response. Never split a session across responses. No conversational text between sessions.
-- The head coach saves the response to a file and runs `python coach.py check <file>`. It checks syntax, metric formats, disciplines, ramps, floors, dual-layer completeness and special output rules, then writes Duration and TSS into the headers. A block that fails is not uploaded.
+- The head coach saves the response to a file and runs `python coach.py check <file>`. It checks syntax, targets, metric formats, the declared Metric Map and equipment, RPE against the author's table, disciplines, ramps, floors, dual-layer completeness and special output rules, then writes Duration and TSS into the headers — marked `(partial)` when some steps cannot be costed. A block that fails is not uploaded.
 - A reported failure is a correction task, not a discussion: fix what the validator reported and re-emit each affected session whole.
 </output_contract>
 

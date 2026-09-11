@@ -3,8 +3,8 @@
 [Category]: Training
 [Methodology]: daniels
 [Discipline]: treadmill
-[Focus]: Ramp Test
-[Duration] 00:30:00| [Estimated TSS] pending
+[Focus]: Progressive test
+[Duration] pending | [Estimated TSS] pending
 
 ```text
 Warmup
@@ -13,7 +13,11 @@ Warmup
 
 Main Set
 
-- 15m ramp 85-110% Pace [RPE 4-8]
+- 3m 86-88% Pace [RPE 3]
+- 3m 90-92% Pace [RPE 3-4]
+- 3m 94-96% Pace [RPE 4]
+- 3m 98-100% Pace [RPE 4-5]
+- 3m 102-104% Pace [RPE 5-6]
 
 Cooldown
 

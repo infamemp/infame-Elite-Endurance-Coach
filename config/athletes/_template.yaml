@@ -88,12 +88,16 @@ history:
 # cannot execute on their device.
 equipment:
   devices: []                  # watch, HR strap, bike computer, phone app
-  bike_power_meter: false
-  smart_trainer: false         # required for ramp targets
-  erg_control: false           # device can steer the trainer automatically
-  run_power_meter: false
-  tracks_sleep: false
-  tracks_hrv: false
+  # true | false | null (not asked yet). Only false restricts prescription:
+  # power needs a power meter (or a smart trainer indoors), % LTHR needs an HR
+  # sensor. Pace on runs needs nothing extra (GPS, or the treadmill display).
+  bike_power_meter: null
+  smart_trainer: null          # measures power indoors; required for ramp targets
+  erg_control: null            # the device steers the trainer automatically
+  run_power_meter: null        # e.g. Stryd
+  hr_monitor: null             # chest strap or wrist HR
+  tracks_sleep: null
+  tracks_hrv: null
 
 # ── Metric preferences ────────────────────────────────────────────
 # Overrides the default metric per discipline. Leave null to let the Metric Map
@@ -109,8 +113,9 @@ metric_overrides:
   treadmill: null
   track_run: null
 ramp_overrides:
-  treadmill_ramps_requested: false   # express athlete/coach request; see decision_thresholds.yaml
   disable_ramps: []                  # canonical disciplines where ramps are eligible but unwanted
+  disable_ramps: []            # ramps are only possible on the trainer; list it
+                               # here if the athlete does not want them
 
 # ── Communication preferences ─────────────────────────────────────
 preferences:

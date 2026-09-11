@@ -9,13 +9,13 @@
 ```text
 Warmup
 
-- 10m 78-84% Pace
+- 10m 78-84% Pace [RPE 2]
 
 Main Set
 
-- 15m ramp 85-110% Pace
+- 15m ramp 85-110% Pace [RPE 4-8]
 
 Cooldown
 
-- 5m 76-80% Pace
+- 5m 76-80% Pace [RPE 1-2]
 ```

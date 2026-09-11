@@ -14,7 +14,7 @@ Only four kinds of line exist. Anything else — comments, titles, markdown, bol
 |:---|:---|
 | Section header | `Warmup` · `Main Set` · `Cooldown` — alone on the line, in English |
 | Repeat header | `Main Set <N>x` or `<N>x` — alone on the line |
-| Step | `- <duration> <target> [<cadence>] [<RPE>] ["<cue>"]` |
+| Step | `- <duration> <target> [<cadence>] <RPE> ["<cue>"]` |
 | Blank line | Separates sections and surrounds every repeat |
 
 ---
@@ -22,11 +22,11 @@ Only four kinds of line exist. Anything else — comments, titles, markdown, bol
 ## 2. Step line
 
 ```
-- <duration> <target> [<cadence>] [<RPE>] ["<cue>"]
+- <duration> <target> [<cadence>] <RPE> ["<cue>"]
 ```
 
 - Starts with `- ` (hyphen and space). No indentation.
-- Tokens in this order. `<duration>` and `<target>` are required; the rest are optional.
+- Tokens in this order. `<duration>`, `<target>` and `<RPE>` are required; cadence and cue are optional (the cue is required by dual-layer methodologies).
 - One step per line.
 
 ### Duration
@@ -46,7 +46,7 @@ Only four kinds of line exist. Anything else — comments, titles, markdown, bol
 
 | Metric | Token | Intervals.icu reads it as |
 |:---|:---|:---|
-| Power | `<a>-<b>%` · `<a>%` | % of FTP |
+| Power | `<a>-<b>%` · `<a>%` | % of the sport's FTP — cycling FTP on the bike, running FTP (e.g. Stryd) on runs |
 | Heart rate | `<a>-<b>% LTHR` · `<a>% LTHR` | % of threshold HR |
 | Pace | `<a>-<b>% Pace` · `<a>% Pace` | % of threshold pace (higher = faster) |
 
@@ -70,9 +70,9 @@ Only four kinds of line exist. Anything else — comments, titles, markdown, bol
 
 `90rpm` or a range `85-95rpm`, after the target.
 
-### RPE — optional, required by dual-layer methodologies
+### RPE — required on every step
 
-`[RPE <a>-<b>]` or `[RPE <a>]`, using the active author's scale from the zone table.
+`[RPE <a>-<b>]` or `[RPE <a>]`, taken from the active author's zone table for the zone the target falls in. The verification engine checks it against that table. When the target is in a metric the author publishes no zones for, use the RPE of the author's zone of the same physiological class.
 
 ### Cue — optional, required by dual-layer methodologies
 
@@ -83,20 +83,19 @@ Only four kinds of line exist. Anything else — comments, titles, markdown, bol
 ## 3. Ramps
 
 ```
-- <duration> ramp <from>-<to>[<suffix>]
+- <duration> ramp <from>-<to> <RPE>
 ```
 
-- `<from>` is the starting target and `<to>` the ending one; either order (rising or falling).
-- The suffix is the metric's: none for power, ` LTHR`, ` Pace`.
-- Optional cadence after the ramp target.
-- **Only where eligible:** `trainer` with power, and `treadmill` when the athlete profile authorizes it. Everywhere else a ramp is a hard-constraint violation.
+- A ramp is a **continuously** changing target: `<from>` is the starting power and `<to>` the ending one, rising or falling. Optional cadence after the ramp target.
+- **Only on `trainer`, with power.** A smart trainer under ERG control is the only device that can follow a continuous target.
+- **Everywhere else — treadmill included — a progression is a staircase of ordinary steps**, each with its own target, because the athlete adjusts speed or effort by hand. A `ramp` outside the trainer is a hard-constraint violation.
 
 ---
 
 ## 4. Freeride
 
 ```
-- <duration> freeride
+- <duration> freeride <RPE>
 ```
 
 ERG off on a smart trainer for that step. `trainer` only. The engine cannot cost it — its load is missing from the session TSS.

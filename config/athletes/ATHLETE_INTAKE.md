@@ -151,17 +151,19 @@ Watch, heart rate strap, bike computer, smart trainer, power meter, phone app.
 
 **7.2 Do you have a power meter?**
 - Bike: yes / no / smart trainer only (indoor)
-- Run: yes / no
+- Run: yes / no (e.g. Stryd)
 
-**7.3 Does your device control your indoor trainer automatically?**
+**7.3 Do you train with heart rate — a chest strap or a watch that reads it?**
+
+**7.4 Does your device control your indoor trainer automatically?**
 This is what allows ramped targets that change gradually during a session.
 
-**7.4 Do you know any of your numbers?**
+**7.5 Do you know any of your numbers?**
 FTP, threshold pace, max or resting heart rate, recent test results. If you have
 never tested, say so — the coach can work it out from your training data or
 prescribe a test.
 
-**7.5 Do you track sleep, resting heart rate, or HRV?**
+**7.6 Do you track sleep, resting heart rate, or HRV?**
 
 ---
 
@@ -203,6 +205,9 @@ Transfer rules that are easy to get wrong:
 - **Daily maximum** (availability.max_minutes): a number in minutes; `null` for
   a rest day the athlete declared; `ask` when the answer was "varies" or not
   given. Never write null for "don't know" — null means rest.
+- **Equipment** is true, false, or null when it was not asked. Only false
+  restricts prescription: false for a power meter blocks power targets, false
+  for `hr_monitor` blocks % LTHR. Pace on runs needs no device.
 - After `prep`, the top of `profile.md` flags any name the system does not
   recognize.
 
