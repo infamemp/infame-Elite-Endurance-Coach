@@ -38,7 +38,7 @@ Usage:
     python engine/build_profile.py --athlete i18969
     python engine/build_profile.py --all
 
-Version: 1.1
+Version: 1.2
 """
 
 import argparse
@@ -304,28 +304,151 @@ def _is_number(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
-def availability_line(declared):
-    """One deterministic line: minutes per day and the weekly total, so the
-    coach never adds them up by hand. Non-numeric entries are shown as written
-    and excluded from the total, which is then marked partial."""
-    days = ((declared or {}).get("availability") or {}).get("days")
-    if not isinstance(days, dict):
-        return None
-    parts, total, partial = [], 0, False
-    for k in DAY_ORDER:
-        v = days.get(k)
-        if _is_number(v):
-            total += v
-            parts.append(f"{k.capitalize()} {v:g}m")
-        elif v in (None, "", 0):
-            parts.append(f"{k.capitalize()} —")
-        else:
-            partial = True
-            parts.append(f"{k.capitalize()} {v}")
+def _fmt_minutes(total):
     h, m = divmod(int(round(total)), 60)
-    label = "partial total" if partial else "total"
-    return (f"**Declared weekly availability:** {' · '.join(parts)} — "
-            f"**{label} {h}h {m:02d}m**")
+    return f"{h}h {m:02d}m"
+
+
+def availability_lines(declared):
+    """Deterministic availability summary, so the coach never has to decode or
+    add up the yaml by hand.
+
+    Current format (availability.max_minutes): number = usual maximum for that
+    day, null = rest day declared by the athlete, `ask` or any other text = not
+    declared yet. The older format (availability.days, where null meant
+    unavailable) is still read, and labelled as such."""
+    av = (declared or {}).get("availability") or {}
+    L = []
+
+    if isinstance(av.get("max_minutes"), dict):
+        mm = av["max_minutes"]
+        parts, total, rest, ask = [], 0, [], []
+        for k in DAY_ORDER:
+            v = mm.get(k, "ask")
+            if _is_number(v):
+                total += v
+                parts.append(f"{k.capitalize()} {v:g}m")
+            elif v is None:
+                rest.append(k)
+                parts.append(f"{k.capitalize()} rest")
+            else:
+                ask.append(k)
+                parts.append(f"{k.capitalize()} ask")
+        L.append(f"**Declared daily maximum:** {' · '.join(parts)}")
+        if total:
+            L.append(f"**Sum of declared daily maximums:** {_fmt_minutes(total)} "
+                     f"(a ceiling, not the planned week)")
+        if rest:
+            L.append(f"**Rest days declared by the athlete:** {', '.join(rest)}")
+        if ask:
+            L.append(f"**Not declared — ask the head coach before planning:** "
+                     f"{', '.join(ask)}")
+    elif isinstance(av.get("days"), dict):
+        days = av["days"]
+        parts, total, partial = [], 0, False
+        for k in DAY_ORDER:
+            v = days.get(k)
+            if _is_number(v):
+                total += v
+                parts.append(f"{k.capitalize()} {v:g}m")
+            elif v in (None, "", 0):
+                parts.append(f"{k.capitalize()} —")
+            else:
+                partial = True
+                parts.append(f"{k.capitalize()} {v}")
+        label = "partial total" if partial else "total"
+        L.append(f"**Declared weekly availability (older format — null means "
+                 f"unavailable):** {' · '.join(parts)} — "
+                 f"**{label} {_fmt_minutes(total)}**")
+    else:
+        return []
+
+    long_days = av.get("long_days")
+    if isinstance(long_days, dict):
+        ld = [f"{sport} {', '.join(map(str, days))}"
+              for sport, days in long_days.items() if days]
+        if ld:
+            L.append(f"**Long-session days:** {' · '.join(ld)}")
+    wh = av.get("weekly_hours")
+    if isinstance(wh, dict) and (wh.get("min") is not None or wh.get("max") is not None):
+        L.append(f"**Usual weekly hours:** {wh.get('min', '?')}–{wh.get('max', '?')} h")
+    if av.get("changes_week_to_week"):
+        L.append("**Availability changes week to week** — confirm the real week "
+                 "with the head coach at the start of each block.")
+    return L
+
+
+def _load_vocab():
+    """Canonical names from config, so the profile is checked against the
+    same vocabulary the validator uses. Returns (disciplines, priorities,
+    event_types, authors) — empty collections if config is unreadable."""
+    th = {}
+    if yaml is not None:
+        path = os.path.join(ROOT, "config", "decision_thresholds.yaml")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                th = yaml.safe_load(f) or {}
+    disciplines = (th.get("disciplines") or {}).get("canonical") or {}
+    priorities = (th.get("race_priorities") or {}).get("levels") or []
+    event_types = [k for k in ((th.get("taper") or {})
+                               .get("target_tsb_by_event_type") or {}) if k != "default"]
+    authors = {}
+    adir = os.path.join(ROOT, "config", "authors")
+    if yaml is not None and os.path.isdir(adir):
+        for fn in os.listdir(adir):
+            if fn.endswith(".yaml") and not fn.startswith("_"):
+                with open(os.path.join(adir, fn), encoding="utf-8") as f:
+                    authors[fn[:-5]] = (yaml.safe_load(f) or {}).get("sport")
+    return disciplines, priorities, event_types, authors
+
+
+def profile_warnings(declared):
+    """Names in the profile that the rest of the system would not recognize.
+    The profile is often written during an intake conversation, so a typo or
+    an old name must be visible, not silently ignored."""
+    disciplines, priorities, event_types, authors = _load_vocab()
+    W = []
+
+    def disc_ok(name, where):
+        if disciplines and name not in disciplines:
+            W.append(f"`{where}`: '{name}' is not a canonical discipline "
+                     f"({', '.join(disciplines)})")
+            return False
+        return True
+
+    for i, g in enumerate(declared.get("goals") or [], 1):
+        if not isinstance(g, dict):
+            continue
+        pr = g.get("priority")
+        if pr is not None and priorities and str(pr) not in priorities:
+            W.append(f"`goals[{i}].priority`: '{pr}' is not one of "
+                     f"{' '.join(priorities)}")
+        et = g.get("event_type")
+        if et is not None and event_types and et not in event_types:
+            W.append(f"`goals[{i}].event_type`: '{et}' is not one of "
+                     f"{', '.join(event_types)}")
+        if g.get("discipline") is not None:
+            disc_ok(g["discipline"], f"goals[{i}].discipline")
+
+    for d in ((declared.get("context") or {}).get("disciplines") or []):
+        disc_ok(d, "context.disciplines")
+    for key in (declared.get("metric_overrides") or {}):
+        disc_ok(key, f"metric_overrides.{key}")
+
+    meth = (declared.get("preferences") or {}).get("methodology")
+    if isinstance(meth, dict):
+        for disc, author in meth.items():
+            if not disc_ok(disc, f"preferences.methodology.{disc}") or author is None:
+                continue
+            if authors and author not in authors:
+                W.append(f"`preferences.methodology.{disc}`: '{author}' is not an "
+                         f"author in config/authors ({', '.join(sorted(authors))})")
+            elif authors and disciplines and \
+                    authors[author] != disciplines[disc].get("sport"):
+                W.append(f"`preferences.methodology.{disc}`: '{author}' is a "
+                         f"{authors[author]} methodology on a "
+                         f"{disciplines[disc].get('sport')} discipline")
+    return W
 
 
 def render_declared(aid, config_dir=None):
@@ -384,9 +507,16 @@ def render_declared(aid, config_dir=None):
             L.append("> **Note:** `intake.completed` is empty — some fields may "
                      "still hold template defaults rather than real answers.")
             L.append("")
-        avail = availability_line(declared)
+        warnings = profile_warnings(declared)
+        if warnings:
+            L.append("> **Profile check — names the system does not recognize** "
+                     "(correct them in the yaml; until then, confirm with the "
+                     "head coach):")
+            L += [f"> - {w}" for w in warnings]
+            L.append("")
+        avail = availability_lines(declared)
         if avail:
-            L.append(avail)
+            L += [f"{ln}  " for ln in avail[:-1]] + avail[-1:]
             L.append("")
 
     body = [ln for ln in raw.splitlines() if not ln.lstrip().startswith("#")]

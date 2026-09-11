@@ -57,6 +57,52 @@ prescription_floors:
   hrmax: 40       # % HRmax — near resting heart rate
 
 # ══════════════════════════════════════════════════════════════════
+# DISCIPLINES — the one vocabulary used everywhere
+# ══════════════════════════════════════════════════════════════════
+# Every discipline name in the system — session headers, athlete profiles,
+# ramp rules, metric defaults — must be one of these canonical names. Each name
+# means exactly one thing: "road" used to mean road cycling in one place and
+# road running in another, and "track" could be a velodrome or a running track.
+#
+# `sport` must match the sport of the session's methodology (config/authors):
+# a running methodology on a cycling discipline is a hard error.
+
+disciplines:
+  canonical:
+    road_bike: {sport: cycling}
+    mtb:       {sport: cycling}
+    gravel:    {sport: cycling}
+    trainer:   {sport: cycling}    # indoor, smart trainer
+    road_run:  {sport: running}
+    trail_run: {sport: running}
+    treadmill: {sport: running}    # indoor
+    track_run: {sport: running}
+
+  # Older or informal names still accepted in session headers, so blocks written
+  # before this vocabulary keep validating. A name that maps to one discipline
+  # per sport is resolved with the sport of the session's methodology.
+  aliases:
+    road:       {cycling: road_bike, running: road_run}
+    run:        road_run
+    trail:      trail_run
+    track:      track_run
+    indoor:     trainer
+    rodillo:    trainer
+    caminadora: treadmill
+
+# ══════════════════════════════════════════════════════════════════
+# RACE PRIORITIES
+# ══════════════════════════════════════════════════════════════════
+# The coach works with six levels; Intervals.icu stores only A, B and C. The
+# athlete profile (goals[].priority) carries the full level for the coach's
+# reasoning; the race is entered in Intervals.icu with the mapped letter, which
+# is what the state engine reads.
+
+race_priorities:
+  levels: [A+, A, A-, B, C, D]      # highest to lowest
+  intervals_icu: {A+: A, A: A, A-: A, B: B, C: C, D: C}
+
+# ══════════════════════════════════════════════════════════════════
 # RAMP ELIGIBILITY
 # ══════════════════════════════════════════════════════════════════
 # Ramp steps depend on the discipline and the metric, not on the methodology.
@@ -71,7 +117,7 @@ prescription_floors:
 
 ramps:
   # Ramps require a device that can steer a continuously changing target.
-  allowed_disciplines: [trainer, indoor, rodillo]
+  allowed_disciplines: [trainer]
   required_metrics: [power]
 
   # Treadmill CAN steer a changing target — speed and gradient adjust
@@ -87,7 +133,7 @@ ramps:
       permitted_metrics: [pace, lthr]
 
   # Device cannot steer a changing target outdoors. Not overridable.
-  forbidden_disciplines: [road, mtb, gravel, run, trail]
+  forbidden_disciplines: [road_bike, mtb, gravel, road_run, trail_run, track_run]
 
   athlete_override_permitted: true
   no_magnitude_limit: >
@@ -286,6 +332,8 @@ taper:
     marathon: {min: 10, max: 20}
     ultra: {min: 10, max: 25}
     criterium: {min: 5, max: 15}
+    stage_race: {min: 5, max: 15}   # taper targets stage 1 only; later stages are
+                                    # about durability and glycogen management
     default: {min: 5, max: 15}
   target_tsb_source: coach_heuristic
 
@@ -296,20 +344,20 @@ taper:
 # config/athletes/<id>.yaml under metric_overrides always wins.
 
 metric_defaults:
-  road: power                  # falls back to lthr when no power meter
+  road_bike: power             # falls back to lthr when no power meter
   mtb: power
   gravel: power
   trainer: power
-  track: pace
-  run: pace
+  road_run: pace
+  trail_run: lthr
   treadmill: pace
-  trail: lthr
+  track_run: pace
   # Trail defaults to LTHR, or run power when available. Pace is DISCOURAGED,
   # not prohibited: on variable gradient and surface, pace stops representing
   # effort — the same effort yields paces minutes per km apart.
 
 discouraged_metrics:
-  trail:
+  trail_run:
     metric: pace
     reason: >
       Gradient and surface variability break the relationship between pace and
@@ -317,7 +365,7 @@ discouraged_metrics:
     permitted_when: explicitly_chosen
     requires: >
       Warn the athlete why it is problematic, confirm the choice is deliberate,
-      and record it in metric_overrides.trail in the athlete profile so it is not
+      and record it in metric_overrides.trail_run in the athlete profile so it is not
       re-litigated each block.
 
 no_metric_available:

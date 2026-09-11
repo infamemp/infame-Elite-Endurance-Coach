@@ -34,7 +34,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.2
+Version: 2.3
 """
 
 import argparse
@@ -411,6 +411,40 @@ def classify(mid, metric, author, thresholds):
 
 
 # ══════════════════════════════════════════════════════════════════
+# DISCIPLINE — one vocabulary, from `disciplines` in decision_thresholds.yaml
+# ══════════════════════════════════════════════════════════════════
+
+def resolve_discipline(raw, sport, th):
+    """Map a [Discipline] value to its canonical name.
+
+    Returns (canonical, alias_used, error). `alias_used` is the original text
+    when an older or informal name was accepted (e.g. 'run' -> 'road_run');
+    `error` is a message when the name is unknown or belongs to the other
+    sport. `sport` is the methodology's sport (cycling | running)."""
+    cfg = th.get("disciplines") or {}
+    canonical = cfg.get("canonical") or {}
+    aliases = {str(k).lower(): v for k, v in (cfg.get("aliases") or {}).items()}
+    name = str(raw or "").strip().lower()
+    valid = ", ".join(canonical)
+
+    alias_used = None
+    if name not in canonical:
+        target = aliases.get(name)
+        if isinstance(target, dict):
+            target = target.get(sport)
+        if not target:
+            return None, None, (f"Discipline '{raw}' is not recognized. "
+                                f"Use one of: {valid}")
+        alias_used, name = raw, target
+
+    disc_sport = (canonical.get(name) or {}).get("sport")
+    if disc_sport and sport and disc_sport != sport:
+        return name, alias_used, (f"Discipline '{name}' is {disc_sport}, but the "
+                                  f"methodology is a {sport} methodology")
+    return name, alias_used, None
+
+
+# ══════════════════════════════════════════════════════════════════
 # HARD CONSTRAINTS
 # ══════════════════════════════════════════════════════════════════
 
@@ -701,7 +735,7 @@ def main():
     tol = args.tolerance if args.tolerance is not None else \
         th["tss_rules"].get("divergence_tolerance_pct", 10)
 
-    print(f"validate_block v2.2 — {os.path.basename(args.file)}")
+    print(f"validate_block v2.3 — {os.path.basename(args.file)}")
     if fixes:
         print("Auto-corrected before validating (file updated on disk):")
         for note in fixes:
@@ -769,11 +803,19 @@ def main():
         label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
                  f"{header.get('Focus', '')}".strip(" ·") if header else "block")
         print(f"── Session {n}: {label}")
-        print(f"   {author['name']} · {author['sport']} · discipline: {discipline}")
+        canon, alias_used, disc_error = resolve_discipline(
+            discipline, author.get("sport"), th)
+        shown = canon or discipline
+        if alias_used:
+            shown += f" (written as '{alias_used}')"
+        print(f"   {author['name']} · {author['sport']} · discipline: {shown}")
 
         steps, findings = parse_block(code)
         errors = [f for f in findings if f[0].startswith(("HC-", "SYN-"))]
         warns = [f for f in findings if f[0].startswith("FMT-")]
+        if disc_error:
+            errors.append(("HC-DISC", "-", disc_error))
+        discipline = canon or discipline
         profile = load_profile(header.get("Athlete ID") or args.athlete)
         e, w = check_constraints(steps, code, author, th, discipline, profile)
         errors += e

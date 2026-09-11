@@ -36,11 +36,14 @@ Write it however it comes out. Any of these are complete answers:
 
 **2.2 Do you have a date?**
 An event, a trip, a deadline of any kind. If there is no date, say so — training
-without a target date is perfectly valid.
+without a target date is perfectly valid. If the event lasts several days (a
+stage race, a multi-day ultra), say how many stages or days.
 
 **2.3 If you have more than one goal, which matters most?**
 Goals compete for the same training time. Knowing the priority lets the coach
-protect the one that matters.
+protect the one that matters. Rank them — the coach records each one on a
+six-level scale (A+, A, A-, B, C, D), from "the season depends on it" to "just
+for fun".
 
 **2.4 Have you done anything like this before?**
 - Never
@@ -70,18 +73,21 @@ prescribes.
 This is the single most important section. A plan built on hours you do not have
 will fail, no matter how well designed it is.
 
-**4.1 Which days can you train?**
-Mark the realistic ones, not the ideal ones.
+**4.1 What is the longest you can train each day?**
+Your usual maximum, per day — the realistic one, not the ideal one. Mark the days
+you want as rest days. If a day depends on the week, write "varies": the coach
+will ask before each block.
 
 | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 |     |     |     |     |     |     |     |
 
-**4.2 How long can each of those days be?**
-A rough number per day is enough — "45 min weekdays, 2h Saturday."
+**4.2 Which days can hold your long session, in each sport?**
+Most plans need a longer session per sport — the long ride, the long run. Which
+day can absorb each one?
 
-**4.3 Which days can be long?**
-Most plans need one or two longer sessions. Which days can absorb them?
+**4.3 How many hours a week, in a usual week?**
+A range is fine — "8 to 10 hours".
 
 **4.4 What time of day do you usually train?**
 Morning, midday, evening, varies. This affects fuelling advice and how sessions
@@ -174,8 +180,8 @@ All optional. Skip anything you have no opinion about.
 - Teach me as we go
 
 **8.3 Is there a coaching philosophy or author you like?**
-Daniels, Friel, Koop, Coggan, someone else. No opinion is a fine answer — the
-coach will choose what fits.
+Daniels, Friel, Koop, Coggan, someone else — it can be different for each sport
+or terrain. No opinion is a fine answer — the coach will choose what fits.
 
 **8.4 Anything else?**
 
@@ -187,6 +193,18 @@ Once this form is complete, create `config/athletes/<athlete_id>.yaml` from
 `config/athletes/_template.yaml` and transfer the answers. That file is the
 athlete's permanent declared profile — everything measurable comes from
 Intervals.icu and never gets copied here.
+
+Transfer rules that are easy to get wrong:
+- **Disciplines** use only the canonical names: road_bike, mtb, gravel, trainer,
+  road_run, trail_run, treadmill, track_run.
+- **Priority** is one of A+, A, A-, B, C, D. In Intervals.icu enter the race as
+  A (for A+, A, A-), B, or C (for C, D).
+- **Multi-day events**: event_type `stage_race`, plus `discipline` and `stages`.
+- **Daily maximum** (availability.max_minutes): a number in minutes; `null` for
+  a rest day the athlete declared; `ask` when the answer was "varies" or not
+  given. Never write null for "don't know" — null means rest.
+- After `prep`, the top of `profile.md` flags any name the system does not
+  recognize.
 
 Re-run the form only when something structural changes: a new goal, a new
 injury, a different weekly availability, new equipment.
