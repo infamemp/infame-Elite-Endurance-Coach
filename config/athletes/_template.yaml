@@ -16,13 +16,18 @@ units: km                      # km | mi
 
 # ── Goals ─────────────────────────────────────────────────────────
 # Ordered by priority. The first entry is the one training protects.
+# priority uses the coach's six levels. Intervals.icu only has A/B/C, so the
+# race is entered there as: A+, A, A- -> A · B -> B · C, D -> C
+# (see race_priorities in decision_thresholds.yaml).
 goals:
   - description: null          # in the athlete's own words
-    date: null                 # YYYY-MM-DD, or null if no target date
-    priority: A                # A | B | C
+    date: null                 # YYYY-MM-DD (first day, for multi-day events), or null
+    priority: A                # A+ | A | A- | B | C | D
     experience: none           # none | past | recent
-    event_type: null           # time_trial | road_race | marathon | ultra | criterium | null
-                               # drives the target TSB range in decision_thresholds.yaml
+    event_type: null           # time_trial | road_race | criterium | marathon | ultra |
+                               # stage_race | null — drives the target TSB range
+    discipline: null           # canonical discipline of the event, e.g. mtb, trail_run
+    stages: null               # number of stages/days, only for stage_race
 
 # ── Injuries and limitations ──────────────────────────────────────
 # Medical screening happens before an athlete is accepted and is not repeated here.
@@ -34,16 +39,23 @@ limitations:
 
 # ── Availability ──────────────────────────────────────────────────
 # The most important section. A plan built on unavailable hours fails by design.
+# This is the athlete's USUAL week — the starting point, not a contract. The
+# coach confirms or adjusts it in conversation at the start of every block,
+# because it can change week to week.
 availability:
-  days:                        # minutes available per day; null means unavailable
-    mon: null
-    tue: null
-    wed: null
-    thu: null
-    fri: null
-    sat: null
-    sun: null
-  long_session_days: []        # e.g. [sat, sun]
+  max_minutes:                 # longest session the athlete can do that day
+    mon: ask                   #   number = usual maximum, in minutes
+    tue: ask                   #   null   = rest day, declared by the athlete
+    wed: ask                   #   ask    = not declared yet — the coach asks
+    thu: ask                   #   (any other text is treated as ask)
+    fri: ask
+    sat: ask
+    sun: ask
+  long_days:                   # days that can hold the long session, per sport
+    cycling: []                # e.g. [tue]
+    running: []                # e.g. [sat]
+  weekly_hours: {min: null, max: null}   # usual weekly range, in hours
+  changes_week_to_week: true   # true = confirm the real week before each block
   preferred_time: null         # morning | midday | evening | varies
   sustainable: true            # false if the week above is optimistic rather than normal
   disruptions: []              # - {from: YYYY-MM-DD, to: YYYY-MM-DD, reason: travel}
@@ -51,7 +63,8 @@ availability:
 # ── Training context ──────────────────────────────────────────────
 context:
   sports: []                   # cycling | running | both | other
-  disciplines: []              # road | mtb | gravel | trainer | trail | treadmill | track
+  disciplines: []              # road_bike | mtb | gravel | trainer |
+                               # road_run | trail_run | treadmill | track_run
   indoor_frequency: null       # never | occasional | frequent | primary
   indoor_by_choice: null       # true = preference, false = only option available
   terrain: null                # flat | rolling | mountainous
@@ -87,22 +100,31 @@ equipment:
 # resolve it. Trail pace is discouraged but permitted when explicitly chosen —
 # record the decision here so it is not re-litigated every block.
 metric_overrides:
-  road: null                   # power | lthr | pace
+  road_bike: null              # power | lthr | pace
   mtb: null
   gravel: null
   trainer: null
-  trail: null                  # default lthr; pace only by explicit request
+  road_run: null
+  trail_run: null              # default lthr; pace only by explicit request
   treadmill: null
-  track: null
+  track_run: null
 ramp_overrides:
   treadmill_ramps_requested: false   # express athlete/coach request; see decision_thresholds.yaml
-  disable_ramps: []                  # disciplines where ramps are eligible but unwanted
+  disable_ramps: []                  # canonical disciplines where ramps are eligible but unwanted
 
 # ── Communication preferences ─────────────────────────────────────
 preferences:
   target_style: both           # numbers | effort | both
   explanation_depth: null      # minimal | reasoning | teaching
-  preferred_methodology: null  # author id from config/authors/, or null to let the coach choose
+  methodology:                 # author id from config/authors/ per discipline, or null
+    road_bike: null            # to let the coach choose (e.g. friel_cycling, coggan,
+    mtb: null                  # daniels, koop). Only list the disciplines the
+    gravel: null               # athlete actually trains.
+    trainer: null
+    road_run: null
+    trail_run: null
+    treadmill: null
+    track_run: null
   notes: null
 
 # ── Provenance ────────────────────────────────────────────────────

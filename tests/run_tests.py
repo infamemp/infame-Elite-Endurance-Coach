@@ -154,8 +154,38 @@ def unit_tests():
     # ── Ramp rules ────────────────────────────────────────────────
     r = th["ramps"]
     check("ramps: trainer allowed", "trainer" in r["allowed_disciplines"])
-    check("ramps: road forbidden", "road" in r["forbidden_disciplines"])
-    check("ramps: trail forbidden", "trail" in r["forbidden_disciplines"])
+    check("ramps: road bike forbidden", "road_bike" in r["forbidden_disciplines"])
+    check("ramps: road run forbidden", "road_run" in r["forbidden_disciplines"])
+    check("ramps: trail run forbidden", "trail_run" in r["forbidden_disciplines"])
+
+    # ── Discipline vocabulary ─────────────────────────────────────
+    # One canonical name per discipline; old names still resolve, "road"
+    # resolves by the methodology's sport, and cross-sport pairs are errors.
+    rd = vb.resolve_discipline
+    canon = th["disciplines"]["canonical"]
+    for disc in ("road_bike", "mtb", "gravel", "trainer",
+                 "road_run", "trail_run", "treadmill", "track_run"):
+        check(f"disciplines: {disc} is canonical", disc in canon)
+    for listed in (r["allowed_disciplines"] + r["forbidden_disciplines"]
+                   + list(r.get("override_eligible") or {})
+                   + list(th["metric_defaults"])):
+        check(f"disciplines: '{listed}' in config uses the canonical vocabulary",
+              listed in canon)
+    equal("disciplines: 'road' + cycling -> road_bike",
+          rd("road", "cycling", th)[:2], ("road_bike", "road"))
+    equal("disciplines: 'road' + running -> road_run",
+          rd("road", "running", th)[:2], ("road_run", "road"))
+    equal("disciplines: 'run' -> road_run", rd("run", "running", th)[0], "road_run")
+    equal("disciplines: 'Trail' -> trail_run (case-insensitive)",
+          rd("Trail", "running", th)[0], "trail_run")
+    equal("disciplines: canonical name has no alias note",
+          rd("mtb", "cycling", th), ("mtb", None, None))
+    check("disciplines: unknown name is an error",
+          rd("bici", "cycling", th)[2] is not None)
+    check("disciplines: running methodology on trainer is an error",
+          rd("trainer", "running", th)[2] is not None)
+    check("disciplines: cycling methodology on 'run' is an error",
+          rd("run", "cycling", th)[2] is not None)
     check("ramps: treadmill is override-eligible, not forbidden",
           "treadmill" in (r.get("override_eligible") or {})
           and "treadmill" not in r["forbidden_disciplines"])
@@ -293,6 +323,58 @@ def unit_tests():
               "may be a copy of another athlete" in text)
         check("declared: a non-numeric day marks the total as partial",
               "partial total 1h 00m" in text)
+
+        # Current format: number = maximum, null = rest, ask/other text = undeclared
+        with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
+            f.write("id: iTEST\navailability:\n  max_minutes: {mon: 60, tue: 150, "
+                    "wed: ask, thu: 60, fri: varies, sat: 180, sun: null}\n"
+                    "  long_days: {cycling: [tue], running: [sat]}\n"
+                    "  weekly_hours: {min: 12, max: 14}\n"
+                    "  changes_week_to_week: true\n")
+        text = "\n".join(bpf.render_declared("iTEST", tmp)[0])
+        check("availability: null is a declared rest day",
+              "Rest days declared by the athlete:** sun" in text)
+        check("availability: ask and unknown text are both 'not declared'",
+              "Not declared — ask the head coach before planning:** wed, fri" in text)
+        check("availability: declared maximums are summed (7h 30m)",
+              "Sum of declared daily maximums:** 7h 30m" in text)
+        check("availability: long days per sport are shown",
+              "cycling tue · running sat" in text)
+        check("availability: weekly hours range is shown", "12–14 h" in text)
+        check("availability: week-to-week change asks for confirmation",
+              "confirm the real week" in text)
+
+        # Names the system would not recognize are flagged, not ignored
+        with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
+            f.write("id: iTEST\ngoals:\n  - {priority: A+, event_type: stage_race, "
+                    "discipline: mtb, stages: 4}\n  - {priority: AA, event_type: "
+                    "etapas, discipline: bici}\ncontext: {disciplines: [road_bike, run]}\n"
+                    "metric_overrides: {trail: lthr}\npreferences:\n  methodology: "
+                    "{road_bike: friel_cycling, road_run: coggan, mtb: nadie}\n")
+        text = "\n".join(bpf.render_declared("iTEST", tmp)[0])
+        check("profile check: A+ and stage_race are valid (goal 1 clean)",
+              "goals[1]" not in text)
+        check("profile check: unknown priority is flagged", "'AA' is not one of" in text)
+        check("profile check: unknown event type is flagged", "'etapas' is not one of" in text)
+        check("profile check: unknown goal discipline is flagged",
+              "`goals[2].discipline`: 'bici'" in text)
+        check("profile check: old discipline name in context is flagged",
+              "`context.disciplines`: 'run'" in text)
+        check("profile check: old metric_overrides key is flagged",
+              "`metric_overrides.trail`" in text)
+        check("profile check: cross-sport methodology is flagged",
+              "'coggan' is a cycling methodology on a running discipline" in text)
+        check("profile check: unknown author is flagged", "'nadie' is not an author" in text)
+        check("profile check: valid methodology is not flagged",
+              "road_bike`: 'friel_cycling'" not in text)
+
+        # The template itself must pass its own checks
+        with open(os.path.join(cfg_dir, "_template.yaml"), encoding="utf-8") as f:
+            tpl = yaml.safe_load(f)
+        equal("template: passes the profile check with no warnings",
+              bpf.profile_warnings(tpl), [])
+        check("template: availability uses max_minutes, all days 'ask'",
+              set(tpl["availability"]["max_minutes"].values()) == {"ask"})
 
         with open(os.path.join(tmp, "iTEST.yaml"), "w", encoding="utf-8") as f:
             f.write("id: iTEST\ngoals: [unclosed\n")
