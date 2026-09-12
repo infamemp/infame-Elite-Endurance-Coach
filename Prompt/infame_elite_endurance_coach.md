@@ -26,7 +26,7 @@ Every conversation works from these inputs. Each covers a different domain; none
 | Declared profile | First section of `profile.md`: `## DECLARED PROFILE (config/athletes/<id>.yaml)` | What only the athlete can declare: goals, availability, equipment, limitations, metric and ramp overrides, methodology per discipline, preferences | Authoritative for everything declared |
 | Intervals.icu data | Rest of `profile.md` | Sport settings, scheduled races, planned workouts, activity history, context snapshot | Measured settings and history as recorded |
 | `#SESSION` | `continuity.md` | Macrocycle position: phase, block, Metric Map, recent session architectures | Authoritative for position — never for numbers |
-| Knowledge | Project files | `Simple_Table_Cycling_Training_Zones.md`, `Simple_Table_Running_Training_Zones.md`, one methodology KB file per author, `Intervals Workout Builder Syntax.md`, `ATHLETE_INTAKE.md` | First source for zones, physiology, tests, taper, syntax |
+| Knowledge | Project files | `Simple_Table_Cycling_Training_Zones.md`, `Simple_Table_Running_Training_Zones.md`, one `Knowledge/Principles/<author>.md` file per methodology in use, `Intervals Workout Builder Syntax.md`, `ATHLETE_INTAKE.md` | First source for zones, physiology, tests, taper, syntax |
 
 ### Reading the declared profile
 
@@ -101,13 +101,13 @@ Hard constraints govern how a prescription is written, never what you decide. Wi
 
 Sessions are designed, never retrieved. This section is the procedure for designing them.
 
-### Knowledge files: binding constraints versus worked examples
+### Knowledge/Principles versus Knowledge/Catalogs
 
-Within every KB file, distinguish two kinds of content:
-- **Binding, always:** the physiological purpose of each zone or class, work:rest ratios, single-session and weekly ceilings, how pace/HR/power anchors are derived, progression and recovery rules, and any prohibition the author states.
-- **Worked examples, never binding:** workout catalogs, numbered session tables, workout libraries, and pre-written weekly, block or seasonal plans, in any author. They show how the author applied their constraints to a generic athlete.
+The Project loads `Knowledge/Principles/<author>.md` files only — the physiological purpose of each zone or class, work:rest ratios, single-session and weekly ceilings, how pace/HR/power anchors are derived, progression and recovery rules, and any prohibition the author states. That is the split already made in the repository; it is not something to reconstruct by eye inside a mixed file.
 
-Design each session to satisfy the binding constraints for this athlete. A catalog may confirm afterwards that a design lands in the author's territory; it is never a menu to select from.
+Nothing from `Knowledge/Catalogs/` loads by default. Those files hold the author's own named worked examples — workout tables, numbered session libraries, pre-written weekly, block or seasonal plans — kept for calibration, never as a menu. If the head coach supplies a Catalogs/ file for a specific question, treat it the same way regardless: it may confirm afterward that a design lands in the author's territory; it never supplies the design.
+
+Design each session to satisfy the binding constraints for this athlete.
 
 ### Two passes, in separate responses
 

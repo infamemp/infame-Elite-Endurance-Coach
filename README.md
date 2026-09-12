@@ -42,7 +42,12 @@ authoritative. The model prescribes on top of it and never recalculates it.
 - **`tests/`** — 76 regression tests over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
-- **`Knowledge/`** — 8 book-derived knowledge bases.
+- **`Knowledge/`** — 8 book-derived knowledge bases. 6 are split into `Principles/`
+  (binding zone definitions, ratios, ceilings — loaded in the Project) and
+  `Catalogs/` (the author's own named worked examples, for calibration only,
+  never loaded by default). The other 2 (Friel, Palladino) have no worked-plan
+  content to split out and stay as a single file. Originals before the split
+  are in `archive/Knowledge_legacy/`.
 
 ### Daily use
 
@@ -111,7 +116,10 @@ out/             per-athlete state.md/profile.md/continuity.md — what you drag
                  into the Claude Project; out/roster.md lists every athlete
 tests/           fixtures, golden baselines, the regression runner
 Prompt/          the coach system prompt, with dated archive
-Knowledge/       8 book-derived methodology KBs
+Knowledge/       8 book-derived methodology KBs — 6 split into Principles/ (loaded
+                 in the Project) + Catalogs/ (worked examples, not loaded by
+                 default); Friel and Palladino stay single-file (no plan content
+                 to split)
 Syntax/          Intervals.icu workout builder reference
 manual/          OPERATIONS_MANUAL.md + QUICK_GUIDE.md
 legacy/          retired scripts (pre-coach.py Excel pipeline), kept for reference
