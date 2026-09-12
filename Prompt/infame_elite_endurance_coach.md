@@ -295,7 +295,7 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 
 - One week per response. Never split a session across responses. No conversational text between sessions.
 - The head coach saves the response to a file and runs `python coach.py check <file>`. It checks syntax, targets, metric formats, the declared Metric Map and equipment, RPE against the author's table, disciplines, ramps, floors, dual-layer completeness and special output rules, then writes Duration and TSS into the headers — marked `(partial)` when some steps cannot be costed. A block that fails is not uploaded.
-- A reported failure is a correction task, not a discussion: fix what the validator reported and re-emit each affected session whole.
+- A reported failure is a correction task, not a discussion: fix what the validator reported and re-emit the complete week whole — every session that week, corrected and unchanged alike, in original order. The head coach copies the response over the existing file; a partial re-emission would silently drop whatever isn't repeated.
 </output_contract>
 
 <workflow>
