@@ -75,6 +75,24 @@ def load_athlete(aid):
         return json.load(f)
 
 
+def load_declared_goals(aid):
+    """Read goals[] from config/athletes/<aid>.yaml (the head coach's declared
+    profile). Returns [] if the file is missing or unreadable -- taper_check
+    then reports 'not applicable' rather than failing, since a missing
+    declared profile is a known, tolerated state elsewhere in the system."""
+    path = os.path.join(CONFIG, "athletes", f"{aid}.yaml")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as f:
+            declared = yaml.safe_load(f)
+    except yaml.YAMLError:
+        return []
+    if not isinstance(declared, dict):
+        return []
+    return declared.get("goals") or []
+
+
 def d(s):
     return datetime.strptime(s[:10], "%Y-%m-%d").date()
 
@@ -329,39 +347,71 @@ def project_pmc(pmc, events, horizon_days=42):
     }
 
 
-def taper_check(projection, events, thresholds):
-    """Locate the next A-priority race and compare projected TSB at that date
-    against the target range for the event type."""
-    tp = thresholds["taper"]
-    a_races = [e for e in events
-               if str(e.get("category") or "").upper() == "RACE"
-               and str(e.get("priority") or "").upper() in ("A", "RACE_A")]
-    if not a_races:
-        a_races = [e for e in events
-                   if str(e.get("category") or "").upper() == "RACE"]
-        if not a_races:
-            return {"applicable": False, "reason": "no races on the calendar"}
+def taper_check(projection, goals, thresholds):
+    """Locate the next A-priority goal and compare projected TSB at that date
+    against the target range for its event_type.
 
-    race = a_races[0]
-    days_out = (d(race["date"]) - date.today()).days
+    Priority and event_type are read from the head coach's DECLARED profile
+    (goals[] in config/athletes/<id>.yaml) -- never from Intervals.icu's own
+    event fields. Intervals collapses A+/A/A- into a single category
+    ("RACE_A") and its `type` field is the sport (Run/Ride/...), not a race
+    format, so neither can drive this check reliably. The declared profile is
+    the only place both actually live at the right granularity."""
+    tp = thresholds["taper"]
+    today = date.today()
+
+    a_goals = []
+    for g in goals or []:
+        if str(g.get("priority") or "").upper() not in ("A+", "A", "A-"):
+            continue
+        raw_date = g.get("date")
+        if not raw_date:
+            continue
+        # YAML auto-parses an unquoted YYYY-MM-DD scalar into a date (or
+        # datetime) object rather than leaving it as a string -- config/
+        # athletes/<id>.yaml is hand-written and unquoted, so both forms
+        # have to be accepted here.
+        if isinstance(raw_date, datetime):
+            gdate = raw_date.date()
+        elif isinstance(raw_date, date):
+            gdate = raw_date
+        else:
+            try:
+                gdate = d(str(raw_date))
+            except (ValueError, TypeError):
+                continue
+        if gdate < today:
+            continue
+        a_goals.append((gdate, g))
+
+    if not a_goals:
+        return {"applicable": False,
+                "reason": "no upcoming A+/A/A- priority goal declared in "
+                          "goals[] of the athlete's profile"}
+
+    a_goals.sort(key=lambda x: x[0])
+    race_date, goal = a_goals[0]
+    race_name = goal.get("description") or "Unnamed A-priority goal"
+
+    days_out = (race_date - today).days
     phase = ("taper" if days_out <= tp["a_race_taper_days"]
              else "pre_taper" if days_out <= tp["a_race_pre_taper_days"]
              else "build")
 
-    result = {"applicable": True, "race": race["name"], "date": race["date"],
+    result = {"applicable": True, "race": race_name, "date": race_date.isoformat(),
               "days_out": days_out, "phase": phase}
 
     if not projection:
         result["note"] = "No PMC projection available"
         return result
 
-    at_race = next((s for s in projection["series"] if s["date"] == race["date"]), None)
+    at_race = next((s for s in projection["series"] if s["date"] == race_date.isoformat()), None)
     if not at_race:
         result["note"] = (f"Race is beyond the {projection['horizon_days']}-day "
                           f"projection horizon")
         return result
 
-    ev_type = str(race.get("type") or "").lower()
+    ev_type = str(goal.get("event_type") or "").lower()
     target = tp["target_tsb_by_event_type"].get(ev_type,
                                                 tp["target_tsb_by_event_type"]["default"])
     tsb = at_race["tsb"]
@@ -479,7 +529,8 @@ def build(aid, thresholds, quiet=False):
     durability = durability_signal(data)
     state = resolve_state(pmc, hrv, acwr, durability, thresholds)
     projection = project_pmc(pmc, data.get("events", []))
-    taper = taper_check(projection, data.get("events", []), thresholds)
+    goals = load_declared_goals(aid)
+    taper = taper_check(projection, goals, thresholds)
     longit = longitudinal.analyze(data, thresholds)
 
     ppcfg = load_power_profile_cfg()
