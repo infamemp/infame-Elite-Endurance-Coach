@@ -1,5 +1,5 @@
 {
-  "athlete_id": "_test_runner",
+  "athlete_id": "_test_taper_active",
   "longitudinal": {
     "adaptation_state": {
       "anchors_set_recently": "0/6",
@@ -153,25 +153,34 @@
       "source": "wellness HRV, 7d mean vs 53d median"
     },
     "pmc": {
-      "atl": 72.0,
-      "ctl": 58.0,
+      "atl": 40.0,
+      "ctl": 50.0,
       "ramp_rate": 1.5,
       "source": "pmc_series (daily wellness record)",
-      "tsb": -14.0
+      "tsb": 10.0
     }
   },
   "state": {
     "flags": [],
     "governor": "tsb",
-    "load_recovery_state": "load_pressure",
+    "load_recovery_state": "fresh",
     "operational_state": "load_accepting",
     "reasoning": [
-      "TSB -14.0 falls in band 'load_pressure' (primary governor)",
+      "TSB 10.0 falls in band 'fresh' (primary governor)",
       "Operational state: 'load_accepting'"
     ]
   },
   "taper": {
-    "applicable": false,
-    "reason": "no upcoming A+/A/A- priority goal declared in goals[] of the athlete's profile"
+    "applicable": true,
+    "days_out": 1,
+    "phase": "taper",
+    "projected_tsb_at_race": 17.6,
+    "race": "Test Marathon",
+    "target_source": "marathon",
+    "target_tsb_range": [
+      10,
+      20
+    ],
+    "verdict": "in_target_range"
   }
 }

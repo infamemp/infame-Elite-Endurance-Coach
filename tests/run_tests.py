@@ -33,6 +33,7 @@ Exit code: 0 all passed · 1 at least one failure.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -523,6 +524,20 @@ def build_for_fixture(name):
     with open(os.path.join(data_dir, "athlete_data.json"), "w",
               encoding="utf-8") as f:
         json.dump(payload, f)
+
+    # A fixture may also declare a goals profile (taper_check reads it from
+    # config/athletes/<id>.yaml, never from Intervals.icu event fields --
+    # see build_state.load_declared_goals). Copy it into place under the
+    # same _test_<name> id, or remove any stale one left by a previous run
+    # if this fixture no longer ships one.
+    athletes_cfg = os.path.join(ROOT, "config", "athletes")
+    os.makedirs(athletes_cfg, exist_ok=True)
+    decl_src = os.path.join(FIXTURES, name, "declared_profile.yaml")
+    decl_dst = os.path.join(athletes_cfg, f"_test_{name}.yaml")
+    if os.path.exists(decl_src):
+        shutil.copy(decl_src, decl_dst)
+    elif os.path.exists(decl_dst):
+        os.remove(decl_dst)
 
     th, _, _ = load_cfg()
     # build() reports where it wrote; that is useful in normal use and noise here.

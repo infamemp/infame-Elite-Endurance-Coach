@@ -215,6 +215,6 @@
   },
   "taper": {
     "applicable": false,
-    "reason": "no races on the calendar"
+    "reason": "no upcoming A+/A/A- priority goal declared in goals[] of the athlete's profile"
   }
 }
