@@ -311,16 +311,81 @@ def resolve_state(pmc, hrv, acwr, durability, thresholds):
 # PMC PROJECTION
 # ══════════════════════════════════════════════════════════════════
 
-def project_pmc(pmc, events, horizon_days=42):
-    """Banister projection over planned load. Days with no planned session
-    carry zero load, which is what makes CTL decay visible."""
+def weekday_load_pattern(activities, as_of=None, weeks=8, min_activities=10):
+    """Average training load per weekday (Monday=0 ... Sunday=6) across the
+    trailing `weeks` weeks of activities, counting days with no logged
+    activity as zero load for that weekday. This is what lets a habitual
+    rest day average out near zero on its own -- without anyone declaring
+    it -- and lets a habitual long day carry its usual weight forward, for
+    project_pmc to fall back on when there is no explicit Intervals.icu
+    event for a future day.
+
+    Returns None when there isn't enough real history to trust the pattern:
+    fewer than `min_activities` logged activities in the window, fewer than
+    3 weeks of calendar span to draw them from, or fewer than 3 occurrences
+    of some weekday within that span. The activity count matters as much as
+    the calendar span -- a window that is calendar-long but activity-thin
+    (a handful of logged sessions with mostly untouched days in between) is
+    exactly the case this must not extrapolate from."""
+    as_of = as_of or date.today()
+    window_start = as_of - timedelta(days=weeks * 7)
+
+    daily_load = {}
+    in_window = 0
+    earliest = None
+    for a in activities:
+        if not a.get("date"):
+            continue
+        try:
+            ad = d(a["date"])
+        except (ValueError, TypeError):
+            continue
+        if earliest is None or ad < earliest:
+            earliest = ad
+        if window_start <= ad < as_of:
+            daily_load[ad] = daily_load.get(ad, 0) + (a.get("training_load") or 0)
+            in_window += 1
+
+    if earliest is None or in_window < min_activities:
+        return None
+
+    span_start = max(earliest, window_start)
+    if (as_of - span_start).days < 21:
+        return None
+
+    totals = {wd: 0.0 for wd in range(7)}
+    counts = {wd: 0 for wd in range(7)}
+    day = span_start
+    while day < as_of:
+        wd = day.weekday()
+        counts[wd] += 1
+        totals[wd] += daily_load.get(day, 0)
+        day += timedelta(days=1)
+
+    if min(counts.values()) < 3:
+        return None
+    return {wd: round(totals[wd] / counts[wd], 1) for wd in range(7)}
+
+
+def project_pmc(pmc, events, activities=None, horizon_days=42):
+    """Banister projection over planned load. A day with an explicit
+    Intervals.icu event -- including an explicit zero, a declared rest day
+    -- uses that event's load. A day with no explicit event falls back to
+    the athlete's historical average load for that weekday (see
+    weekday_load_pattern) instead of zero: most athletes do not log every
+    future session as a calendar event, and projecting silence as "no
+    training at all" was producing misleadingly fresh TSB readings heading
+    into a race."""
     if not pmc or pmc.get("ctl") is None:
         return None
 
     planned = {}
     for e in events:
-        if e.get("planned_load") and e.get("date"):
-            planned[e["date"]] = planned.get(e["date"], 0) + e["planned_load"]
+        load = e.get("planned_load")
+        if load is not None and e.get("date"):
+            planned[e["date"]] = planned.get(e["date"], 0) + load
+
+    pattern = weekday_load_pattern(activities or [])
 
     ctl, atl = pmc["ctl"], pmc["atl"]
     kc, ka = 1 - math.exp(-1 / CTL_TAU), 1 - math.exp(-1 / ATL_TAU)
@@ -329,21 +394,44 @@ def project_pmc(pmc, events, horizon_days=42):
     series = []
     for i in range(1, horizon_days + 1):
         day = start + timedelta(days=i)
-        load = planned.get(day.isoformat(), 0)
+        iso = day.isoformat()
+        if iso in planned:
+            load = planned[iso]
+            entry = {"date": iso, "planned_load": load}
+        elif pattern is not None:
+            load = pattern[day.weekday()]
+            entry = {"date": iso, "planned_load": 0, "assumed_load": load}
+        else:
+            load = 0
+            entry = {"date": iso, "planned_load": 0}
         ctl += (load - ctl) * kc
         atl += (load - atl) * ka
-        series.append({"date": day.isoformat(), "planned_load": load,
-                       "ctl": round(ctl, 1), "atl": round(atl, 1),
-                       "tsb": round(ctl - atl, 1)})
+        entry.update({"ctl": round(ctl, 1), "atl": round(atl, 1),
+                      "tsb": round(ctl - atl, 1)})
+        series.append(entry)
 
-    planned_days = sum(1 for s in series if s["planned_load"] > 0)
+    planned_days = sum(1 for s in series
+                       if "assumed_load" not in s and s["planned_load"] > 0)
+    assumed_days = sum(1 for s in series if "assumed_load" in s)
+    if pattern is not None:
+        caveat = (f"{planned_days} of {horizon_days} days have an explicit "
+                  f"Intervals.icu event. The other {assumed_days} have no "
+                  f"declared session, so they are filled with the athlete's "
+                  f"average load for that day of the week over the trailing "
+                  f"8 weeks, not zero.")
+    else:
+        caveat = ("Unplanned days are projected as zero load -- not enough "
+                  "activity history yet (need at least 3 weeks) to build a "
+                  "per-weekday average. With few planned sessions on the "
+                  "calendar this understates future CTL.")
+
     return {
         "horizon_days": horizon_days,
         "days_with_planned_load": planned_days,
+        "days_with_assumed_load": assumed_days,
         "series": series,
         "method": f"Banister exponential, CTL tau {CTL_TAU}d, ATL tau {ATL_TAU}d",
-        "caveat": ("Unplanned days are projected as zero load. With few planned "
-                   "sessions on the calendar this understates future CTL."),
+        "caveat": caveat,
     }
 
 
@@ -494,12 +582,17 @@ def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, ta
         L.append("## PMC projection")
         L.append("")
         L.append(f"{projection['method']}. Horizon {projection['horizon_days']} days, "
-                 f"{projection['days_with_planned_load']} with planned load.")
+                 f"{projection['days_with_planned_load']} with an explicit planned load, "
+                 f"{projection['days_with_assumed_load']} filled from weekday history.")
         L.append("")
-        L.append("| Date | Planned load | CTL | ATL | TSB |")
+        L.append("| Date | Load | CTL | ATL | TSB |")
         L.append("| :--- | ---: | ---: | ---: | ---: |")
         for s in projection["series"][::7]:
-            L.append(f"| {s['date']} | {s['planned_load'] or '—'} | "
+            if "assumed_load" in s:
+                load_cell = f"{s['assumed_load']} (assumed)"
+            else:
+                load_cell = s["planned_load"] or "—"
+            L.append(f"| {s['date']} | {load_cell} | "
                      f"{s['ctl']} | {s['atl']} | {s['tsb']} |")
         L.append("")
         L.append(f"Caveat: {projection['caveat']}")
@@ -528,7 +621,7 @@ def build(aid, thresholds, quiet=False):
     acwr = acwr_signal(data)
     durability = durability_signal(data)
     state = resolve_state(pmc, hrv, acwr, durability, thresholds)
-    projection = project_pmc(pmc, data.get("events", []))
+    projection = project_pmc(pmc, data.get("events", []), data.get("activities", []))
     goals = load_declared_goals(aid)
     taper = taper_check(projection, goals, thresholds)
     longit = longitudinal.analyze(data, thresholds)

@@ -508,6 +508,76 @@ def unit_tests():
         _, status = bpf.render_declared("iTEST", tmp)
         equal("declared: invalid YAML is reported as unreadable", status, "unreadable")
 
+    # ── PMC projection: weekday pattern fallback ──────────────────
+    # An unplanned future day should fall back to the athlete's own
+    # historical average for that weekday, never to zero -- and an
+    # explicit Intervals.icu event (including an explicit zero, a declared
+    # rest day) must always override that fallback. Dates are relative to
+    # the real today, not a fixed date, because project_pmc anchors
+    # weekday_load_pattern's history window to date.today() internally.
+    from datetime import date, timedelta
+    import build_state as bs
+    today = date.today()
+    wd_a = today.weekday()               # "heavy" weekday: load 80
+    wd_b = (today.weekday() + 3) % 7     # "light" weekday: load 20
+    wd_c = (today.weekday() + 1) % 7     # untouched weekday: load 0
+    assert wd_c not in (wd_a, wd_b)      # +1 can never land on +0 or +3
+
+    activities = (
+        [{"date": (today - timedelta(days=7 * i)).isoformat(), "training_load": 80}
+         for i in range(1, 9)] +
+        [{"date": (today - timedelta(days=7 * i - 3)).isoformat(), "training_load": 20}
+         for i in range(1, 9)]
+    )
+
+    pattern = bs.weekday_load_pattern(activities, as_of=today)
+    check("pmc pattern: enough history produces a pattern", pattern is not None)
+    if pattern is not None:
+        equal("pmc pattern: heavy weekday average", pattern[wd_a], 80.0)
+        equal("pmc pattern: light weekday average", pattern[wd_b], 20.0)
+        equal("pmc pattern: untouched weekday averages to zero", pattern[wd_c], 0.0)
+
+    equal("pmc pattern: below min_activities returns None",
+          bs.weekday_load_pattern(activities[:8], as_of=today), None)
+
+    short_span = [{"date": (today - timedelta(days=i + 1)).isoformat(),
+                   "training_load": 50} for i in range(10)]
+    equal("pmc pattern: enough activities but under 3 weeks of span returns None",
+          bs.weekday_load_pattern(short_span, as_of=today), None)
+
+    pmc = {"date": (today - timedelta(days=1)).isoformat(), "ctl": 50.0, "atl": 40.0}
+    events = [
+        {"date": (today + timedelta(days=2)).isoformat(), "planned_load": 0},
+        {"date": (today + timedelta(days=5)).isoformat(), "planned_load": 150},
+    ]
+    proj = bs.project_pmc(pmc, events, activities, horizon_days=10)
+    by_date = {s["date"]: s for s in proj["series"]}
+
+    zeroed = by_date[(today + timedelta(days=2)).isoformat()]
+    check("pmc projection: explicit zero-load event has no assumed_load",
+          "assumed_load" not in zeroed)
+    equal("pmc projection: explicit zero-load event keeps planned_load at 0",
+          zeroed["planned_load"], 0)
+
+    loaded = by_date[(today + timedelta(days=5)).isoformat()]
+    check("pmc projection: explicit nonzero event has no assumed_load",
+          "assumed_load" not in loaded)
+    equal("pmc projection: explicit event's planned_load wins over the pattern",
+          loaded["planned_load"], 150)
+
+    unplanned_date = today + timedelta(days=1)
+    unplanned = by_date[unplanned_date.isoformat()]
+    check("pmc projection: unplanned day gets an assumed_load",
+          "assumed_load" in unplanned)
+    if "assumed_load" in unplanned and pattern is not None:
+        equal("pmc projection: assumed_load matches the weekday pattern",
+              unplanned["assumed_load"], pattern[unplanned_date.weekday()])
+
+    equal("pmc projection: only the nonzero explicit day counts as planned",
+          proj["days_with_planned_load"], 1)
+    equal("pmc projection: the other 8 days (10 - 2 explicit) are assumed",
+          proj["days_with_assumed_load"], 8)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture
