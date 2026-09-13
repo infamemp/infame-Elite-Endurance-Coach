@@ -231,6 +231,12 @@ is overdue for a refresh.
 
 ## 4. What to drag into the Claude Project, and when
 
+**If the MCP server is set up (see §4a), you don't need this section for
+day-to-day work** — the coach pulls the same data itself, on request,
+with no dragging. This section is now the manual fallback path: what to
+do if the MCP server isn't configured on the machine you're using, or if
+it's ever down.
+
 When opening a new chat for an athlete, drag the whole `out/<athlete_name>/`
 folder, or the individual files inside it, into the chat window:
 
@@ -243,6 +249,101 @@ folder, or the individual files inside it, into the chat window:
 **You don't need to re-drag anything partway through a conversation** —
 once a chat has the files, the coach keeps them in context for the rest
 of that session. Only re-drag when opening a **brand-new** chat.
+
+---
+
+## 4a. Using the MCP server instead (recommended)
+
+The MCP server (`mcp_server/`) connects Claude Desktop directly to the
+coaching tools, so the coach can pull an athlete's data, save a block,
+validate it, and upload it — all from inside the conversation, with no
+terminal command and no drag-and-drop. This replaces §4 and most of §6
+for day-to-day use. It runs on whichever machine has it configured; it
+does not remove the need to sync **code** changes between machines (§11
+still applies for that).
+
+**What it does *not* change:** the phase-gated approval workflow (§5) is
+untouched. The coach still proposes and stops at every STOP-AND-WAIT
+point; you still explicitly approve before it advances. This is purely
+about how data moves in and out — not about what the coach decides or
+when.
+
+### One-time setup, per machine
+
+1. Create a dedicated virtual environment inside the repo, so this
+   dependency never mixes with the regular `coach.py` environment:
+   ```
+   python -m venv .venv-mcp
+   .venv-mcp\Scripts\pip.exe install "mcp==1.30.0" pyyaml requests
+   ```
+2. Find Claude Desktop's actual config file. **Don't assume the path** —
+   inside the app, go to **Settings → Developer → Edit config**, and read
+   the address bar of the file explorer window it opens. This has landed
+   in different places across different installs of Desktop.
+3. Add this block to that file (merge it in if the file already has other
+   content — don't overwrite the whole file):
+   ```json
+   {
+     "mcpServers": {
+       "infame-coach": {
+         "command": "C:\\Dev\\Github\\infame_elite_endurance_coach\\.venv-mcp\\Scripts\\python.exe",
+         "args": ["-m", "mcp_server.run_server"],
+         "cwd": "C:\\Dev\\Github\\infame_elite_endurance_coach",
+         "env": {
+           "ICU_API_KEY": "your Intervals.icu API key",
+           "PYTHONPATH": "C:\\Dev\\Github\\infame_elite_endurance_coach"
+         }
+       }
+     }
+   }
+   ```
+   Both `cwd` **and** `PYTHONPATH` are needed — Desktop has not reliably
+   honored `cwd` on its own, so `PYTHONPATH` is a required backup, not
+   redundant.
+4. **If editing this file with PowerShell**, don't use
+   `Set-Content -Encoding UTF8` — it adds a byte-order-mark that Desktop
+   can't parse and the app will fail to open with "Couldn't load app
+   settings." Use:
+   ```
+   [System.IO.File]::WriteAllText($path, $json, [System.Text.Encoding]::ASCII)
+   ```
+5. Fully quit Claude Desktop (system tray → Quit, not just closing the
+   window) and reopen it.
+6. Confirm in **Settings → Developer** that `infame-coach` shows
+   **Running**, not **Failed**.
+
+### The tools
+
+| Tool | Replaces | Notes |
+|---|---|---|
+| `list_roster` | `coach.py prep --list` | Read-only |
+| `get_athlete_state` | `coach.py prep` + dragging `state.md` | Read-only; pulls fresh data itself, same as `prep` |
+| `get_athlete_profile` | dragging `profile.md` | Read-only |
+| `save_continuity` | pasting a `#SESSION` block into `continuity.md` by hand | Requires the `#SESSION ... #END` wrapper — the coach adds it if you don't |
+| `save_block` | pasting a block into Notepad | Write only — doesn't check anything |
+| `validate_block` | `coach.py check` | Same exit codes: 0 = upload-safe, 1 = blocked |
+| `save_race_result` | editing `race_notes.md` by hand | Appends; rejects a duplicate `Date:` field to prevent conflicting data |
+| `push_block` | pasting into Intervals.icu's Workout Builder by hand | Requires **both** `dry_run=False` and `confirm=True`; also refuses on its own if `validate_block` reports the file `BLOCKED`, unless `override_validation=True` is explicitly passed |
+
+**`continuity.md` is the one piece that stays manual either way** — no
+tool reads it back for the coach yet. When opening a new chat for an
+athlete who already has one, open `out/<athlete_name>/continuity.md` and
+paste its contents into the chat as a message (this is confirmed to
+still land in the same `out/<athlete_name>/` folder the manual has always
+used, keyed off the athlete's declared name — not a new ID-based folder —
+as long as that athlete has been fetched at least once already).
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "Couldn't load app settings" on Desktop launch | BOM added by `Set-Content -Encoding UTF8` | Rewrite with `WriteAllText(..., Encoding.ASCII)` |
+| Server shows "Failed" / `ModuleNotFoundError: No module named 'mcp_server'` | `cwd` not honored by Desktop | Add `PYTHONPATH` to the `env` block |
+| `validate_block`/`push_block` say "File not found" for a file that demonstrably exists | Relative path resolved against process cwd instead of the repo root | Fixed in the current server code — pull latest and restart Desktop |
+| A tool call hangs for several minutes then times out | The subprocess inherited the live stdio pipe as its own stdin | Fixed in the current server code — pull latest and restart Desktop |
+| `validate_block` fails with no real error content | Unicode encoding crash on Windows (box-drawing characters) | Fixed in the current server code — pull latest and restart Desktop |
+| Errors mentioning a device name or "remote-devices" | The conversation was in Cowork or Code mode, not plain Chat | Retry from a plain Chat conversation |
+| `push_block` refuses, citing `validate_block` as BLOCKED | Working as intended | Fix the flagged issue and validate again; `override_validation=True` only for a deliberate, conscious bypass |
 
 ---
 
@@ -270,6 +371,16 @@ before telling an athlete to start it.
 ---
 
 ## 6. Validate and upload a block to Intervals.icu
+
+**With the MCP server (§4a), this whole section collapses to three asks
+in the chat:** save the block with `save_block`, check it with
+`validate_block`, and once it's upload-safe, ask for `push_block` — which
+now refuses on its own if the block is still `BLOCKED`, so you can't
+accidentally upload a failed one. No Notepad, no manual paste into the
+Workout Builder. The rest of this section is the manual fallback path —
+useful if the MCP server isn't set up on the machine you're using, or as
+background for understanding what the tools above are actually doing
+under the hood.
 
 When the coach delivers a block of sessions, its message has up to three
 distinct parts, always in this order. **Only the first one goes into a
@@ -345,10 +456,11 @@ own header declares:
 python coach.py check block.txt --methodology daniels --discipline running
 ```
 
-**Uploading itself is a manual step today:** paste the passed block's
+**Uploading itself is a manual step only without the MCP server.** With
+it, ask for `push_block` instead — see §4a for the tool and the
+validation gate it now enforces. Without it, paste the passed block's
 sessions into Intervals.icu's own Workout Builder, the normal way you'd
-enter any workout by hand. There is currently no automated upload
-command — see `IMPROVEMENT_BACKLOG.md` if you're curious why.
+enter any workout by hand.
 
 ---
 
@@ -357,7 +469,14 @@ command — see `IMPROVEMENT_BACKLOG.md` if you're curious why.
 This is for the case where you need to resolve something for an athlete
 mid-week, without waiting for their current training block to finish.
 
-**Steps:**
+**With the MCP server:** if you're still in that week's existing chat,
+just ask your question — no `prep` needed, the coach already has fresh
+context. Opening a new chat instead: ask the current chat for the
+continuity header, ask the coach to save it with `save_continuity`, then
+in the new chat ask for `get_athlete_state`/`get_athlete_profile` and
+paste in the continuity content as described in §4a.
+
+**Without the MCP server:**
 1. Run `python coach.py prep i123456` so you're working from fresh data.
 2. If you're still inside that week's existing chat, just ask your
    question — the coach already has full context, nothing else is
@@ -381,17 +500,24 @@ When the coach delivers the final session of a training block, it
 automatically shows you the closing `#SESSION` on its own, visually set
 apart with a border, along with an instruction to copy it.
 
-**Steps:**
+**With the MCP server:** ask the coach to save that block with
+`save_continuity`. Open a new chat, ask for `get_athlete_state`/
+`get_athlete_profile`, paste in the continuity content (§4a) — no `prep`
+needed in between, since `get_athlete_state` fetches fresh numbers
+itself.
+
+**Without the MCP server:**
 1. Copy that block into `out\<athlete_name>\continuity.md`, replacing
    the previous contents.
 2. Before your next conversation with this athlete, run
    `python coach.py prep <id>` to refresh `state.md` with current
    numbers.
 3. Open a new chat, drag in all three files.
-4. The coach plans the next block **from `state.md` alone** — it won't
-   ask how the athlete felt or how compliant they were with the last
-   block unless you choose to share that; if you do, it's extra context,
-   never a requirement.
+
+**Either way:** the coach plans the next block **from `state.md` alone**
+— it won't ask how the athlete felt or how compliant they were with the
+last block unless you choose to share that; if you do, it's extra
+context, never a requirement.
 
 ---
 
@@ -431,10 +557,13 @@ That message is expected, not a bug — it resolves on its own the longer
 `prep` keeps running for that athlete.
 
 **Recording a race result.** After a race debrief in Phase 6 (section
-10), the coach gives you a `#RACE_RESULT` block. Add it to the end of
-`out/<athlete_name>/race_notes.md` — never delete or overwrite what's
-already there. A season can have several races; `review` only pulls in
-the ones whose date falls inside the window you asked for with
+10), the coach gives you a `#RACE_RESULT` block. With the MCP server, ask
+the coach to save it with `save_race_result` (§4a) — it appends to the
+end of `race_notes.md` itself and refuses a conflicting duplicate `Date:`
+field. Without it, add the block to the end of
+`out/<athlete_name>/race_notes.md` by hand — never delete or overwrite
+what's already there. A season can have several races; `review` only
+pulls in the ones whose date falls inside the window you asked for with
 `--since`.
 
 ---
@@ -450,7 +579,9 @@ the coach enters Phase 6:
 2. **If the macrocycle ended without a race** (a goal change, or the
    plan being cut short): the coach summarizes what the athlete adapted
    over that time instead.
-3. **To start the next macrocycle:** run `prep` again and confirm to
+3. **To start the next macrocycle:** with the MCP server, just tell the
+   coach you're ready — asking for `get_athlete_state` pulls fresh data
+   on its own. Without it, run `prep` again first. Either way, confirm to
    the coach that you want to start a new one — it loops back to Phase 1.
 
 ---
@@ -461,7 +592,7 @@ the coach enters Phase 6:
 ```
 python tests/run_tests.py
 ```
-Runs all 76 tests (unit tests, block validation, and a comparison
+Runs all 193 tests (unit tests, block validation, and a comparison
 against known-correct results for the state-resolving engine). If
 anything fails, don't consider the change finished until you understand
 why — a failing test doesn't always mean a bug, but it always means the
@@ -479,6 +610,15 @@ This last point is exactly what failed once with an older data pipeline
 and cost weeks of a field silently showing blank — worth treating as a
 checklist you follow every time, not something to remember from memory.
 
+**Note on the MCP server (§4a):** this checklist is about **code and
+config** changes — it's unaffected either way. The MCP server itself only
+runs on the machine it's configured on, and writes `out/<athlete>/` files
+(continuity, blocks, race notes) to that machine's local repo copy, the
+same as the old manual files did. If you work from both machines, those
+`out/` files still need the same attention as before if you want them
+available on the other one — the MCP server doesn't sync anything
+between machines on its own.
+
 **Public vs. private repo:** if you ever make the repo public so Claude
 can review it directly, set it back to private as soon as you're done —
 GitHub → Settings → Danger Zone → Change visibility.
@@ -495,12 +635,16 @@ GitHub → Settings → Danger Zone → Change visibility.
 | Avg Power showing `—` for power-meter activities | Your local copy is out of sync with the repo | Repeat section 11 (sync machines) |
 | `PROFILE BUILD FAILED (non-blocking)` | The profile-rendering step failed, but `state.md` was still delivered | Check the printed error; the chat can proceed with `state.md` alone while you fix the underlying issue |
 | `note: no continuity.md here yet` | First week for this athlete or this block, or it was never saved | Normal in the first case; in the second, ask the coach for the header again (section 7) |
-| `#STATE` older than 7 days | Haven't run `prep` recently | Run `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale numbers |
+| `#STATE` older than 7 days | Haven't run `prep` recently — only applies to the manual/CLI path, since `get_athlete_state` (§4a) always fetches fresh | Run `python coach.py prep <id>` before continuing — the coach will refuse to advance on stale numbers |
 | `No data for '<id>'` (running `review`) | Never ran `prep` for this athlete | Run `python coach.py prep <id>` first — `review` reads what `prep` already saved, it doesn't fetch new data itself |
 | "No curve history yet" (running `review`) | Snapshot capture only just started for this athlete | Not an error — see section 9. Clears up as `prep` keeps running over time |
 | `cannot validate — Unknown methodology 'X'` (running `check`) | The `[Methodology]` field in that session doesn't match a real file in `config/authors/` — e.g. plain `friel` instead of `friel_cycling`/`friel_running` | Take it back to the coach as a correction — see section 6 |
 | `FAIL [HC-DUAL] ... missing quoted cue` (running `check`) | A line is missing its short quoted coaching phrase — some methodologies (e.g. Koop for trail) require one on *every* line, not only the Main Set | Take it back to the coach as a correction — see section 6 |
 | A block that already showed `RESULT: PASS` shows `pending` again after running `check` once more | You pasted a fresh, unprocessed copy of the block (straight from the coach) over a file that had already been validated, erasing the real numbers that were written into it | Not a bug — see section 6. Just run `check` again on the file as it is now |
+| `infame-coach` shows "Failed" in Claude Desktop → Settings → Developer | The MCP server didn't start | Click **View logs**, then check §4a's troubleshooting table |
+| A tool call through the MCP server hangs for several minutes then times out | Known stdio issue in an older version of the server code | Confirm `git pull` is current and Desktop has been restarted since — see §4a |
+| `push_block` refuses, citing `validate_block` as BLOCKED | Working as intended — the tool now enforces this itself | Fix the flagged issue and validate again; see §4a for the deliberate override |
+| Errors mentioning a device name or "remote-devices" during an MCP tool call | The conversation was in Cowork or Code mode, not plain Chat | Retry from a plain Chat conversation in the Project |
 
 ---
 
@@ -518,6 +662,16 @@ infame_elite_endurance_coach/
 │   └── power_profile.py          power-profile module (used by build_state)
 ├── verify/
 │   └── validate_block.py         deterministic gate — called by coach.py check
+├── mcp_server/                   MCP server for Claude Desktop — see §4a
+│   ├── server.py                 tool registration
+│   ├── run_server.py             entry point; logs a crash traceback on fatal exit
+│   ├── common.py                 shared plumbing — routes every tool through the
+│   │                             same engine functions coach.py uses
+│   ├── guard.py                  the @guarded decorator every tool uses
+│   ├── cancel_patch.py           self-detecting workaround for python-sdk#2610
+│   ├── tools_read.py / tools_write.py / tools_validate.py / tools_push.py
+│   └── logs/last_crash.txt       written on a fatal server crash, if one occurs
+├── .venv-mcp/                    MCP server's own dependencies — never committed
 ├── config/
 │   ├── athletes/
 │   │   ├── _template.yaml        template used by coach.py new
@@ -541,7 +695,9 @@ infame_elite_endurance_coach/
 │   └── review.md                 written by `coach.py review`, not hand-edited
 ├── out/roster.md                 name ↔ id ↔ last-updated table
 ├── tests/
-│   ├── run_tests.py               76 tests — run after any config/engine change
+│   ├── run_tests.py               193 tests — run after any config/engine change
+│   ├── test_mcp_server.py         MCP server's own regression suite — run after
+│   │                              any mcp_server/ change
 │   └── make_fixtures.py
 └── Prompt/
     └── infame_elite_endurance_coach.md   the prompt — also lives in the Claude Project
