@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 from datetime import date
 
-from .common import ensure_import_paths, safe_out_dir
+from .common import ROOT, ensure_import_paths, safe_out_dir
 from .guard import ToolError, guarded
 
 # Confirmed against config/authors/*.yaml's own `sport:` field — never a
@@ -96,8 +96,16 @@ def push_block(
                 f"No block saved today for '{athlete_id}' — call save_block "
                 f"first, or pass file_path explicitly."
             )
-    elif not os.path.exists(file_path):
-        raise ToolError(f"File not found: {file_path}")
+    else:
+        # Same class of bug fixed in tools_validate.py's validate_block:
+        # a caller-supplied relative file_path must never be resolved
+        # against the current process's working directory, which is not
+        # reliable at server runtime (confirmed on Windows via Claude
+        # Desktop — see tools_validate.py's comment for the full story).
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(ROOT, file_path)
+        if not os.path.exists(file_path):
+            raise ToolError(f"File not found: {file_path}")
 
     with open(file_path, encoding="utf-8") as f:
         raw_text = f.read()

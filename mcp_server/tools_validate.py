@@ -60,8 +60,24 @@ def validate_block(
                 f"{os.path.relpath(file_path, os.path.dirname(OUT))} — "
                 f"call save_block first, or pass file_path explicitly."
             )
-    elif not os.path.exists(file_path):
-        raise ToolError(f"File not found: {file_path}")
+    else:
+        # A relative file_path must never be resolved against the current
+        # process's working directory: os.getcwd() at server runtime is
+        # not reliable, confirmed on Windows via Claude Desktop — the
+        # configured claude_desktop_config.json "cwd" field did not
+        # actually govern the launched process's real working directory,
+        # so a relative path that worked from an interactive shell
+        # launched at ROOT failed with "File not found" from the live
+        # server despite the file existing exactly there. Every other
+        # path this module touches (out_dir below, ROOT/verify/... for
+        # the script itself) is already absolute by construction; a
+        # caller-supplied file_path is the one place a relative string
+        # could slip through unresolved, so it's anchored to ROOT
+        # explicitly here rather than trusted.
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(ROOT, file_path)
+        if not os.path.exists(file_path):
+            raise ToolError(f"File not found: {file_path}")
 
     script = os.path.join(ROOT, "verify", "validate_block.py")
     cmd = [sys.executable, script, file_path]
