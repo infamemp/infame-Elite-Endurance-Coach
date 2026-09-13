@@ -63,21 +63,37 @@ def guarded(fn: F) -> F:
 
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
+        # TEMP DIAGNOSTIC (remove once the validate_block stdio hang is
+        # root-caused): checkpoint lines to stderr, which Desktop's
+        # per-server log file already captures. Each logger.info() call
+        # flushes on emit (logging.StreamHandler default), so a checkpoint
+        # is durable on disk immediately, even if the process hangs right
+        # after it.
+        logger.info("CHECKPOINT guard: received call to %s (args=%r kwargs=%r)",
+                    fn.__name__, args, kwargs)
         buf = io.StringIO()
         with _CALL_LOCK, contextlib.redirect_stdout(buf):
+            logger.info("CHECKPOINT guard: about to invoke %s", fn.__name__)
             try:
                 result = fn(*args, **kwargs)
+                logger.info("CHECKPOINT guard: %s returned normally", fn.__name__)
             except SystemExit as exc:
                 # sys.exit() from reused CLI code — never inherits from
                 # Exception, so it needs its own branch or it kills the
                 # server exactly the way it did before.
                 message = str(exc.code) if exc.code is not None else ""
                 logger.error("tool %s: SystemExit(%r)", fn.__name__, message)
+                logger.info("CHECKPOINT guard: about to return (SystemExit path) for %s",
+                            fn.__name__)
                 return _error(fn.__name__, "SystemExit", message, buf.getvalue())
             except ToolError as exc:
+                logger.info("CHECKPOINT guard: about to return (ToolError path) for %s",
+                            fn.__name__)
                 return _error(fn.__name__, "ToolError", str(exc), buf.getvalue())
             except Exception as exc:  # noqa: BLE001 — the whole point is to catch everything
                 logger.exception("tool %s raised", fn.__name__)
+                logger.info("CHECKPOINT guard: about to return (Exception path) for %s",
+                            fn.__name__)
                 return _error(fn.__name__, type(exc).__name__, str(exc), buf.getvalue())
         captured = buf.getvalue()
         if captured.strip():
@@ -87,6 +103,7 @@ def guarded(fn: F) -> F:
             # future leak is visible in the server's own log rather than
             # only manifesting as a corrupted protocol stream.
             logger.debug("tool %s stdout (captured, not leaked):\n%s", fn.__name__, captured)
+        logger.info("CHECKPOINT guard: about to return (success path) for %s", fn.__name__)
         return result
 
     return wrapper

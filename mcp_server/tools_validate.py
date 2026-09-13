@@ -18,6 +18,7 @@ repeat that gap.
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import sys
@@ -25,6 +26,8 @@ from datetime import date
 
 from .common import OUT, ROOT, ensure_import_paths, safe_out_dir
 from .guard import ToolError, guarded
+
+logger = logging.getLogger("mcp_server.tools_validate")
 
 
 @guarded
@@ -114,11 +117,28 @@ def validate_block(
     # tests/run_tests.py's own subprocess calls into this same script
     # already carry this exact guard, for the exact same reason.
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    # TEMP DIAGNOSTIC (remove once the validate_block stdio hang is
+    # root-caused): checkpoints around the one call in this tool that can
+    # actually block — subprocess.run() — to see whether the hang is inside
+    # the subprocess itself or somewhere else in the tool/guard/transport
+    # stack.
+    logger.info("CHECKPOINT validate_block: about to subprocess.run cmd=%r cwd=%r", cmd, ROOT)
+    # stdin=DEVNULL is deliberate, not a default: without it, the child
+    # inherits this process's own stdin — which, under the stdio MCP
+    # transport, is the live pipe Desktop writes JSON-RPC requests into.
+    # validate_block.py never reads stdin, so this changes nothing when
+    # things work, but it removes an inherited handle to the server's own
+    # protocol channel for the subprocess's whole lifetime — a real
+    # difference from a standalone CLI invocation (which has no such pipe)
+    # that was left unexplained before this fix.
     result = subprocess.run(
         cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-        cwd=ROOT, env=env,
+        cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
     )
+    logger.info("CHECKPOINT validate_block: subprocess.run returned exit_code=%r",
+                result.returncode)
     report = (result.stdout or "") + (result.stderr or "")
+    logger.info("CHECKPOINT validate_block: about to build return dict")
     return {
         "ok": True,
         "passed": result.returncode == 0,
