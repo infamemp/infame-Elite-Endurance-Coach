@@ -260,7 +260,7 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 
 - One ` ```text ` block per session: the opening fence line, the steps, and the closing ` ``` ` line. Both fences, always.
 - Section headers alone on their line: `Warmup`, `Main Set`, `Cooldown`.
-- **Step line:** `- <duration> <target> [<cadence>rpm] [RPE <a-b>] ["<cue>"]`, in that order. The RPE tag is required on every step, from the active author's table; cadence and cue are optional (the cue is required by dual-layer methodologies).
+- **Step line:** `- <duration> <target> [<cadence>rpm] [RPE <a-b>] ["<cue>"]`, in that order. The RPE tag is required on every step, from the active author's table; cadence and cue are optional (the cue is required by dual-layer methodologies). The RPE tag is its own bracket pair, exactly like the class tag that follows it on the rendered line — `[RPE 2-3]`, never `RPE 2-3` as loose text next to the target and never left off. A step missing the brackets fails validation the same as a step missing RPE entirely.
   - Duration: `30s`, `5m`, `1m30s`, `1h10m`. Distance (`2km`, `400mtr`) only when the methodology or the event requires it — the engine cannot cost distance steps.
   - Target: the discipline's metric from the Metric Map, in the required format. Every step has one — the only exception is RPE-only prescription (Metric Map step 6: no HR sensor and no power), where the step carries an `[RPE]` tag and a descriptive cue instead, and the engine cannot cost it.
   - Ramp: `- <duration> ramp <from>-<to> [RPE <a-b>]`, power on `trainer` only. Elsewhere, a progression is a staircase of steps.
@@ -287,7 +287,7 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 3. `[Duration]` and `[Estimated TSS]` are `pending`.
 4. Opening ` ```text ` and closing ` ``` ` both present.
 5. Every step has a target with the metric's required suffix (or only the `[RPE]` tag in RPE-only prescription); no watts, bpm, absolute pace, `% FTP`, `% HR` or zone shorthand.
-6. Every step has an `[RPE]` tag matching the author's zone for its target.
+6. Every step has an `[RPE <a-b>]` tag, in its own brackets, matching the author's zone for its target — scan for the literal `[RPE` substring on every line; `RPE 2-3` written as plain text next to the target is not the tag and fails the same as a missing one.
 7. `ramp` only on the trainer with power; no nested repeats; blank line around each repeat.
 8. Numbers in `[Execution]` match the code.
 
