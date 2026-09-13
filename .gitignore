@@ -27,3 +27,10 @@ config/athletes/*.yaml
 __pycache__/
 
 athlete_docs/
+
+# Local virtualenvs for the optional mcp_server/ dependency — never committed.
+.venv*/
+
+# mcp_server's own crash/debug log, written by run_server.py — local
+# diagnostics only, may contain data/profile.md content in a traceback.
+mcp_server/logs/
