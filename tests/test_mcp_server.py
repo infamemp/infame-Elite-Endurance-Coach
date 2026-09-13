@@ -99,7 +99,8 @@ def _seed_athlete_data(fresh: bool = True):
 
 
 def _cleanup():
-    for p in (os.path.join(ROOT, "data", AID), os.path.join(ROOT, "out", "Test_Fixture")):
+    for p in (os.path.join(ROOT, "data", AID), os.path.join(ROOT, "out", "Test_Fixture"),
+              os.path.join(ROOT, "out", "_test_relpath")):
         shutil.rmtree(p, ignore_errors=True)
 
 
@@ -403,6 +404,57 @@ def _test_windows_style_narrow_codec(validate_block, good_block_path):
           r.get("report", "")[-300:])
 
 
+def test_relative_file_path_resolves_against_root():
+    """A caller-supplied, relative file_path must resolve against ROOT
+    (common.py's ROOT, computed from __file__ and therefore cwd-
+    independent), never against the server process's own working
+    directory. Confirmed on Windows via Claude Desktop: the same relative
+    path that worked when validate_block() was called from a fresh
+    interpreter launched at ROOT failed with "File not found" from the
+    live server process, even though the file existed exactly there --
+    the configured claude_desktop_config.json "cwd" field did not
+    actually govern the launched process's real working directory. The
+    fix must not depend on any process ever honoring "cwd" at all, so
+    this test proves it works by actually changing this test process's
+    own cwd to somewhere else entirely before calling either tool.
+
+    validate_block.py and push_block.py both accept a file_path
+    parameter (the only two tools in this package that do — every other
+    tool builds its paths from ROOT/OUT internally and was never
+    exposed to this)."""
+    from mcp_server.tools_push import push_block
+    from mcp_server.tools_validate import validate_block
+
+    good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
+    # The file has to actually live somewhere under ROOT for a *relative*
+    # path to be meaningful at all -- a relative path from an arbitrary
+    # cwd could never reach a file under /tmp.
+    rel_dir = os.path.join(ROOT, "out", "_test_relpath")
+    os.makedirs(rel_dir, exist_ok=True)
+    original_cwd = os.getcwd()
+    try:
+        dest = os.path.join(rel_dir, "block.md")
+        shutil.copy2(good, dest)
+        relative = os.path.relpath(dest, ROOT)
+
+        with tempfile.TemporaryDirectory() as elsewhere:
+            os.chdir(elsewhere)
+            check("relative file_path: the test process's cwd is genuinely "
+                  "not ROOT (proves this test actually exercises the bug)",
+                  os.path.realpath(os.getcwd()) != os.path.realpath(ROOT))
+
+            r = validate_block(file_path=relative)
+            equal("validate_block: a relative file_path resolves against "
+                  "ROOT, not the process cwd", r.get("passed"), True)
+
+            r2 = push_block(AID, file_path=relative)
+            equal("push_block: a relative file_path resolves against "
+                  "ROOT, not the process cwd", r2.get("ok"), True)
+    finally:
+        os.chdir(original_cwd)
+        shutil.rmtree(rel_dir, ignore_errors=True)
+
+
 # ══════════════════════════════════════════════════════════════════
 # tools_push — dry-run by default, double-gated for a real send
 # ══════════════════════════════════════════════════════════════════
@@ -474,7 +526,8 @@ def main():
 
     try:
         for fn in (test_cancel_patch, test_guard, test_common, test_tools_read,
-                   test_tools_write, test_tools_validate, test_tools_push):
+                   test_tools_write, test_tools_validate,
+                   test_relative_file_path_resolves_against_root, test_tools_push):
             fn()
     finally:
         _cleanup()
