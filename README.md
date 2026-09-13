@@ -39,7 +39,15 @@ authoritative. The model prescribes on top of it and never recalculates it.
   constraint, recomputing TSS from the same config the engine uses. A block that
   fails is not uploaded.
 - **`generated/`** — zone tables built from `config/`, never hand-edited.
-- **`tests/`** — 76 regression tests over synthetic athletes with frozen expected
+- **`mcp_server/`** — optional local MCP server exposing the engine as 8 tools
+  (`get_athlete_state`, `get_athlete_profile`, `list_roster`, `save_continuity`,
+  `save_race_result`, `save_block`, `validate_block`, `push_block`) to Claude
+  Desktop, so a conversation can pull state, save a block, validate it, and
+  upload it without dragging files. `push_block` stays dry-run unless both
+  `dry_run=False` and `confirm=True` are passed explicitly, and refuses a
+  BLOCKED block unless `override_validation=True` is also passed. See
+  `manual/OPERATIONS_MANUAL.md` §4a.
+- **`tests/`** — 193 regression tests over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
 - **`Knowledge/`** — 8 book-derived knowledge bases. 6 are split into `Principles/`
@@ -57,6 +65,15 @@ python coach.py prep <id>
 # into the Claude Project, design the block in conversation
 python coach.py check <file>
 ```
+
+**With the MCP server (`mcp_server/`) connected in Claude Desktop**, the
+drag-and-drop and the separate `check` call are no longer necessary: the
+coach calls `get_athlete_state`/`get_athlete_profile` directly, mid-
+conversation, and validates and uploads with `validate_block`/
+`push_block` — see `manual/OPERATIONS_MANUAL.md` §4a and
+`manual/QUICK_GUIDE.md` for the tool-by-tool flow. The commands above
+remain the fallback path for the browser Project or a machine where the
+server isn't configured.
 
 Onboarding a new athlete: `python coach.py new <id>`. Measuring what a block
 actually did: `python coach.py review <id> --since <date>` — compares
@@ -112,6 +129,7 @@ config/          authors, athletes, schema, thresholds, TSS classes, power profi
 engine/          fetch, state resolution, profile rendering, longitudinal analysis
 verify/          the hard-constraint gate
 generated/       zone tables built from config — never hand-edited
+mcp_server/      optional local MCP server — see manual/OPERATIONS_MANUAL.md §4a
 out/             per-athlete state.md/profile.md/continuity.md — what you drag
                  into the Claude Project; out/roster.md lists every athlete
 tests/           fixtures, golden baselines, the regression runner
@@ -134,6 +152,75 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v6.7 — MCP server rebuilt**
+
+`mcp_server/` is back, with the root cause of the v6.6 removal fixed
+structurally rather than patched around. The removal postmortem
+(`archive/RESTORE_POINT_v6.5.md`) named a monkeypatch of a private SDK
+class as the actual cause of the earlier instability; this rebuild
+replaces that guesswork with a confirmed diagnosis and a version-pinned
+fix:
+
+- **Root cause, confirmed against upstream, not re-guessed.** The v6.5
+  instability traced to `modelcontextprotocol/python-sdk#2610` — cancelling
+  an in-flight request over stdio makes `RequestResponder.__exit__` let a
+  `CancelledError` escape after the responder had already completed;
+  because that task is a sibling of the stdio receive loop's own task
+  group, one cancelled tool call took the whole server down. Confirmed
+  still present in `mcp` 1.30.0 by reading its source directly, and
+  confirmed a correct no-op against `mcp` 2.x, where `RequestResponder` no
+  longer exists.
+- **The fix:** a pinned SDK version plus `mcp_server/cancel_patch.py`, a
+  self-detecting workaround — it constructs a real `RequestResponder` and
+  empirically probes whether the installed SDK still exhibits the bug
+  before patching anything, so it becomes a deliberate no-op the day the
+  upstream fix (`python-sdk#2624`) ships in whatever version is installed,
+  with nothing else to remember to change.
+- **The 8 tools are back**, unchanged in shape from v6.5:
+  `get_athlete_state`, `get_athlete_profile`, `list_roster` (reads),
+  `save_continuity`, `save_race_result`, `save_block` (writes),
+  `validate_block` (wraps the existing verifier as a subprocess), and
+  `push_block` (uploads to Intervals.icu, dry-run by default).
+- **Three real bugs found and fixed during manual end-to-end testing on
+  Windows** — none caught by the test suite beforehand, since it runs on
+  Linux:
+  - `validate_block` crashed with an uncaught `UnicodeEncodeError` on
+    Windows: `subprocess.run`'s `encoding="utf-8"` only controls how the
+    *parent* decodes output, not what encoding the *child* uses to
+    encode it, and a Windows child piped (not console) stdout defaults to
+    cp1252, which can't encode the box-drawing characters
+    `validate_block.py` prints on every run. The crash surfaced as
+    `passed: False`, indistinguishable from a real hard-constraint
+    failure. Fixed by forcing `PYTHONIOENCODING=utf-8`/`PYTHONUTF8=1` in
+    the child's environment.
+  - `validate_block` and `push_block` both resolved a relative
+    `file_path` against the current process's working directory instead
+    of the server's own `ROOT` — worked when called from a fresh
+    interpreter launched at `ROOT`, failed with a spurious "File not
+    found" through the live server process launched by Claude Desktop,
+    whose actual working directory didn't match `ROOT` despite
+    `claude_desktop_config.json`'s `cwd` field. Fixed by resolving a
+    relative path against `ROOT` explicitly in both tools.
+  - `validate_block` hung for several minutes over Desktop's live stdio
+    connection while returning in 0.2s called directly: its
+    `subprocess.run()` never redirected the child's stdin, so the child
+    inherited the server's own stdin — the live JSON-RPC pipe Desktop
+    uses under stdio transport, which a standalone CLI call never has.
+    Fixed with an explicit `stdin=DEVNULL`.
+- **One design gap closed, not a bug in the strict sense:** `push_block`
+  never checked `validate_block`'s own result before sending. The
+  original two-command CLI made "BLOCKED" and "upload" a full
+  conversation turn apart, so a human seeing BLOCKED simply wouldn't run
+  the next command; inside one MCP conversation they're a single tool
+  call apart, and that protective friction doesn't exist by default.
+  Confirmed directly during testing: a block with real HC-METRIC failures
+  was assembled and would have been sent to Intervals.icu with both
+  `dry_run=False` and `confirm=True`, rejected only because the test used
+  invalid credentials, not because the tool stopped it. `push_block` now
+  runs the same validation check internally before its live send and
+  refuses a BLOCKED block unless `override_validation=True` is also
+  passed explicitly.
 
 **v6.6 — MCP server removed**
 
@@ -227,7 +314,7 @@ the same pass. What changed:
   figure.
 - **A verification gate** checks every generated block against the hard
   constraints before it can reach an athlete.
-- **A regression suite** of 76 tests over synthetic athletes with frozen expected
+- **A regression suite** of 193 tests over synthetic athletes with frozen expected
   outputs.
 - **Non-threshold anchors** declared per author, keeping zones interchangeable
   across methodologies without altering any author's published numbers.
@@ -248,7 +335,7 @@ Any change to `config/` or `engine/` follows the same sequence:
 ```bash
 python build_zone_tables.py validate    # schema-check the authors
 python build_zone_tables.py build       # regenerate the zone tables
-python tests/run_tests.py               # 76 regression tests
+python tests/run_tests.py               # 193 regression tests
 ```
 
 A failing golden test does not automatically mean a bug — it means output
