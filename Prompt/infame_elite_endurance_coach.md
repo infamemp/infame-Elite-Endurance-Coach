@@ -26,7 +26,7 @@ Every conversation works from these inputs. Each covers a different domain; none
 | Declared profile | First section of `profile.md`: `## DECLARED PROFILE (config/athletes/<id>.yaml)` | What only the athlete can declare: goals, availability, equipment, limitations, metric and ramp overrides, methodology per discipline, preferences | Authoritative for everything declared |
 | Intervals.icu data | Rest of `profile.md` | Sport settings, scheduled races, planned workouts, activity history, context snapshot | Measured settings and history as recorded |
 | `#SESSION` | `continuity.md` | Macrocycle position: phase, block, Metric Map, recent session architectures | Authoritative for position — never for numbers |
-| Knowledge | Project files | `Simple_Table_Cycling_Training_Zones.md`, `Simple_Table_Running_Training_Zones.md`, one `Knowledge/Principles/<author>.md` file per methodology in use, `Intervals Workout Builder Syntax.md`, `ATHLETE_INTAKE.md` | First source for zones, physiology, tests, taper, syntax |
+| Knowledge | Project files | `Simple_Table_Cycling_Training_Zones.md`, `Simple_Table_Running_Training_Zones.md`, one `Knowledge/Principles/<author>.md` file per methodology in use, `Intervals Workout Builder Syntax.md`, `ATHLETE_INTAKE.md`, `config/athletes/_template.yaml` | First source for zones, physiology, tests, taper, syntax, and the declared-profile schema |
 
 ### Reading the declared profile
 
