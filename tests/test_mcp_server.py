@@ -438,19 +438,35 @@ def test_relative_file_path_resolves_against_root():
         relative = os.path.relpath(dest, ROOT)
 
         with tempfile.TemporaryDirectory() as elsewhere:
-            os.chdir(elsewhere)
-            check("relative file_path: the test process's cwd is genuinely "
-                  "not ROOT (proves this test actually exercises the bug)",
-                  os.path.realpath(os.getcwd()) != os.path.realpath(ROOT))
+            # cwd must be restored to original_cwd BEFORE this `with`
+            # block's __exit__ tries to delete `elsewhere` — on Windows, a
+            # directory cannot be deleted while it is the process's
+            # current working directory (PermissionError: [WinError 32],
+            # confirmed reproducible: it aborted the whole test run before
+            # any pass/fail count could even print). Restoring cwd in the
+            # OUTER finally, after this `with` block has already exited,
+            # is too late — the delete has already failed by then. This
+            # inner try/finally is what actually has to do it.
+            try:
+                os.chdir(elsewhere)
+                check("relative file_path: the test process's cwd is "
+                      "genuinely not ROOT (proves this test actually "
+                      "exercises the bug)",
+                      os.path.realpath(os.getcwd()) != os.path.realpath(ROOT))
 
-            r = validate_block(file_path=relative)
-            equal("validate_block: a relative file_path resolves against "
-                  "ROOT, not the process cwd", r.get("passed"), True)
+                r = validate_block(file_path=relative)
+                equal("validate_block: a relative file_path resolves against "
+                      "ROOT, not the process cwd", r.get("passed"), True)
 
-            r2 = push_block(AID, file_path=relative)
-            equal("push_block: a relative file_path resolves against "
-                  "ROOT, not the process cwd", r2.get("ok"), True)
+                r2 = push_block(AID, file_path=relative)
+                equal("push_block: a relative file_path resolves against "
+                      "ROOT, not the process cwd", r2.get("ok"), True)
+            finally:
+                os.chdir(original_cwd)
     finally:
+        # Redundant with the inner restore on every path that reaches it,
+        # but cheap, idempotent, and the real safety net if something
+        # raised before the `with` block above was ever entered.
         os.chdir(original_cwd)
         shutil.rmtree(rel_dir, ignore_errors=True)
 
