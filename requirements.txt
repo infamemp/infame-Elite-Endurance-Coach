@@ -16,3 +16,14 @@ jsonschema>=4.21.0   # build_zone_tables.py — validates config/authors/*.yaml 
 # scripts in legacy/ (convert.py, intervals_export.py), which are kept for
 # reference only and are not part of the current workflow:
 #   openpyxl>=3.1.0
+
+# NOT required for coach.py/engine/verify/tests — only needed to run the
+# local MCP server (mcp_server/, Claude Desktop only). Install separately:
+#   pip install "mcp==1.30.0"
+# Pinned, not a floor (">="): mcp_server/cancel_patch.py carries a verified
+# workaround for a real bug in this exact release line (still open as of
+# 1.30.0 — see mcp_server/README.md and python-sdk#2610). It self-detects
+# whether it's still needed on whatever version is actually installed and
+# no-ops cleanly if not, but an untested newer major version (e.g. 2.x,
+# which restructures these internals entirely) should be a deliberate
+# upgrade with its own verification pass, not a silent `pip install -U`.
