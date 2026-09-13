@@ -23,7 +23,7 @@ that makes it safe to exist.
 | `save_race_result` | writes | Appends a `#RACE_RESULT` block to `race_notes.md`, never overwrites |
 | `save_block` | writes | `out/<athlete>/blocks/<today>_bloque.md` |
 | `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess |
-| `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call.** |
+| `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** |
 
 `push_block` is not wired into the Claude Project prompt, is not called
 automatically by anything in this repository, and its default (and only
@@ -34,6 +34,22 @@ undo the architecture") and this task's own scope limits. The Claude
 Project prompt, its Knowledge base, and the phase workflow's STOP-AND-WAIT
 gates are untouched by this rebuild — the coach still proposes, the human
 still approves every phase before advancing, exactly as before.
+
+**Validating and uploading are no longer independent, on purpose.** The
+original two-command CLI workflow could describe them as fully separate
+manual steps — with `validate_block` and `push_block` a whole conversation
+turn apart, a human seeing "BLOCKED" simply wouldn't go on to run the next
+command. Inside one MCP conversation they're one tool call apart, and that
+protective friction doesn't exist by default anymore: nothing stopped
+`push_block` from being called on a block just reported BLOCKED, in the
+same turn — confirmed directly, once, before this fix (a real BLOCKED
+block was assembled and would have been sent to Intervals.icu; it was only
+rejected because the test used invalid credentials). `push_block` now runs
+the same check internally before its live send and refuses to send a
+BLOCKED block unless `override_validation=True` is passed explicitly — a
+deterministic-fact check, the same category as `validate_block`'s own
+HC-METRIC-style rules, not the engine giving advice, so it does not cross
+the §6 boundary above.
 
 ## Why it broke last time, and what's different now
 
@@ -177,6 +193,9 @@ account or network access is needed):
 - `push_block`'s dry-run default, both single-gate-open cases, and — only
   with `requests.Session.post` mocked, never a real network call — the
   fully-gated send path.
+- `push_block` refusing to send a known-BLOCKED block even with both gates
+  open, and proceeding (still against the mock only) once
+  `override_validation=True` is passed explicitly.
 
 Before running any of this against real athlete data: it was designed and
 tested exclusively against `TESTRAMP` first, as this task required, and

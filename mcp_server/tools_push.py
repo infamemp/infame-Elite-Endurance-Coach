@@ -17,6 +17,20 @@ so it gets more resistance than every other tool here, not less:
   scope — the Claude Project prompt is untouched, so nothing there can
   invoke it either. It exists to be called deliberately, by a human, the
   same as every other manual step it could someday replace.
+- Before actually sending (both gates open), this function runs the exact
+  same check `validate_block` runs and refuses to send a block that check
+  reports as BLOCKED. This was NOT true of the original two-command CLI
+  workflow's "separateness," and that gap was found and closed here: when
+  validating and uploading were two separate manual commands, a human
+  seeing "BLOCKED" simply wouldn't go on to run the next one. Once both
+  live one tool call apart in the same conversation, that protective
+  friction is gone — nothing before this fix stopped `push_block` from
+  being called on a block `validate_block` had just reported BLOCKED, in
+  the same turn. This is a deterministic-fact check (the same category as
+  validate_block's own HC-METRIC-style rules), not the engine giving
+  advice, so it does not cross the line above. `override_validation=True`
+  exists for the rare legitimate case of pushing anyway — always a
+  conscious, visible choice in the call, never an accident.
 """
 
 from __future__ import annotations
@@ -26,6 +40,7 @@ from datetime import date
 
 from .common import ROOT, ensure_import_paths, safe_out_dir
 from .guard import ToolError, guarded
+from .tools_validate import _run_validation
 
 # Confirmed against config/authors/*.yaml's own `sport:` field — never a
 # flat [Discipline] -> Intervals.icu `type` table, per the exact bug fixed
@@ -70,6 +85,7 @@ def push_block(
     dry_run: bool = True,
     confirm: bool = False,
     athlete_name: str | None = None,
+    override_validation: bool = False,
 ) -> dict:
     """Build the Intervals.icu bulk-events payload for a saved block and,
     only when explicitly told twice (dry_run=False AND confirm=True), POST
@@ -84,7 +100,14 @@ def push_block(
     the live-send path is exercised only by a mocked `requests.Session.post`,
     the same way the original tool's live path was verified (and, per
     archive/RESTORE_POINT_v6.5.md §5, never actually exercised against a
-    real account even once)."""
+    real account even once).
+
+    Before that live send, this tool runs the same check `validate_block`
+    runs against `file_path` and raises `ToolError` — sending nothing — if
+    the block is BLOCKED (a real hard-constraint failure, not a warning).
+    Pass `override_validation=True` to skip that check and push anyway; the
+    dry-run path never validates, since it never sends anything either
+    way."""
     ensure_import_paths()
     import validate_block as vb
 
@@ -166,6 +189,18 @@ def push_block(
                 "the same call). No request was sent to Intervals.icu."
             ),
         }
+
+    if not override_validation:
+        validation = _run_validation(file_path=file_path, quiet=True)
+        if not validation.get("passed", False):
+            raise ToolError(
+                "Refusing to push — validate_block reports this file is "
+                f"BLOCKED (exit_code={validation.get('exit_code')}). Fix the "
+                "hard-constraint failure(s) first, or pass "
+                "override_validation=True to push anyway (not recommended; "
+                "always a deliberate, visible choice, never a default).\n\n"
+                + validation.get("report", "")
+            )
 
     import fetch_athlete_data as fad
 

@@ -533,6 +533,69 @@ def test_tools_push():
               calls and all("type_inferred" not in e for e in calls[0]["json"]))
 
 
+# ══════════════════════════════════════════════════════════════════
+# tools_push — refuses to send a block validate_block reports BLOCKED
+# ══════════════════════════════════════════════════════════════════
+# Found during manual end-to-end testing on this branch: nothing stopped
+# push_block(dry_run=False, confirm=True) from sending a block that had
+# just been reported BLOCKED by validate_block — the two tools were fully
+# independent, a gap that only mattered once validating and uploading
+# stopped being two separate manual CLI commands a whole conversation turn
+# apart. Confirmed directly: a real BLOCKED block (genuine HC-METRIC
+# failures) was assembled and would have been sent; it was only rejected
+# by Intervals.icu itself (403, invalid test credentials), not by this
+# tool. push_block now runs the same check internally before its live
+# send and must refuse without an explicit override.
+
+def test_tools_push_refuses_blocked_block():
+    from mcp_server.tools_push import push_block
+
+    bad = os.path.join(ROOT, "tests", "blocks", "bad_road.md")
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = os.path.join(tmp, "bad.md")
+        shutil.copy2(bad, copy)
+
+        import fetch_athlete_data as fad
+        import requests
+
+        calls = []
+
+        class _FakeResponse:
+            status_code = 200
+
+            def raise_for_status(self):
+                return None
+
+        def _fake_post(self, url, params=None, json=None, timeout=None):
+            calls.append({"url": url, "params": params, "json": json})
+            return _FakeResponse()
+
+        original_post = requests.Session.post
+        requests.Session.post = _fake_post
+        try:
+            # push_block is @guarded, so the ToolError this raises internally
+            # is caught at the tool boundary and comes back as an error
+            # dict, not a raised exception — the same shape every other
+            # tool's expected failure takes.
+            r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
+            equal("push_block: refuses a known-BLOCKED block with both "
+                  "gates open and no override", r.get("ok"), False)
+            equal("push_block: the refusal is reported as a ToolError",
+                  r.get("error_type"), "ToolError")
+            check("push_block: the refusal names it as blocked",
+                  "BLOCKED" in (r.get("error") or ""), r.get("error", "")[:200])
+            equal("push_block: refusing a BLOCKED block makes no network call",
+                  len(calls), 0)
+
+            r = push_block(AID, file_path=copy, dry_run=False, confirm=True,
+                            override_validation=True)
+            equal("push_block: override_validation=True proceeds anyway "
+                  "(against the mock)", r.get("sent"), True)
+            equal("push_block: override still makes exactly one call", len(calls), 1)
+        finally:
+            requests.Session.post = original_post
+
+
 def main():
     print("mcp_server — regression tests\n")
     if not MCP_AVAILABLE:
@@ -543,7 +606,8 @@ def main():
     try:
         for fn in (test_cancel_patch, test_guard, test_common, test_tools_read,
                    test_tools_write, test_tools_validate,
-                   test_relative_file_path_resolves_against_root, test_tools_push):
+                   test_relative_file_path_resolves_against_root, test_tools_push,
+                   test_tools_push_refuses_blocked_block):
             fn()
     finally:
         _cleanup()

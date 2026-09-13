@@ -30,8 +30,7 @@ from .guard import ToolError, guarded
 logger = logging.getLogger("mcp_server.tools_validate")
 
 
-@guarded
-def validate_block(
+def _run_validation(
     athlete_id: str | None = None,
     file_path: str | None = None,
     fill_tss: bool = False,
@@ -42,14 +41,16 @@ def validate_block(
     quiet: bool = False,
     athlete_name: str | None = None,
 ) -> dict:
-    """Validate a block. Pass file_path explicitly, or athlete_id alone to
-    validate today's file saved by save_block
-    (out/<athlete>/blocks/<today>_bloque.md).
-
-    Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
-    tool never repairs or interprets the result, only reports it. Uploading
-    to Intervals.icu is a separate, deliberately manual step regardless of
-    this result (see push_block)."""
+    """The actual validation logic — deliberately not decorated with
+    `@guarded`. `guard.py`'s call lock is a plain, non-reentrant
+    `threading.Lock`, so a `@guarded` tool calling another `@guarded` tool
+    in-process (as `push_block` needs to, to refuse pushing a BLOCKED
+    block — see tools_push.py) would deadlock the second lock acquisition
+    forever. `validate_block` below is `@guarded` and calls this; so does
+    `push_block`, directly, without going through the `@guarded` layer
+    twice. Safe either way: the only thing this function does that could
+    misbehave — `subprocess.run()` — never touches this process's own
+    stdout, so it needs none of `@guarded`'s stdout-redirection either."""
     ensure_import_paths()
 
     if not file_path:
@@ -147,3 +148,36 @@ def validate_block(
         "fill_tss_requested": fill_tss,
         "report": report,
     }
+
+
+@guarded
+def validate_block(
+    athlete_id: str | None = None,
+    file_path: str | None = None,
+    fill_tss: bool = False,
+    methodology: str | None = None,
+    discipline: str | None = None,
+    expected_tss: float | None = None,
+    tolerance: float | None = None,
+    quiet: bool = False,
+    athlete_name: str | None = None,
+) -> dict:
+    """Validate a block. Pass file_path explicitly, or athlete_id alone to
+    validate today's file saved by save_block
+    (out/<athlete>/blocks/<today>_bloque.md).
+
+    Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
+    tool never repairs or interprets the result, only reports it.
+
+    push_block calls this same check internally before actually sending
+    anything (dry_run=False + confirm=True) and refuses to push a block
+    this reports as blocked, unless push_block's own override_validation=True
+    is passed explicitly — so uploading is still a deliberately separate,
+    human-gated action, but it is no longer possible to push a block that
+    was just reported BLOCKED without a conscious, visible override."""
+    return _run_validation(
+        athlete_id=athlete_id, file_path=file_path, fill_tss=fill_tss,
+        methodology=methodology, discipline=discipline,
+        expected_tss=expected_tss, tolerance=tolerance, quiet=quiet,
+        athlete_name=athlete_name,
+    )
