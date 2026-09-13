@@ -22,14 +22,20 @@ command below is typed there, one line at a time, followed by Enter.
 | Command | What it does |
 |---|---|
 | `python coach.py new <id>` | Onboard a new athlete — creates their config file from a template |
-| `python coach.py prep <id>` | Pull fresh data for one athlete and build the files you'll use in the chat |
-| `python coach.py prep --all` | Same, for every athlete on the account |
+| `python coach.py prep --all` | Refresh every athlete at once — mainly useful for a full-roster overview |
 | `python coach.py prep --list` | List every athlete and when each was last updated — downloads nothing new |
-| `python coach.py check <file>` | Check a generated training block for errors before uploading it |
 | `python coach.py review <id> --since <date>` | Compare an athlete's numbers today against a past date |
 
 `<id>` is the athlete's Intervals.icu ID — it looks like `i123456`. Find it
 with `python coach.py prep --list` if you don't have it memorized.
+
+**If the MCP server (`infame-coach`) is connected in Claude Desktop**,
+you no longer run `python coach.py prep <id>` or `python coach.py check
+<file>` by hand for day-to-day work — just ask the coach to use the
+matching tool directly (`get_athlete_state`, `get_athlete_profile`,
+`save_block`, `validate_block`, `save_race_result`, `push_block`). See
+the sections below. The CLI commands above still exist and still work;
+they're just no longer the everyday path. Full detail in Manual §4a.
 
 ---
 
@@ -46,19 +52,27 @@ with `python coach.py prep --list` if you don't have it memorized.
    with what the coach gave you, and save.
 5. Copy to both machines, commit, push — same as any other file.
 
-Full detail in Manual §1.
+Full detail in Manual §1. This flow is unchanged by the MCP server —
+there's no tool yet for writing an athlete's declared profile.
 
 ---
 
 ## Every time you open a new chat with an athlete
 
-From the folder `out/<athlete_name>/`, drag these files into the Claude
-Project chat window:
+**With the MCP server connected:** just ask the coach directly, e.g.
+*"use get_athlete_state and get_athlete_profile for i123456."* No prep
+command, no dragging files — it pulls fresh data itself.
 
-- [ ] `state.md` — always
-- [ ] `profile.md` — always
-- [ ] `continuity.md` — only if it exists (means a session already
-      happened during this training block)
+**Then, only if this athlete already has a `continuity.md`** (meaning a
+session already happened during this training block): open
+`out/<athlete_name>/continuity.md` and paste its contents into the chat
+as a message. There's no tool that reads this file for the coach yet —
+this is the one piece still done by hand, but it's a paste, not a drag.
+
+**Without the MCP server** (fallback, or if it's ever down): follow the
+old flow — run `python coach.py prep <id>`, then drag `state.md`,
+`profile.md`, and `continuity.md` (if present) from `out/<athlete_name>/`
+into the chat window. Full detail in Manual §4.
 
 Do this once per chat — not again partway through the same conversation.
 
@@ -66,18 +80,20 @@ Do this once per chat — not again partway through the same conversation.
 
 ## Mid-week question, staying in the same chat
 
-1. Run `python coach.py prep <id>` first, so the coach is working from
-   fresh numbers.
-2. Ask your question. Nothing else to do.
+Just ask your question — the coach already has current numbers in
+context from earlier in this chat. If it's been a while, ask it to
+re-run `get_athlete_state` first.
 
 ## Mid-week question, opening a brand-new chat instead
 
-1. `python coach.py prep <id>`
-2. Before closing the chat you're in now, ask the coach:
-   *"give me the continuity header"*
-3. Copy what it gives you into `out/<athlete_name>/continuity.md`,
-   replacing whatever was already there.
-4. Open the new chat and drag in the files as usual.
+1. Before closing the chat you're in now, ask the coach: *"give me the
+   continuity header."*
+2. Ask the coach to save it with `save_continuity` for this athlete —
+   or, if the MCP server isn't available, copy what it gives you into
+   `out/<athlete_name>/continuity.md` by hand, replacing whatever was
+   there.
+3. Open the new chat, ask for `get_athlete_state` / `get_athlete_profile`,
+   then paste in the continuity content as described above.
 
 ---
 
@@ -85,51 +101,70 @@ Do this once per chat — not again partway through the same conversation.
 
 1. The coach shows you a boxed `#SESSION` block on its own once the block
    ends — you don't have to ask for it.
-2. Copy it into `out/<athlete_name>/continuity.md`, replacing the old one.
-3. Run `python coach.py prep <id>` before your next chat with that
-   athlete.
-4. Optional: `python coach.py review <id> --since <block start date>` to
+2. Ask the coach to save it with `save_continuity` for this athlete (or,
+   without the MCP server, copy it into `out/<athlete_name>/continuity.md`
+   by hand, replacing the old one).
+3. Optional: `python coach.py review <id> --since <block start date>` to
    see what actually changed.
 
 ## After a race
 
 1. During the debrief, the coach gives you a `#RACE_RESULT` block.
-2. Add it to the **end** of `out/<athlete_name>/race_notes.md` — never
-   delete what's already there.
+2. Ask the coach to save it with `save_race_result` for this athlete — it
+   appends to the end of `race_notes.md` itself and refuses a conflicting
+   duplicate `Date:` field. Without the MCP server, add it to the **end**
+   of `out/<athlete_name>/race_notes.md` by hand instead — never delete
+   what's already there.
 3. `review` picks it up automatically the next time you use it.
 
 ---
 
-## Validating a block before upload
+## Validating and uploading a block
 
-1. From the coach's message, copy only the training block — from the
-   first `[Week]` line through the `[Nutrition]:` line of the last
-   session. **Never** copy the one-line instruction to run the
-   validator, or the `───`-bordered `#SESSION ... #END` header that
-   follows — that header goes in `continuity.md` instead (see above),
-   not in the block file.
-2. Paste it into Notepad, save it anywhere under
-   `out/<athlete_name>/blocks/` (`.txt` or `.md`, doesn't matter).
-3. `python coach.py check path\to\file`
-4. Seeing `pending` in the coach's chat message is always normal — the
-   coach never fills that in, only `check` does, directly in your file.
-   If a block that already passed shows `pending` again, you likely
-   pasted a fresh, unprocessed copy over it — just run `check` again.
-5. Don't upload anything until the result says `PASS`. Full detail in
-   Manual §6.
+**With the MCP server:**
+1. Ask the coach to save the block with `save_block` for this athlete.
+   (`save_block` only writes — it doesn't check anything yet.)
+2. Ask it to run `validate_block` on what it just saved.
+3. Seeing `pending` for TSS/Duration is still normal until `validate_block`
+   actually runs — same as before, the coach's own text never carries the
+   computed number.
+4. If it reports `BLOCKED`, take the specific failure back to the coach as
+   a correction, save again, and validate again — same loop as always,
+   just without Notepad in between.
+5. Once it says upload-safe, ask the coach to `push_block`. It will
+   **refuse on its own** if the block is still `BLOCKED` — you'd have to
+   explicitly ask for an override to bypass that, which you should never
+   need in normal use.
+
+**Without the MCP server** (fallback): copy only the training block from
+the coach's message — from the first `[Week]` line through the
+`[Nutrition]:` line of the last session, never the one-line validator
+instruction or the `───`-bordered `#SESSION ... #END` header (that goes
+in `continuity.md`, not here). Paste into Notepad, save under
+`out/<athlete_name>/blocks/`, then `python coach.py check path\to\file`
+and paste the passed sessions into Intervals.icu's Workout Builder by
+hand. Full detail in Manual §6.
 
 ---
 
 ## Golden rules
 
-- A fix isn't real until it exists on **both** machines and is pushed to
-  GitHub — see Manual §0.
+- A **code** fix isn't real until it exists on **both** machines and is
+  pushed to GitHub — see Manual §0. This still applies fully; the MCP
+  server doesn't change how code changes get synced.
+- The MCP server only runs on the machine it's configured on. If you
+  work from both machines, `out/<athlete>/continuity.md` and the git
+  sync discipline in Manual §11 still matter — the MCP server writes to
+  the local repo copy on whichever machine you're using, same as the old
+  manual files did.
 - Run `python tests/run_tests.py` any time you edit anything inside
   `config/` or `engine/`.
-- If the coach says `#STATE` is more than 7 days old, run `prep` again
-  before continuing — it will refuse to guess with stale data.
+- `get_athlete_state` always pulls fresh data itself — there's no "stale
+  #STATE" warning to watch for anymore when using the MCP server. The old
+  7-day-staleness warning only applies to the manual/CLI fallback path.
 - Never type inside `continuity.md` by hand. The only thing that ever
-  goes in there is a fresh `#SESSION` block, pasted in whole.
+  goes in there is a fresh `#SESSION` block — whether written by
+  `save_continuity` or pasted in whole.
 - If you ever make the repo public for a review, set it back to private
   the same day: GitHub → Settings → Danger Zone → Change visibility.
 
@@ -149,6 +184,10 @@ Do this once per chat — not again partway through the same conversation.
 | `cannot validate — Unknown methodology 'X'` (running `check`) | The `[Methodology]` field doesn't match a real file in `config/authors/` | Take it back to the coach as a correction — see Manual §6 |
 | `FAIL [HC-DUAL] ... missing quoted cue` (running `check`) | A line is missing its quoted coaching phrase — some methodologies require one on every line | Take it back to the coach as a correction — see Manual §6 |
 | A passed block shows `pending` again after re-running `check` | You pasted an unprocessed copy over an already-validated file | Not a bug — run `check` again on the file as it is now |
+| `infame-coach` shows "Failed" in Claude Desktop → Settings → Developer | Server didn't start | Click **View logs** and check the error against Manual §4a's troubleshooting table |
+| A tool call hangs for several minutes then times out | Known stdio issue, already fixed in the current server code | Make sure you're on the latest `git pull` and restarted Desktop after |
+| `push_block` refuses with "validate_block reports this file is BLOCKED" | Working as intended — it won't upload a block that failed validation | Fix the flagged issue and validate again; only pass `override_validation=True` if you're deliberately bypassing it |
+| Errors mentioning device name or "remote-devices" | You're in a Cowork/Code session, not plain Chat | Retry from a plain Chat conversation in the Project |
 
 ---
 
