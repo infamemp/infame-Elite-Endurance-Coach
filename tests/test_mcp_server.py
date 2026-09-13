@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from datetime import date
@@ -326,6 +327,80 @@ def test_tools_validate():
             filled = f.read()
         check("tools_validate: fill_tss=True actually wrote a computed TSS to disk",
               "pending" not in filled.lower() or "Estimated TSS" not in filled)
+
+        _test_windows_style_narrow_codec(validate_block, good)
+
+
+# On Windows, a Python child process whose stdout is a pipe (not a real
+# console) defaults to the legacy ANSI codepage (cp1252) unless told
+# otherwise — and validate_block.py prints Unicode box-drawing characters
+# ("── Session 1: ...") on every normal run, which cp1252 cannot encode.
+# The child crashed with an uncaught UnicodeEncodeError before it could
+# report anything, and tools_validate.py reported the resulting nonzero
+# exit as `passed: False` — indistinguishable from a real hard-constraint
+# failure. Fixed by forcing PYTHONIOENCODING=utf-8 (and PYTHONUTF8=1) in
+# the child's own environment in tools_validate.py, rather than relying on
+# the platform default.
+#
+# This sandbox is Linux, where a bare subprocess.run() typically doesn't
+# reproduce this — which is exactly why the original test suite (developed
+# and run here) didn't catch it. A forced "C" locale with Python's own
+# locale coercion disabled reproduces the same class of bug portably: it
+# collapses the child's stdout to a narrow, ASCII-only codec, the same
+# functional condition cp1252 puts a Windows child in (a real, printed
+# Unicode character the encoding can't represent), so this is a genuine
+# regression test for the mechanism, not a Windows-only assertion that
+# can't be checked here.
+_HOSTILE_LOCALE_ENV = {
+    "LC_ALL": "C", "LANG": "C", "PYTHONCOERCECLOCALE": "0", "PYTHONUTF8": "0",
+}
+
+
+def _test_windows_style_narrow_codec(validate_block, good_block_path):
+    # Control: prove the vulnerability is real and this mechanism actually
+    # stresses it — calling validate_block.py directly, exactly as
+    # tools_validate.py used to (no PYTHONIOENCODING override), under the
+    # hostile locale, must crash with an uncaught UnicodeEncodeError.
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = os.path.join(tmp, "control.md")
+        shutil.copy2(good_block_path, copy)
+        script = os.path.join(ROOT, "verify", "validate_block.py")
+        hostile_env = dict(os.environ, **_HOSTILE_LOCALE_ENV)
+        hostile_env.pop("PYTHONIOENCODING", None)
+        proc = subprocess.run(
+            [sys.executable, script, copy, "--quiet"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=ROOT, env=hostile_env,
+        )
+        check("windows-encoding control: validate_block.py itself crashes under a "
+              "hostile locale with no PYTHONIOENCODING override (proves the "
+              "test mechanism reproduces the real bug class)",
+              proc.returncode != 0 and "UnicodeEncodeError" in proc.stderr,
+              f"exit={proc.returncode}, stderr={proc.stderr[-300:]}")
+
+    # The fix: run the same block through the real validate_block tool,
+    # with the hostile locale inherited from THIS process's own
+    # environment (simulating a coach's machine where Desktop launches the
+    # server under exactly this kind of narrow default) — tools_validate.py
+    # must still force UTF-8 on the child regardless, so the block passes
+    # cleanly with no UnicodeEncodeError anywhere in the report.
+    original_env = dict(os.environ)
+    try:
+        os.environ.update(_HOSTILE_LOCALE_ENV)
+        os.environ.pop("PYTHONIOENCODING", None)
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = os.path.join(tmp, "fixed.md")
+            shutil.copy2(good_block_path, copy)
+            r = validate_block(file_path=copy)
+    finally:
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    equal("windows-encoding fix: validate_block tool still passes under a "
+          "hostile inherited locale", r.get("passed"), True)
+    check("windows-encoding fix: no UnicodeEncodeError anywhere in the report",
+          "UnicodeEncodeError" not in (r.get("report") or ""),
+          r.get("report", "")[-300:])
 
 
 # ══════════════════════════════════════════════════════════════════

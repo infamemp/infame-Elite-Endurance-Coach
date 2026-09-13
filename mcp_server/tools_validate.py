@@ -80,9 +80,27 @@ def validate_block(
     if quiet:
         cmd.append("--quiet")
 
+    # encoding="utf-8" below only controls how THIS process decodes the
+    # pipe's bytes — it says nothing about what encoding the CHILD process
+    # uses to encode its own stdout in the first place. On Windows, a
+    # Python process whose stdout is a pipe (not a real console) defaults
+    # to the legacy ANSI codepage (cp1252) unless told otherwise, and
+    # validate_block.py prints Unicode box-drawing/em-dash characters in
+    # its session headers that cp1252 cannot encode — the child crashes
+    # with UnicodeEncodeError before it can report anything, which then
+    # surfaces here as a plain exit code 1, indistinguishable from a real
+    # hard-constraint failure. PYTHONIOENCODING forces the child's own
+    # stdout/stderr to UTF-8 regardless of console/codepage; PYTHONUTF8
+    # additionally puts the whole child interpreter in UTF-8 mode. Confirmed
+    # reproducible on Windows: validate_block.py run directly in a console
+    # (which does handle Unicode) passes cleanly; the identical file run
+    # through this subprocess call failed every time before this fix.
+    # tests/run_tests.py's own subprocess calls into this same script
+    # already carry this exact guard, for the exact same reason.
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     result = subprocess.run(
         cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-        cwd=ROOT,
+        cwd=ROOT, env=env,
     )
     report = (result.stdout or "") + (result.stderr or "")
     return {
