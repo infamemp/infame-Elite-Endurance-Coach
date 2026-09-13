@@ -479,7 +479,7 @@ def taper_check(projection, goals, thresholds):
 
     a_goals.sort(key=lambda x: x[0])
     race_date, goal = a_goals[0]
-    race_name = goal.get("description") or "Unnamed A-priority goal"
+    race_name = (goal.get("description") or "Unnamed A-priority goal").strip()
 
     days_out = (race_date - today).days
     phase = ("taper" if days_out <= tp["a_race_taper_days"]

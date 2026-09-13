@@ -578,6 +578,19 @@ def unit_tests():
     equal("pmc projection: the other 8 days (10 - 2 explicit) are assumed",
           proj["days_with_assumed_load"], 8)
 
+    # ── taper_check: description whitespace ────────────────────────
+    # A YAML `>` folded block scalar keeps a trailing newline by default;
+    # left unstripped, it lands inside the rendered "**{race}**" line and
+    # breaks it mid-markdown. Any athlete's goals[].description written
+    # that way must still render clean.
+    thresholds = bs.load_thresholds()
+    messy_goal = [{"description": "Barbie 10k — llegar en su mejor forma.\n",
+                   "date": (today + timedelta(days=10)).isoformat(),
+                   "priority": "A", "event_type": "road_race"}]
+    messy_taper = bs.taper_check(None, messy_goal, thresholds)
+    equal("taper_check strips a trailing newline from goals[].description",
+          messy_taper["race"], "Barbie 10k — llegar en su mejor forma.")
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture

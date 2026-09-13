@@ -3,7 +3,7 @@
 id: _test_taper_active
 goals:
   - description: Test Marathon
-    date: 2026-09-12
+    date: 2026-09-13
     priority: A
     experience: past
     event_type: marathon
