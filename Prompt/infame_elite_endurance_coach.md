@@ -389,7 +389,7 @@ Current Block:        <block name>
 Block Weeks:          <X of Y>
 Last Session Date:    <DD-MM-YYYY>
 Notes:                <decisions the next conversation needs>
-Recent Architectures: <one entry per session of Tempo class or above, and per steady session over 45 min: date · class · architecture in a few words · design variable used>
+Recent Architectures: <one entry per session of Tempo class or above; per Recovery or Endurance session except road_bike or mtb outdoors — where traffic, group riding and terrain make a repeated simple ride the normal case, not something worth tracking; and per steady session over 45 min: date · class · discipline · architecture in a few words · design variable used, or the stated reason it repeats>
 #END
 ```
 
