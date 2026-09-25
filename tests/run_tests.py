@@ -402,6 +402,7 @@ def unit_tests():
     equal("cp test: 30 minutes between components",
           cp["components"]["recovery_between_minutes"], 30)
 
+
     # ── Taper is evidence-based ───────────────────────────────────
     tp = th["taper"]
     equal("taper: 2 weeks per Bosquet 2007", tp["optimal_duration_days"], 14)
@@ -630,6 +631,113 @@ def build_for_fixture(name):
     return strip_volatile(result)
 
 
+
+def architecture_tests():
+    """engine/architecture.py: classify a session's Main Set from its own
+    written text alone. Every case here is either a hand-built example of
+    one named shape, or a real session pulled from a live account during
+    development (kept verbatim as a regression case, not just a synthetic
+    one) -- see engine/architecture.py's own module docstring for the
+    documented, deliberate gaps these cases do not cover."""
+    import architecture
+    from validate_block import load_thresholds_only
+    th = load_thresholds_only()
+
+    def classify(text, event_type="Ride"):
+        return architecture.classify_session(text, event_type=event_type,
+                                              thresholds=th)
+
+    r = classify("Main Set 5x\n- 4m 100-105%\n- 4m 50-55%")
+    equal("architecture: identical on/off reps -> classic_intervals",
+          r["architecture"], "classic_intervals")
+    check("architecture: no combo on a single shape", not r["combo"])
+
+    r = classify("Main Set\n- 25m 94-96%")
+    equal("architecture: one continuous block -> sustained_effort",
+          r["architecture"], "sustained_effort")
+
+    r = classify("Main Set 4x\n- 3m 96-98%\n- 2m 109-111%")
+    equal("architecture: alternating sub/supra-threshold -> over_unders",
+          r["architecture"], "over_unders")
+
+    r = classify("Main Set 4x\n- 3m 84-86%\n- 3m 96-98%")
+    equal("architecture: alternating, both sub-threshold, folds into over_unders",
+          r["architecture"], "over_unders")
+
+    r = classify("Main Set 3x\n- 4m 88-90%\n- 15s 130-140%")
+    equal("architecture: short burst on a long base -> surges_on_base",
+          r["architecture"], "surges_on_base")
+
+    r = classify("Main Set 6x\n- 10s 180-190%\n- 50s 45-55%")
+    equal("architecture: short/max/long-recovery -> sprints",
+          r["architecture"], "sprints")
+
+    r = classify("Main Set\n- 20m ramp 70-100%")
+    equal("architecture: a rising ramp as the work itself -> single_ramp",
+          r["architecture"], "single_ramp")
+
+    r = classify("Main Set 4x\n- 10s 180-190%\n- 50s 45-55%\n\n"
+                  "- 5m 55-65%\n\nMain Set 4x\n- 4m 100-105%\n- 3m 55-65%")
+    equal("architecture: two distinct shapes -> the bigger one is primary",
+          r["architecture"], "classic_intervals")
+    check("architecture: two distinct shapes flag as a combo", r["combo"])
+    equal("architecture: combo sequence keeps only real-load shapes, in order",
+          r["sequence"], ["sprints", "classic_intervals"])
+    check("architecture: a zero-load filler step between shapes is not its own entry",
+          "endurance_cadence" not in r["sequence"])
+
+    r = classify("- 20m 55-70%")
+    equal("architecture: nothing reaches work intensity -> endurance_cadence",
+          r["architecture"], "endurance_cadence")
+
+    r = classify("# Descanso\n")
+    check("architecture: a rest-day note has nothing classifiable",
+          not r["ok"] and r["architecture"] is None)
+
+    r = classify("")
+    check("architecture: an empty description has nothing classifiable",
+          not r["ok"])
+
+    r = classify("- 3km 75-85% Pace")
+    check("architecture: a distance-only step is excluded, not zero-length",
+          not r["ok"])
+
+    # No explicit "Main Set" header at all -- real historical text written
+    # before that hard constraint existed. Confirms the position-based
+    # fallback, not just the declared-section path above.
+    real_sst_ramp = (
+        "Warmup\n- 10m ramp 75-75%\n- 1m 45-55%\n\n"
+        "2x\n- 5m ramp 76-86%\n- 2m ramp 45-55%\n\n"
+        "5x\n- 3m 76-86%\n- 3m 45-55%\n\n- 5m 45-55%\n\n"
+        "Cooldown\n- 5m ramp 65-50%\n")
+    r = classify(real_sst_ramp)
+    check("architecture: no declared Main Set falls back to finding it by position",
+          r["ok"] and r["architecture"] is not None)
+    equal("architecture: real SST-ramp session reads as a combo of two shapes",
+          r["sequence"], ["single_ramp", "classic_intervals"])
+
+    # A real, genuinely compound session (cadence-alternating work, several
+    # intensity changes inside one repeat) -- the biggest unit matches none
+    # of the 14 shapes. Confirms this reads as ok / architecture None with a
+    # reason, never as a wrong shape standing in for it.
+    real_compound = (
+        "Warmup\n- 8m ramp 44-75%\n\n- 30s 104-113.9%\n- 3m 45-55%\n"
+        "- 30s 104-113.9%\n\n2x\n- 5m 45-55%\n- 1m 80-90% 85rpm\n"
+        "- 1m 80-90% 65rpm\n- 1m 80-90%\n- 1m 80-90% 65rpm\n- 1m 80-90%\n"
+        "- 1m 80-90% 65rpm\n- 1m 80-90%\n- 1m 80-90% 65rpm\n- 1m30s 45-55%\n"
+        "- 5m 90-100%\n- 1m30s 45-55%\n- 3m 95-105%\n\n- 10m 45-55%\n")
+    r = classify(real_compound)
+    check("architecture: a real compound session is ok with no forced match",
+          r["ok"] and r["architecture"] is None and r["reason"])
+
+    r = classify("Main Set\n- 120m 55-75% Pace", event_type="Run")
+    equal("architecture: %Pace classifies the same way as %power",
+          r["architecture"], "endurance_cadence")
+
+    r = classify("Main Set 5x\n- 4m 100-105%\n- 4m 50-55%")
+    equal("class: a threshold interval reads as threshold from generic cutpoints",
+          r["class"], "threshold")
+
 def golden_tests(update=False):
     if not os.path.isdir(FIXTURES):
         FAILED.append(("golden: fixtures missing",
@@ -790,6 +898,10 @@ def main():
             unit_tests()
         except Exception as e:
             FAILED.append(("unit tests", f"raised {type(e).__name__}: {e}"))
+        try:
+            architecture_tests()
+        except Exception as e:
+            FAILED.append(("architecture tests", f"raised {type(e).__name__}: {e}"))
 
     if run_all or args.blocks:
         print("Block validation...")
