@@ -1,0 +1,37 @@
+# Combination patterns observed across the 246 combined main sets in the
+# corpus. These are not architectures themselves — they are ways the 14
+# architectures in this folder get chained. Order matters: the same two
+# architectures read as pre_fatigue-then-key-work or key-work-then-finisher
+# depending on which comes first.
+
+patterns:
+  - name: pre_fatigue_into_key_work
+    shape: "[short, easier architecture] -> [main architecture at full freshness-adjusted target]"
+    example: "sprints (pre_fatigue) -> sustained_effort"
+    purpose: >
+      Blunts freshness before the architecture that actually matters for the
+      session's training goal, so the key work is done partially fatigued —
+      closer to how it will be executed late in a race.
+
+  - name: key_work_into_finisher
+    shape: "[main architecture] -> [short, different architecture]"
+    example: "classic_intervals -> sprints"
+    purpose: >
+      Adds a second, usually shorter and differently-shaped stimulus once the
+      key work is already done, without diluting the key work itself.
+
+  - name: two_distinct_sets
+    shape: "[architecture A, full set] -> full recovery block -> [architecture B, full set]"
+    example: "surges_on_base -> classic_intervals"
+    purpose: >
+      Two separate training goals in one session (common in longer/harder
+      days). Each set should still be legible as its own architecture; if A
+      and B share the same rep_shape and set_shape, this is not a
+      combination — it is one longer set of a single architecture.
+
+notes: >
+  A combination is described as an ordered list of architecture names plus
+  their role (pre_fatigue / standalone / finisher — see each architecture's
+  `combinable` field for which roles it can take). The picker should treat a
+  combination as optional, reached for deliberately, not as the default way
+  to fill a main set.

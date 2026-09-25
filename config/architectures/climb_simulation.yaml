@@ -1,0 +1,29 @@
+name: climb_simulation
+display_name: Climb simulation
+frequency_in_corpus: 2
+
+intent: >
+  A short ramp up into a harder finish, repeated across several "climbs" of
+  varying length/cadence, each separated by a descent-style recovery.
+  Distinct from a plain ramp because the ramp is always followed by a short,
+  harder punch at the top — it simulates cresting a climb, not just a
+  progressive effort.
+
+rep_shape: climb_simulation
+set_shape: identical
+
+applicable_classes: [threshold, vo2max, anaerobic]
+disciplines: [trainer, road_bike, mtb]
+
+progression_levers: [reps, bout_duration, intensity]
+
+notes: >
+  Low frequency in this corpus likely reflects that most "climb" workouts on
+  these platforms are tagged and structured as over_unders or
+  stepped_build instead — worth revisiting once running/trail sources are
+  added, where a climb architecture is more central.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "N x (ramp up / short hard punch at the top / easy descent), repeated"

@@ -1,0 +1,30 @@
+name: classic_intervals
+display_name: Classic intervals
+frequency_in_corpus: 690
+
+intent: >
+  The default interval structure: N identical work bouts separated by full
+  (near-recovery) rest. Isolates one physiological stimulus cleanly and lets
+  the athlete hit the same target repeatedly. The baseline architecture that
+  every other one in this library is a deliberate departure from — this is
+  what the coach falls back to when nothing else has been chosen, which is
+  exactly why the picker should not default to it silently.
+
+rep_shape: steady
+set_shape: identical
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max, anaerobic, neuromuscular]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [reps, bout_duration, recovery_duration, intensity]
+
+notes: >
+  Recovery is full active recovery, not float — that is what separates this
+  from "surges_on_base" or "over_unders". If recovery is shortened toward the
+  work intensity, the architecture has changed, not just its dose.
+
+combinable: [standalone, pre_fatigue, finisher]
+
+example_shapes:
+  - "N x (work bout / recovery ≈ work duration or longer), N typically 3-8"
+  - "2 sets of N x (...) with a longer easy block between sets"

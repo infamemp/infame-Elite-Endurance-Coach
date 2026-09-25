@@ -1,0 +1,29 @@
+name: endurance_cadence
+display_name: Endurance / cadence work
+frequency_in_corpus: 140
+
+intent: >
+  Nothing in the main set reaches tempo. The stimulus is aerobic volume,
+  cadence contrast, or technique (high/low rpm blocks, spin-ups, leg speed),
+  not intensity. Useful as the low-intensity counterpart in a week, and as a
+  legitimate "easy" architecture that is not simply the absence of a plan.
+
+rep_shape: steady
+set_shape: [single, identical]
+
+applicable_classes: [recovery, endurance]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [bout_duration, reps]
+
+notes: >
+  On road_bike/mtb outdoor this already falls under the existing monotony
+  exemption for Recovery/Endurance — no variety requirement applies there by
+  default. On the trainer, cadence contrast (alternating rpm at constant
+  power) is the one lever that adds variety without touching intensity.
+
+combinable: [standalone, pre_fatigue]
+
+example_shapes:
+  - "One long block below tempo"
+  - "N x (higher-cadence block / normal-cadence block), same low power"

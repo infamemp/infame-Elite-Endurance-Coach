@@ -1,0 +1,29 @@
+name: over_unders
+display_name: Over-unders
+frequency_in_corpus: 13
+
+intent: >
+  Alternating just above and just below threshold with no full recovery
+  between the two — the "under" is still working, just easier. Trains
+  clearing lactate while still producing meaningful power, directly relevant
+  to racing where pace surges above threshold before settling only partway
+  down.
+
+rep_shape: over_under
+set_shape: identical
+
+applicable_classes: [threshold, vo2max]
+disciplines: [trainer, road_bike, road_run, treadmill]
+
+progression_levers: [reps, bout_duration, intensity]
+
+notes: >
+  The "under" segment must stay clearly below the "over" segment but still
+  above tempo — if it drops to a full recovery power, this has become
+  classic_intervals; if it rises to match the "over", it has become
+  sustained_effort.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "N x (over segment / under segment, no recovery between them), repeated with full recovery between sets"

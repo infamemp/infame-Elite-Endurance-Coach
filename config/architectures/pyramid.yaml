@@ -1,0 +1,29 @@
+name: pyramid
+display_name: Pyramid
+frequency_in_corpus: 1
+
+intent: >
+  A set of reps whose duration (or intensity) rises to a peak rep and then
+  falls back down symmetrically, rather than climbing steadily (ladder_up) or
+  descending steadily (ladder_down). Mentally distinct from a plain ladder
+  because the athlete knows they're past the hardest point once the descent
+  begins.
+
+rep_shape: steady
+set_shape: pyramid
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+disciplines: [trainer, road_bike, road_run, treadmill]
+
+progression_levers: [bout_duration, intensity, reps]
+
+notes: >
+  Only one clean example survived deduplication in this corpus; most
+  apparent "pyramids" turned out to be ladders miscounted before the set-shape
+  fix, or genuinely irregular sets better filed under a combination of other
+  architectures. Keep this one narrow: true up-then-down symmetry only.
+
+combinable: [standalone]
+
+example_shapes:
+  - "Reps stepping up in duration to a peak, then back down, same intensity, full recovery between reps"

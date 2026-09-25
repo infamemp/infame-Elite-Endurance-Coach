@@ -1,0 +1,27 @@
+name: progressive_intervals
+display_name: Progressive intervals
+frequency_in_corpus: 6
+
+intent: >
+  Identical-duration reps, but each rep is harder than the last (as opposed
+  to stepped_build, where the rise happens inside one rep). Trains pacing a
+  set that gets harder as fatigue accumulates, and is a natural test of
+  whether an athlete can hold form under rising demand across a session.
+
+rep_shape: steady
+set_shape: progressive
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+disciplines: [trainer, road_bike, road_run, treadmill]
+
+progression_levers: [reps, bout_duration, intensity]
+
+notes: >
+  The regressive mirror (each rep easier than the last) is the same
+  architecture with the direction reversed — represent it as `set_shape:
+  regressive` on the same rep_shape rather than as a separate file.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "N x (work bout / full recovery), each work bout's target higher than the previous one"
