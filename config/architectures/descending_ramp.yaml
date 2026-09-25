@@ -1,0 +1,28 @@
+name: descending_ramp
+display_name: Descending ramp effort
+frequency_in_corpus: 7
+
+intent: >
+  A single bout whose target falls steadily through the effort — the mirror
+  of single_ramp. Rare in the corpus; mostly appears as a deliberately
+  front-loaded effort (start at the hardest point while fresh, ease off as
+  fatigue accumulates) rather than as a repeated architecture.
+
+rep_shape: ramp
+set_shape: single
+
+applicable_classes: [threshold, vo2max]
+disciplines: [trainer, treadmill]
+
+progression_levers: [bout_duration, intensity]
+
+notes: >
+  Low frequency in the corpus is informative, not disqualifying — this is a
+  legitimate, distinct shape, just an uncommon prescription. Don't merge it
+  into single_ramp; the direction of the ramp changes what's trained (arriving
+  fresh vs. finishing fresh).
+
+combinable: [standalone]
+
+example_shapes:
+  - "One block, target falling steadily from hard to moderate over its full duration"

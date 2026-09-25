@@ -1,0 +1,31 @@
+name: surges_on_base
+display_name: Surges on a base
+frequency_in_corpus: 83
+
+intent: >
+  A sustained sub-maximal base (tempo/sweet-spot/endurance) with short, much
+  harder bursts layered inside it. Trains the ability to produce a hard
+  effort without a preceding recovery — arriving at the burst already
+  working — which is the closest simulation of race-day accelerations out of
+  a paceline or on a climb.
+
+rep_shape: surge_on_base
+set_shape: [identical, single]
+
+applicable_classes: [anaerobic, vo2max, neuromuscular]   # class = the burst; the base stays tempo/sub_threshold
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run]
+
+progression_levers: [reps, bout_duration, intensity]
+
+notes: >
+  Two numbers move somewhat independently: the base intensity (usually fixed
+  around tempo/sweet-spot for the session) and the burst intensity/duration
+  (the actual progression lever). Don't let the base drift — if the base
+  itself becomes the thing progressing, this has turned into
+  classic_intervals with a longer "recovery" that isn't really recovery.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "Base effort held continuously, with N short bursts (5-30s) inserted at intervals, no return to easy between them"
+  - "N x (base segment / burst), base and burst both continuous — no easy recovery step"

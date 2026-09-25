@@ -1,0 +1,29 @@
+name: cadence_contrast
+display_name: Cadence contrast
+frequency_in_corpus: 1
+
+intent: >
+  Same power target, alternating cadence (e.g. 60rpm / 95rpm blocks). The
+  stimulus is neuromuscular/technical, not metabolic — intensity barely
+  moves, only the pedaling demand does. A genuine, if rare, architecture for
+  low-cadence strength work or spin efficiency, distinct from cadence cues
+  layered onto another architecture (which many workouts in the corpus also
+  do, without this being their primary shape).
+
+rep_shape: cadence_contrast
+set_shape: identical
+
+applicable_classes: [endurance, tempo, sub_threshold]
+disciplines: [trainer]
+
+progression_levers: [reps, bout_duration]
+
+notes: >
+  Cycling-specific; has no running equivalent. Intensity is deliberately not
+  a lever here — moving it turns this into a different architecture with a
+  cadence label attached, not a harder version of this one.
+
+combinable: [standalone, pre_fatigue]
+
+example_shapes:
+  - "N x (low-cadence block / high-cadence block), same power target throughout"

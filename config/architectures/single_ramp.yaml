@@ -1,0 +1,28 @@
+name: single_ramp
+display_name: Single ramp effort
+frequency_in_corpus: 115
+
+intent: >
+  The work bout itself is a ramp rather than a steady target — power rises
+  (or falls) continuously through the effort instead of holding one number.
+  Removes the option to settle into a pace; the athlete is always chasing a
+  slightly harder (or recovering from a slightly easier) target.
+
+rep_shape: ramp
+set_shape: single
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max, anaerobic]
+disciplines: [trainer, road_run, treadmill]
+
+progression_levers: [bout_duration, intensity]
+
+notes: >
+  Outdoor cycling and unstructured running can't reliably execute a
+  continuous ramp target the way ERG mode or a treadmill program can; keep
+  this one mainly to trainer/treadmill/structured-pace contexts.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "One block, power/pace rising steadily from moderate to hard over its full duration"
+  - "Rise then hold the final target for a short tail"

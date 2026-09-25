@@ -1,0 +1,28 @@
+name: sustained_effort
+display_name: Sustained single effort
+frequency_in_corpus: 306
+
+intent: >
+  One continuous block at a single target, no internal structure. Builds the
+  ability to hold a pace/power without the mental and physiological relief of
+  a recovery. The architecture behind classic tempo/sweet-spot/threshold rides
+  and long steady-state efforts.
+
+rep_shape: steady
+set_shape: single
+
+applicable_classes: [endurance, tempo, sub_threshold, threshold, vo2max]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [bout_duration, intensity]
+
+notes: >
+  Duration is the only real lever besides intensity. A common progression is
+  simply the same effort held longer block to block (see the "5min FTP" /
+  "TT Speed" style series in the corpus, which grow the single effort from
+  ~10min to ~25min with intensity essentially unchanged).
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "One block, 8-60 min, single target"

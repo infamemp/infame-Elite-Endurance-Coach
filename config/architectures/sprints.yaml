@@ -1,0 +1,28 @@
+name: sprints
+display_name: Sprints
+frequency_in_corpus: 69
+
+intent: >
+  Very short (<=30s), very hard (>150% FTP equivalent / max effort) bouts
+  with long full recovery. Neuromuscular power and technique, not aerobic
+  load — the TSS contribution is almost incidental to the point of the
+  session.
+
+rep_shape: sprint
+set_shape: identical
+
+applicable_classes: [neuromuscular]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, track_run]
+
+progression_levers: [reps, recovery_duration]
+
+notes: >
+  Intensity is not really a progression lever here — it's already maximal.
+  Recovery should stay long enough that quality doesn't degrade rep to rep;
+  shortening it changes the architecture into anaerobic capacity work, not a
+  harder version of the same sprint set.
+
+combinable: [pre_fatigue, finisher, standalone]
+
+example_shapes:
+  - "N x (max sprint <=15-30s / full recovery 2-5min)"

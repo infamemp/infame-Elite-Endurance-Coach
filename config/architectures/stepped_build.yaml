@@ -1,0 +1,29 @@
+name: stepped_build
+display_name: Stepped build within each rep
+frequency_in_corpus: 26
+
+intent: >
+  Each rep climbs through several steps of rising intensity with no
+  recovery between the steps (e.g. tempo -> sweet-spot -> threshold -> VO2max
+  inside one continuous bout), then a full recovery, then the whole climb
+  repeats. Builds tolerance to accumulating intensity within a single effort
+  rather than isolating one zone.
+
+rep_shape: stepped_build
+set_shape: identical
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+disciplines: [trainer, road_run, treadmill]
+
+progression_levers: [reps, bout_duration, intensity]
+
+notes: >
+  The number of steps and the intensity spread between the first and last
+  step are what actually varies across the corpus's versions of this
+  architecture; treat "add one more step" as a distinct lever from "raise
+  the top step."
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "One continuous bout: 3-5 steps, each harder than the last, no recovery between steps, then full recovery, then repeat 2-4x"
