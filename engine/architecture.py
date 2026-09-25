@@ -388,3 +388,57 @@ def classify_session(description, event_type=None, thresholds=None):
                                     "architecture (complex or free-form)")
     return _result(True, reason, architecture=primary, cls=cls,
                     combo=len(sequence) > 1, sequence=sequence)
+
+
+# ══════════════════════════════════════════════════════════════════
+# STATE.MD SECTION -- one analyze()/render() pair, same shape as
+# longitudinal.py and power_profile.py, so build_state.py wires this in
+# the same two-line way it already wires those.
+# ══════════════════════════════════════════════════════════════════
+
+def summarize_recent(recent_sessions, thresholds):
+    """Classify every one of the last ~8 weeks' events (fetch_athlete_data.
+    fetch_recent_sessions()) into an architecture family. Never raises on a
+    single bad session -- one unparseable entry is skipped, not fatal to the
+    whole state build, exactly like every other signal in this module."""
+    rows = []
+    for s in recent_sessions or []:
+        desc = (s.get("description") or "").strip()
+        if not desc:
+            continue  # rest day, or an event with nothing written on it
+        try:
+            r = classify_session(desc, event_type=s.get("type"), thresholds=thresholds)
+        except Exception:
+            continue
+        if not r["ok"]:
+            continue
+        rows.append({"date": s.get("date"), "type": s.get("type"),
+                     "architecture": r["architecture"], "class": r["class"],
+                     "combo": r["combo"], "sequence": r["sequence"]})
+    rows.sort(key=lambda x: x["date"] or "")
+    return {"rows": rows}
+
+
+def render(summary):
+    rows = (summary or {}).get("rows") or []
+    lines = ["## RECENT ARCHITECTURES (last 8 weeks, computed)", ""]
+    if not rows:
+        lines.append("No classifiable session found in the last 8 weeks.")
+        return "\n".join(lines)
+    lines += [
+        "Read automatically from each session's own text already saved on "
+        "Intervals.icu -- not a substitute for `Recent Architectures` in "
+        "`continuity.md` when that is present and current; a backstop for "
+        "when it is not, and a cross-check either way. Class is "
+        "approximate (generic cutpoints, not the athlete's active author) "
+        "-- for grouping only, never a number to prescribe from. A blank "
+        "row is a session whose text did not parse into a named shape or "
+        "had nothing to classify (a rest day, a bare imported ride).",
+        "",
+        "| Date | Type | Architecture | Approx. class |",
+        "|:---|:---|:---|:---|",
+    ]
+    for r in rows:
+        arch = " + ".join(r["sequence"]) if r["combo"] else (r["architecture"] or "_complex/free-form_")
+        lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {r['class'] or '-'} |")
+    return "\n".join(lines)

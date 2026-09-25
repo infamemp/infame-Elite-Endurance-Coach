@@ -39,6 +39,7 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import longitudinal  # noqa: E402
 import power_profile  # noqa: E402
+import architecture  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -635,6 +636,9 @@ def build(aid, thresholds, quiet=False):
         if pts:
             pp = power_profile.analyze(pts, data.get("profile") or {}, ppcfg)
 
+    recent_arch = architecture.summarize_recent(data.get("recent_sessions") or [],
+                                                 thresholds)
+
     payload = {
         "schema_version": 1,
         "athlete_id": aid,
@@ -645,6 +649,7 @@ def build(aid, thresholds, quiet=False):
         "taper": taper,
         "longitudinal": longit,
         "power_profile": pp,
+        "recent_architectures": recent_arch,
     }
 
     dest = os.path.join(DATA, str(aid))
@@ -653,6 +658,7 @@ def build(aid, thresholds, quiet=False):
     md = md.rstrip() + "\n\n" + longitudinal.render(longit)
     if pp:
         md = md.rstrip() + "\n\n" + power_profile.render(pp)
+    md = md.rstrip() + "\n\n" + architecture.render(recent_arch)
     with open(os.path.join(dest, "state.md"), "w", encoding="utf-8") as f:
         f.write(md)
     with open(os.path.join(dest, "state.json"), "w", encoding="utf-8") as f:
