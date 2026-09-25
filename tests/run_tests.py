@@ -738,6 +738,24 @@ def architecture_tests():
     equal("class: a threshold interval reads as threshold from generic cutpoints",
           r["class"], "threshold")
 
+    # ── Frequency tally (the idea-bank input) ───────────────────────
+    rows = [
+        {"architecture": "sustained_effort", "sequence": ["sustained_effort"]},
+        {"architecture": "sustained_effort", "sequence": ["sustained_effort"]},
+        {"architecture": "classic_intervals", "sequence": ["sprints", "classic_intervals"]},
+    ]
+    counts, unused = architecture.frequency(rows)
+    equal("frequency: counts each occurrence", counts["sustained_effort"], 2)
+    equal("frequency: a combo counts every shape in it, not just the primary",
+          counts["sprints"], 1)
+    check("frequency: an architecture with zero uses is still in the tally",
+          counts["over_unders"] == 0)
+    check("frequency: unused lists every architecture that never appeared",
+          "over_unders" in unused and "sustained_effort" not in unused
+          and "sprints" not in unused)
+    equal("frequency: all 14 known architectures are covered",
+          set(counts), set(architecture.ALL_ARCHITECTURES))
+
 def golden_tests(update=False):
     if not os.path.isdir(FIXTURES):
         FAILED.append(("golden: fixtures missing",
