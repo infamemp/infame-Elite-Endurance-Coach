@@ -194,6 +194,9 @@
     "horizon_days": 42,
     "method": "Banister exponential, CTL tau 42d, ATL tau 7d"
   },
+  "recent_architectures": {
+    "rows": []
+  },
   "schema_version": 1,
   "signals": {
     "acwr": {
