@@ -396,6 +396,39 @@ def classify_session(description, event_type=None, thresholds=None):
 # the same two-line way it already wires those.
 # ══════════════════════════════════════════════════════════════════
 
+# The 14 architecture slugs in config/architectures/*.yaml, kept here as
+# plain data so the frequency tally below can report a zero count for one
+# that never appeared -- this module does not read those YAML files (see
+# module docstring), so this list is kept in sync by convention, the same
+# way _DIRECT_FAMILY's slugs already are.
+ALL_ARCHITECTURES = [
+    "classic_intervals", "sustained_effort", "endurance_cadence", "single_ramp",
+    "surges_on_base", "sprints", "stepped_build", "hard_start_fading",
+    "over_unders", "descending_ramp", "progressive_intervals", "cadence_contrast",
+    "climb_simulation", "pyramid",
+]
+
+
+def frequency(rows):
+    """How many times each architecture appears in `rows` (summarize_recent's
+    output). A combo counts every shape in its sequence once each, not just
+    the primary one -- a session that combines sprints with classic_intervals
+    used both, and hiding the sprints because classic_intervals had the
+    bigger load would understate exactly the thing this exists to reveal.
+
+    Returns (counts, unused): `counts` is every architecture's tally,
+    including zero; `unused` is the ones that never appeared, in their
+    ALL_ARCHITECTURES order."""
+    counts = {a: 0 for a in ALL_ARCHITECTURES}
+    for r in rows:
+        seq = r.get("sequence") or ([r["architecture"]] if r.get("architecture") else [])
+        for a in seq:
+            if a in counts:
+                counts[a] += 1
+    unused = [a for a in ALL_ARCHITECTURES if counts[a] == 0]
+    return counts, unused
+
+
 def summarize_recent(recent_sessions, thresholds):
     """Classify every one of the last ~8 weeks' events (fetch_athlete_data.
     fetch_recent_sessions()) into an architecture family. Never raises on a
@@ -441,4 +474,21 @@ def render(summary):
     for r in rows:
         arch = " + ".join(r["sequence"]) if r["combo"] else (r["architecture"] or "_complex/free-form_")
         lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {r['class'] or '-'} |")
+
+    counts, unused = frequency(rows)
+    lines += [
+        "",
+        "**Architecture frequency in this window** (a combo counts every "
+        "shape it uses, not only the primary one). Not split by class or "
+        "discipline -- read against each architecture's own "
+        "`applicable_classes` in `config/architectures/` for whether it "
+        "fits the class actually being designed.",
+        "",
+        "| Architecture | Count |", "|:---|---:|",
+    ]
+    for a in ALL_ARCHITECTURES:
+        lines.append(f"| {a} | {counts[a]} |")
+    lines.append("")
+    lines.append("**Not used in this window:** " +
+                 (", ".join(unused) if unused else "none — all 14 appeared."))
     return "\n".join(lines)
