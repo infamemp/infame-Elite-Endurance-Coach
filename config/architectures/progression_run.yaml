@@ -1,0 +1,43 @@
+name: progression_run
+display_name: Progression run
+frequency_in_corpus: 0   # not in the original cycling corpus; added from the running catalog analysis (Sep 2026)
+
+intent: >
+  One continuous effort split into two or more discrete segments, each
+  harder than the last, with no recovery between segments -- each segment
+  held at its own roughly steady effort, not a smooth continuous rise.
+  Distinct from single_ramp (power/pace rises continuously through the
+  whole effort, never settling) and from stepped_build (several short
+  steps within one shorter, harder effort): here there are typically only
+  2-3 segments, each substantial in its own right (often 15+ minutes),
+  and the run reads as "a run that gets harder partway through," not as a
+  structured interval session. Trains finishing strong on tired legs and
+  practices even-to-negative pacing for a race.
+
+rep_shape: progression_run
+set_shape: single
+
+applicable_classes: [endurance, tempo, sub_threshold, threshold]
+disciplines: [road_run, trail_run, treadmill, track_run]
+
+progression_levers: [bout_duration, intensity, reps]
+
+notes: >
+  Identified from the running-catalog analysis, not the original cycling
+  corpus -- it is the single most cross-validated new finding in that
+  work: named explicitly as "Progression Run" by Hudson & Fitzgerald (6
+  worked formats) and, independently, as "Progressive Run" by Canova (2
+  more worked formats); the same shape also appears unlabeled in Hansons
+  ("4 and Go!", "Five and GO!", "Last 3 GO!") and in Run Less Run Faster's
+  long-run guidance ("start slightly slower... pick up mid-run, finish
+  strong"). Four independent sources, one shape.
+  `reps` as a progression lever here means the number of discrete segments
+  (2 vs. 3), not repeated bouts -- there is still only one continuous run.
+  This architecture has not yet been evaluated against a cycling corpus;
+  `disciplines` is running-only until it is.
+
+combinable: [standalone]
+
+example_shapes:
+  - "One continuous run: an easier first segment, then 1-2 more segments each harder than the last, no recovery between them"
+  - "A long run whose final third or quarter rises to a faster, sustained pace"
