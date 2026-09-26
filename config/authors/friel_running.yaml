@@ -5,8 +5,14 @@
 id: friel_running
 name: Friel Running Zones
 
-# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
-knowledge_file: Joe_Friel_cyclists_training_bible_knowledge_base.md
+# No Friel running book is in the repository. The zones come from a
+# TrainingPeaks article, so this methodology supplies zones only: the coach
+# must never attribute training principles to it (the cycling bible is NOT
+# its knowledge base — using it made the coach invent a Friel running method).
+knowledge_file: none
+knowledge_note: >-
+  Zones only, from Joe Friel's TrainingPeaks article "Joe Friel's Quick Guide
+  to Setting Zones". No Friel running book is in the Project.
 sport: running
 
 zone_identifier_style: Zone N (with sub-zone letters, e.g. "Zone 5a")

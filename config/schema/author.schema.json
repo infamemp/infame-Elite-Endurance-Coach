@@ -35,7 +35,11 @@
     },
     "knowledge_file": {
       "type": "string",
-      "description": "Path, relative to Knowledge/, of the book KB the coach reads for this methodology. Must exist on disk."
+      "description": "Path, relative to Knowledge/, of the book KB the coach reads for this methodology. Must exist on disk. The literal value `none` marks a zones-only methodology (no book in the repository) and then requires knowledge_note."
+    },
+    "knowledge_note": {
+      "type": "string",
+      "description": "Required when knowledge_file is `none`: where the zones come from and why there is no KB."
     },
     "sport_note": {
       "type": "string",

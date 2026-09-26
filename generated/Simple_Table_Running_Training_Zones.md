@@ -77,7 +77,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % Threshold Pace, % LTHR
 * **Estimated Metrics (`~`, computed through the crosswalk):** % FTP (run power)
 * **Primary Metrics:** Lactate Threshold (LT) Pace, Lactate Threshold Heart Rate (LTHR)
-* **Knowledge Base (Project file):** `Joe_Friel_cyclists_training_bible_knowledge_base.md` (`Knowledge/Joe_Friel_cyclists_training_bible_knowledge_base.md`)
+* **Knowledge Base (Project file):** none — ZONES ONLY. Zones only, from Joe Friel's TrainingPeaks article "Joe Friel's Quick Guide to Setting Zones". No Friel running book is in the Project. Never attribute progressions, session types or training philosophy to this methodology; never choose it unless the head coach asks for it.
 * **Dual-Layer Required:** No
 * **Note:** Verified against Friel's published run zones (TrainingPeaks, "Joe Friel's Quick Guide to Setting Zones"). His pace zones are given as % of threshold pace TIME (e.g. Zone 2 = 114-129%); the values here are the same zones as % of threshold SPEED, the form Intervals.icu uses (Zone 2 = 78-88%).
 * **Note:** This is the only author in the repository that publishes running pace and heart rate natively in the same table; the running pace-to-LTHR crosswalk is built from it.

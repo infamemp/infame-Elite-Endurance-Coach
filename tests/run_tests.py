@@ -544,8 +544,21 @@ def unit_tests():
 
     # Every author declares its KB file; every KB on disk is claimed (Mujika is a topic KB)
     claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
-    check("authors: every author declares an existing knowledge_file",
-          all(k and os.path.isfile(os.path.join(ROOT, "Knowledge", k)) for k in claimed), claimed)
+    check("authors: every author declares an existing knowledge_file (or `none`)",
+          all(k == "none" or (k and os.path.isfile(os.path.join(ROOT, "Knowledge", k)))
+              for k in claimed), claimed)
+    # A book KB belongs to the sport it was written for: a running methodology
+    # must never borrow a cycling book (that is how the coach invented a
+    # "Friel running method" from The Cyclist's Training Bible).
+    cycling_kbs = {zm.load_author_raw(a)["knowledge_file"] for a in on_disk
+                   if zm.load_author_raw(a).get("sport") == "cycling"}
+    borrowed = sorted(a for a in on_disk
+                      if zm.load_author_raw(a).get("sport") == "running"
+                      and zm.load_author_raw(a)["knowledge_file"] in cycling_kbs)
+    check("authors: no running methodology points at a cycling book", not borrowed, borrowed)
+    equal("authors: friel_running is zones-only (no Friel running book in the repo)",
+          zm.load_author_raw("friel_running")["knowledge_file"], "none")
+    claimed.discard("none")
     kb_disk = {os.path.relpath(f, os.path.join(ROOT, "Knowledge")).replace(os.sep, "/")
                for f in glob.glob(os.path.join(ROOT, "Knowledge", "**", "*.md"), recursive=True)
                if os.sep + "Catalogs" + os.sep not in f}
@@ -558,13 +571,21 @@ def unit_tests():
                                  "Simple_Table_Running_Training_Zones.md"))
     for a_id in sorted(on_disk):
         kf = zm.load_author_raw(a_id)["knowledge_file"]
+        if kf == "none":
+            check(f"generated: {a_id} header says ZONES ONLY",
+                  "none — ZONES ONLY" in gen_txt.split(f"## Methodology: {zm.load_author_raw(a_id)['name']}")[1].split("## Methodology:")[0])
+            continue
         check(f"generated: {a_id} header names its Knowledge Base file",
               f"`Knowledge/{kf}`" in gen_txt, kf)
     check("generated: one Knowledge Base line per methodology",
           gen_txt.count("**Knowledge Base (Project file):**") == len(on_disk))
     import build_profile as _bp
     kl = "\n".join(_bp.knowledge_lines({"preferences": {"methodology": {
-        "road_run": "hudson", "road_bike": "coggan", "trail_run": None, "gravel": "nope"}}}))
+        "road_run": "hudson", "road_bike": "coggan", "trail_run": None, "gravel": "nope",
+        "treadmill": "friel_running"}}}))
+    check("profile: a zones-only methodology is flagged, never given a book",
+          "`friel_running` → no Knowledge file: ZONES ONLY" in kl
+          and "Joe_Friel" not in kl, kl)
     check("profile: declared methodologies list their Knowledge file",
           "Hudson_Run_Faster_From_5K_to_Marathon.md" in kl and
           "Allen - Coggan_Training_and_Racing_With_a_Powermeter.md" in kl, kl)

@@ -135,7 +135,10 @@ def cross_field_errors(data, stem):
         extra.append(f"id '{data.get('id')}' does not match filename stem '{stem}'")
     kf = data.get("knowledge_file")
     if kf is None:
-        extra.append("knowledge_file is missing (path relative to Knowledge/)")
+        extra.append("knowledge_file is missing (path relative to Knowledge/, or `none`)")
+    elif kf == "none":
+        if not str(data.get("knowledge_note") or "").strip():
+            extra.append("knowledge_file is `none` but knowledge_note is missing")
     elif not os.path.isfile(os.path.join(ROOT, "Knowledge", kf)):
         extra.append(f"knowledge_file 'Knowledge/{kf}' does not exist")
     available = set(data.get("available_metrics", []))
@@ -396,7 +399,13 @@ def render_author(author, thresholds):
         L.append("* **Estimated Metrics (`~`, computed through the crosswalk):** " +
                  ", ".join(labels[m] for m in est))
     L.append("* **Primary Metrics:** " + ", ".join(author["primary_metrics"]))
-    if author.get("knowledge_file"):
+    if author.get("knowledge_file") == "none":
+        L.append("* **Knowledge Base (Project file):** none — ZONES ONLY. "
+                 + str(author.get("knowledge_note", "")).strip()
+                 + " Never attribute progressions, session types or training "
+                 "philosophy to this methodology; never choose it unless the head "
+                 "coach asks for it.")
+    elif author.get("knowledge_file"):
         L.append(f"* **Knowledge Base (Project file):** "
                  f"`{os.path.basename(author['knowledge_file'])}` "
                  f"(`Knowledge/{author['knowledge_file']}`)")
