@@ -33,6 +33,10 @@
       ],
       "description": "Sport this methodology governs."
     },
+    "knowledge_file": {
+      "type": "string",
+      "description": "Path, relative to Knowledge/, of the book KB the coach reads for this methodology. Must exist on disk."
+    },
     "sport_note": {
       "type": "string",
       "description": "Optional refinement shown in generated output when the sport label alone is imprecise. E.g. 'Ultrarunning / Running'."

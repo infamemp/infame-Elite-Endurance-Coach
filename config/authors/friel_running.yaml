@@ -4,6 +4,9 @@
 
 id: friel_running
 name: Friel Running Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Joe_Friel_cyclists_training_bible_knowledge_base.md
 sport: running
 
 zone_identifier_style: Zone N (with sub-zone letters, e.g. "Zone 5a")
