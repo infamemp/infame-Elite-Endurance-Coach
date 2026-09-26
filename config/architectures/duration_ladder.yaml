@@ -1,0 +1,44 @@
+name: duration_ladder
+display_name: Duration ladder
+frequency_in_corpus: 0   # not in the original cycling corpus; added from the running catalog analysis (Sep 2026)
+
+intent: >
+  Same intensity throughout (or, in a documented variant, intensity that
+  climbs or falls in lockstep with duration), with the duration of each rep
+  changing monotonically -- longer each time, or shorter each time -- and
+  full recovery between reps. Distinct from progressive_intervals (same
+  duration, changing intensity) and from pyramid (duration rises then falls
+  symmetrically): here duration moves in one direction only. Trains the
+  same pace under a changing time-horizon, or lets an athlete accumulate
+  volume at a hard pace by front-loading the longest rep while fresh
+  (duration_down) or building confidence into it (duration_up).
+
+rep_shape: steady
+set_shape: [duration_ladder_up, duration_ladder_down]
+
+applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+disciplines: [trainer, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [reps, bout_duration, intensity, recovery_duration]
+
+notes: >
+  Identified from the running-catalog analysis, not the original cycling
+  corpus: Daniels' T-pace tables ("2x12min / 2x5min", "15min/10min/5min"),
+  Hudson & Fitzgerald's "Ladder Intervals," Moehl's "Ladder" (with a
+  documented half-time-recovery variant: shorter rungs also get shorter
+  recovery, and a faster pace), and Canova's "Medium Speed Variation"
+  (5000/4000/3000m, pace rising as distance falls) -- five independent
+  authors converging on the same shape. In several of these (Hudson,
+  Canova), pace changes together with duration rather than staying fixed;
+  treat that as a valid variant of this architecture (both levers moving
+  together), not a separate one.
+  A rung can itself be a small repeated block (Daniels' "2x12min / 2x5min"
+  is a 2-rung ladder where each rung is 2 reps, not 1) -- the ladder
+  applies to the block-to-block trend, not necessarily to single reps.
+
+combinable: [standalone, finisher]
+
+example_shapes:
+  - "Reps at one target, full recovery between, each rep's duration longer (or shorter) than the last -- e.g. 3 reps at 15, 10, 5 minutes"
+  - "As above, but the target also gets harder (or easier) each rep, moving with duration"
+  - "A rung may itself be a small repeated block rather than a single rep (2x12min, then 2x5min)"

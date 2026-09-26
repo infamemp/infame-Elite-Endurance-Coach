@@ -53,7 +53,7 @@ invent a new one:
 
 ## Combinations
 246 of the ~1,700 workouts chain two or more architectures in one main set.
-This is not a 15th architecture — it's how the 14 below get combined. Order
+This is not a new architecture — it's how the ones below get combined. Order
 matters:
 - **pre_fatigue**: an easier or shorter architecture placed before the key
   work, to blunt freshness (e.g. `sprints` before `sustained_effort`).

@@ -29,6 +29,23 @@ patterns:
       and B share the same rep_shape and set_shape, this is not a
       combination — it is one longer set of a single architecture.
 
+  - name: sandwich
+    shape: "[sustained_effort or endurance_cadence] -> [a different architecture] -> [sustained_effort or endurance_cadence]"
+    example: "sustained_effort -> classic_intervals -> sustained_effort"
+    purpose: >
+      A repeated running pattern (Hansons' P-017 "2 miles / 8x800 / 2 miles",
+      Moehl's multi-part hill workout, Canova's "Long Resistance w/
+      Variation") — an easy-to-moderate bookend both before and after the
+      key work, rather than only a pre_fatigue lead-in or only a finisher.
+      The two bookends need not be identical in duration or pace; what makes
+      this a sandwich rather than two separate combinations is that both
+      sides are the same (easier) architecture as each other, framing one
+      harder block in the middle. A common running variant increases the
+      difficulty of each block in the sequence (Moehl's multi-part hill
+      workout: power-hike, then a runnable segment, then a hard uphill
+      surge) — still a sandwich in shape, with a progressive dose across the
+      blocks rather than a flat one.
+
 notes: >
   A combination is described as an ordered list of architecture names plus
   their role (pre_fatigue / standalone / finisher — see each architecture's
