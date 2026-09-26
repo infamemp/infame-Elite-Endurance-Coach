@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.6.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.7.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,17 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.7 — decisions survive the chat (2026-09-26)**
+
+Every new chat started from zero: the coach re-chose the methodologies
+(Friel/Daniels one time, Coggan/Palladino the next), reverted the approved
+weekly pattern (Tue/Thu treadmill instead of Tue/Thu trainer) and planned Tempo
+before the FTP test, because `#SESSION` was only saved at block end. Now
+`#SESSION` (methodologies, Metric Map, weekly pattern, strategy figures) is
+saved at every phase gate and holds phases 1-6; the weekly pattern is stated by
+the head coach, never inferred; and a threshold that `#STATE`'s own signals
+contradict is provisional: Endurance only until the test result is in.
 
 **v7.6 — the architecture library reaches the coach (2026-09-26)**
 

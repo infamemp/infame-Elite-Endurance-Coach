@@ -550,9 +550,13 @@ def unit_tests():
         ("prompt: Metric Map may not carry placeholders",
          "is a failure. Read `preferences.methodology"),
         ("prompt: availability is never invented by the coach",
-         "never a number you proposed"),
+         "never something you proposed or inferred from history"),
         ("prompt: stated availability is saved with save_availability",
          "save it at once with `save_availability`"),
+        ("prompt: #SESSION is saved at every phase gate",
+         "Saved at every gate, not only at block end"),
+        ("prompt: #SESSION supports phases 1-6", "<1 | 2 | 3 | 4 | 5 | 6>"),
+        ("prompt: contradicted thresholds are provisional", "A threshold `#STATE` contradicts is provisional"),
     ]:
         check(name, needle in _pr, needle)
 
