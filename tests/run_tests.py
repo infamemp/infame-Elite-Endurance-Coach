@@ -570,6 +570,30 @@ def unit_tests():
           all(abs(rl("HMP")["canonical"][k] - v) <= 2.0 for k, v in
               zip(("min", "max"), zm.model_pct_for_distance(21097.5))))
 
+    # ── Hudson ─────────────────────────────────────────────────────
+    def hd(key):
+        return next(z for z in zm.load_author("hudson")["zones"] if str(z["key"]) == key)
+    for key, want in [("Easy", "endurance"), ("MP", "sub_threshold"), ("T1", "sub_threshold"),
+                      ("HMP", "sub_threshold"), ("T2", "threshold"), ("T3", "threshold"),
+                      ("10K", "supra_threshold"), ("5K", "vo2max"), ("3K", "vo2max"),
+                      ("1500m", "anaerobic"), ("Max", "neuromuscular")]:
+        equal(f"hudson: {key} class", hd(key)["physiological_class"], want)
+    ts = [hd(k)["canonical"]["min"] for k in ("T1", "T2", "T3")]
+    equal("hudson: the three thresholds ascend (2.5 h < 90 min < 1 h)", ts, sorted(ts))
+    # The book says a sub-elite runner's thresholds are about marathon pace,
+    # half-marathon pace and a little slower than 10K pace: the crosswalk must agree.
+    def mid(k):
+        c = hd(k)["canonical"]
+        return (c["min"] + c["max"]) / 2
+    check("hudson: Threshold 1 is within 2 points of marathon pace", abs(mid("T1") - mid("MP")) <= 2.0,
+          (mid("T1"), mid("MP")))
+    check("hudson: Threshold 2 is within 2 points of half-marathon pace", abs(mid("T2") - mid("HMP")) <= 2.0,
+          (mid("T2"), mid("HMP")))
+    check("hudson: Threshold 3 is at or a little below 10K pace (within 3 points)",
+          0 <= mid("10K") - mid("T3") <= 3.0, (mid("T3"), mid("10K")))
+    check("hudson: Moderate and Hard are not rows (no published pace or class)",
+          not any(str(z["key"]) in ("Moderate", "Hard") for z in zm.load_author("hudson")["zones"]))
+
     # ── Delta bands ───────────────────────────────────────────────
     cb = th["longitudinal"]["delta_bands"]["cycling"]
     equal("bands: cycling stable floor widened to -2.5", cb["stable"], -2.5)

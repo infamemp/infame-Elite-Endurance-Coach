@@ -141,6 +141,37 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 
 ---
 
+## Methodology: Hudson (Adaptive Running) Zones
+* **Sport:** 5K to marathon
+* **Zone Identifier Style:** Named pace level (race pace or maximum sustainable duration)
+* **Default Metric:** % Threshold Pace
+* **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
+* **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
+* **Primary Metrics:** Race paces (marathon to 1,500 m), Three threshold paces (2.5-hour, 90-minute and 1-hour maximum pace)
+* **Dual-Layer Required:** No
+* **Note:** Table 2.1 defines the pace levels by RACE DISTANCE (marathon, half-marathon, 10K, 5K, 3K, 1,500 m) and the threshold system by MAXIMUM SUSTAINABLE DURATION (Q-2): Threshold 1 = the fastest pace held for 2.5 hours, Threshold 2 = 90 minutes, Threshold 3 = 1 hour. The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
+* **Note:** "Threshold" here is the author's own usage, flagged in the source glossary as differing from the common one: three paces, NOT solely lactate threshold. He puts lactate-threshold pace between 10K and half-marathon pace for most runners and calls it "nothing magical" (METH-10).
+* **Note:** The author ties his thresholds to race paces for sub-elite runners: they are about marathon pace (or slightly faster), half-marathon pace, and a little slower than 10K pace (Q-2). The crosswalk agrees: 2.5 hours reads 93-97%, 90 minutes 95-99% and 1 hour 98-102% of threshold pace, against marathon 91-94%, half-marathon 95-98% and 10K 100-104%.
+* **Note:** Easy, Moderate and Hard (Table 2.1) are perceived-effort levels: "comfortable", "comfortable with mild aerobic strain" and "hard but manageable relative to distance". The book gives no pace, heart rate or physiological class for Moderate and Hard, so they are not rows here; only Easy (the aerobic easy and recovery run) is. Progression runs are prescribed by these feelings, not by race-pace targets (P-4).
+* **Note:** The optimal aerobic-support pace depends on the peak race (Q-3: half-marathon pace for the half-marathon, the marathon and the 10K; 10K pace for the 5K), and specific-endurance work is done within 10% either side of goal race pace, narrowing to 3-4% late in the cycle (Q-4). Those are training rules, not zones, and are not rows.
+* **Note:** Table 2.1 lists maximal effort (steep hill sprints of 8-12 seconds) as the top of the scale. It has no pace; its class comes from the author's stated aim (maximal strength and stride power).
+
+| Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | RPE (1-10) | Domain | Class | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Easy | Easy (aerobic easy and recovery running) | ~75–85% | ~77–88% | ~75–85% | ~2–3 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Class from the author's stated physiological target |
+| MP | Marathon pace | ~91–94% | ~94–96% | ~91–94% | ~4–5 | Heavy | Sub-threshold | Anchor: marathon race pace; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| T1 | Threshold 1 (2.5-hour pace) | ~93–97% | ~95–98% | ~93–97% | ~4–5 | Heavy | Sub-threshold | Anchor: 2.5 h sustainable pace |
+| HMP | Half-marathon pace | ~95–98% | ~97–99% | ~95–98% | ~4–5 | Heavy | Sub-threshold | Anchor: half marathon race pace; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| T2 | Threshold 2 (90-minute pace) | ~95–99% | ~97–100% | ~95–99% | ~6–7 | Heavy | Threshold | Anchor: 1.5 h sustainable pace; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| T3 | Threshold 3 (1-hour pace) | ~98–102% | ~99–101% | ~98–102% | ~6–7 | Heavy→Severe | Threshold | Anchor: 1 h sustainable pace; Borderline: within 1 point of the threshold/supra-threshold boundary |
+| 10K | 10K pace | ~100–104% | ~100–103% | ~100–104% | ~7–8 | Heavy→Severe | Supra-threshold | Anchor: 10K race pace; Borderline: within 1 point of the threshold/supra-threshold boundary |
+| 5K | 5K pace | ~104–108% | ~103–105% | ~104–108% | ~8–9 | Severe | VO2max | Anchor: 5K race pace; Borderline: within 1 point of the supra-threshold/vo2max boundary |
+| 3K | 3K pace | ~109–112% | ~> 105% | ~109–112% | ~8–9 | Severe | VO2max | Anchor: 3200m race pace |
+| 1500m | 1,500 m pace | ~116–119% | N/A | ~116–119% | ~9–10 | Extreme | Anaerobic | Anchor: 1600m race pace |
+| Max | Maximal effort (steep hill sprints) | ~> 150% | N/A | ~> 150% | ~10 | Extreme | Neuromuscular | Class from the author's stated physiological target |
+
+---
+
 ## Methodology: Koop Running Workout Zones
 * **Sport:** Ultrarunning / Running
 * **Zone Identifier Style:** Letter code (workout code)

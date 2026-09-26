@@ -1,0 +1,145 @@
+# Hudson (Adaptive Running) Zones
+# Conforms to config/schema/author.schema.json (v7.2 — race anchors)
+# Source: Brad Hudson & Matt Fitzgerald, "Run Faster from the 5K to the Marathon"
+# (2008), Ch. 2 (Table 2.1, the three threshold paces), Ch. 3-5, extracted via the
+# book-processing pipeline (run-faster-from-5k-to-marathon-hudson-fitzgerald_kb.md,
+# sections Q-1 to Q-4, METH-10, P-1 to P-10).
+
+id: hudson
+name: Hudson (Adaptive Running) Zones
+sport: running
+sport_note: 5K to marathon
+
+zone_identifier_style: Named pace level (race pace or maximum sustainable duration)
+
+default_metric: pace
+available_metrics: []
+primary_metrics:
+  - Race paces (marathon to 1,500 m)
+  - Three threshold paces (2.5-hour, 90-minute and 1-hour maximum pace)
+intensity_anchors: ["race pace", "maximum sustainable duration"]
+
+notes:
+  - >-
+    Table 2.1 defines the pace levels by RACE DISTANCE (marathon, half-marathon,
+    10K, 5K, 3K, 1,500 m) and the threshold system by MAXIMUM SUSTAINABLE
+    DURATION (Q-2): Threshold 1 = the fastest pace held for 2.5 hours,
+    Threshold 2 = 90 minutes, Threshold 3 = 1 hour. The book publishes no
+    percentage, heart-rate or power scale, so every number in the metric columns
+    is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
+  - >-
+    "Threshold" here is the author's own usage, flagged in the source glossary
+    as differing from the common one: three paces, NOT solely lactate
+    threshold. He puts lactate-threshold pace between 10K and half-marathon pace
+    for most runners and calls it "nothing magical" (METH-10).
+  - >-
+    The author ties his thresholds to race paces for sub-elite runners: they are
+    about marathon pace (or slightly faster), half-marathon pace, and a little
+    slower than 10K pace (Q-2). The crosswalk agrees: 2.5 hours reads 93-97%,
+    90 minutes 95-99% and 1 hour 98-102% of threshold pace, against marathon
+    91-94%, half-marathon 95-98% and 10K 100-104%.
+  - >-
+    Easy, Moderate and Hard (Table 2.1) are perceived-effort levels: "comfortable",
+    "comfortable with mild aerobic strain" and "hard but manageable relative to
+    distance". The book gives no pace, heart rate or physiological class for
+    Moderate and Hard, so they are not rows here; only Easy (the aerobic easy and
+    recovery run) is. Progression runs are prescribed by these feelings, not by
+    race-pace targets (P-4).
+  - >-
+    The optimal aerobic-support pace depends on the peak race (Q-3: half-marathon
+    pace for the half-marathon, the marathon and the 10K; 10K pace for the 5K),
+    and specific-endurance work is done within 10% either side of goal race pace,
+    narrowing to 3-4% late in the cycle (Q-4). Those are training rules, not
+    zones, and are not rows.
+  - >-
+    Table 2.1 lists maximal effort (steep hill sprints of 8-12 seconds) as the
+    top of the scale. It has no pace; its class comes from the author's stated
+    aim (maximal strength and stride power).
+
+zones:
+  - key: Easy
+    name: Easy (aerobic easy and recovery running)
+    stated_class:
+      class: endurance
+      source: >-
+        Run Faster, Table 2.1: "Easy (subjectively comfortable)", training type
+        Aerobic; used in easy and recovery runs and some long runs.
+    ranges: {}
+
+  - key: MP
+    name: Marathon pace
+    race_anchor:
+      distance: marathon
+      source: "Table 2.1: per-mile marathon pace in peak condition."
+    ranges: {}
+
+  - key: T1
+    name: Threshold 1 (2.5-hour pace)
+    race_anchor:
+      duration_min: 150
+      source: >-
+        Q-2: fastest pace sustainable for 2.5 hours (about marathon pace for a
+        sub-elite runner).
+    ranges: {}
+
+  - key: HMP
+    name: Half-marathon pace
+    race_anchor:
+      distance: half_marathon
+      source: "Table 2.1: current or goal half-marathon pace."
+    ranges: {}
+
+  - key: T2
+    name: Threshold 2 (90-minute pace)
+    race_anchor:
+      duration_min: 90
+      source: >-
+        Q-2: fastest pace sustainable for 90 minutes (about half-marathon pace
+        for a sub-elite runner).
+    ranges: {}
+
+  - key: T3
+    name: Threshold 3 (1-hour pace)
+    race_anchor:
+      duration_min: 60
+      source: >-
+        Q-2: fastest pace sustainable for 1 hour (a little slower than 10K pace
+        for a sub-elite runner).
+    ranges: {}
+
+  - key: 10K
+    name: 10K pace
+    race_anchor:
+      distance: 10K
+      source: "Table 2.1: current or goal 10K pace."
+    ranges: {}
+
+  - key: 5K
+    name: 5K pace
+    race_anchor:
+      distance: 5K
+      source: "Table 2.1: current or goal 5K pace."
+    ranges: {}
+
+  - key: 3K
+    name: 3K pace
+    race_anchor:
+      distance: 3K
+      source: "Table 2.1: race pace for 3,000 m or 2 miles."
+    ranges: {}
+
+  - key: 1500m
+    name: 1,500 m pace
+    race_anchor:
+      distance: 1500m
+      source: "Table 2.1: race pace for 1,500 m or 1 mile."
+    ranges: {}
+
+  - key: Max
+    name: Maximal effort (steep hill sprints)
+    stated_class:
+      class: neuromuscular
+      source: >-
+        Run Faster, P-1: steep hill sprints of 8-12 seconds at maximal effort,
+        aimed at "maximal running-specific strength and stride power."
+    ranges: {}
