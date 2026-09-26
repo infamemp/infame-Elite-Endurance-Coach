@@ -3,6 +3,23 @@
 # After editing: python build_zone_tables.py validate  →  python build_zone_tables.py build
 #
 # Full field reference: config/schema/author.schema.json
+#
+# ══════════════════════════════════════════════════════════════════
+# THE ONE RULE (v7.2): write ONLY what the author publishes.
+# ══════════════════════════════════════════════════════════════════
+# - The author's own numbers (native ranges), exactly as printed in the book.
+# - The author's own RPE.
+# - Where the author explicitly names a zone's physiological target
+#   ("Lactate Threshold", "VO2max", "aerobic base"), that target as
+#   `stated_class`, with the page or table it comes from.
+#
+# Do NOT type:
+# - estimates for metrics the author does not publish (pace, % LTHR, power…)
+# - a physiological class or a domain
+# All of that is computed by zone_model.py through config/crosswalk.yaml and
+# config/tss_classes.yaml, the same way for every author. If the class computed
+# from the numbers disagrees with the author's stated target, `validate` fails and
+# tells you which zone; you then record a `resolution` (see the zone example).
 
 # Machine identifier. Lowercase, digits and underscores only.
 # MUST match the filename stem exactly. Never change it once in use.
@@ -12,7 +29,7 @@ id: your_id
 name: Author Name Zones
 
 # cycling | running
-sport: cycling
+sport: running
 
 # Optional. Use when the sport label alone is imprecise, e.g. "Ultrarunning / Running".
 # sport_note: Ultrarunning / Running
@@ -20,28 +37,43 @@ sport: cycling
 # How this author names zones, in their own vocabulary.
 zone_identifier_style: Zone N
 
-# Metric used when the athlete declares no preference.
-# One of: power | lthr | pace | hrmax | rpe
-default_metric: power
+# Metric used when the athlete declares no preference. It may be a metric the
+# author does not publish (it will then use the estimated column).
+# One of: power | lthr | pace | hrmax | rpe   (pace is running only)
+default_metric: pace
 
-# Every metric this author defines. A zone may only carry ranges for metrics listed here.
-available_metrics: [power, lthr]
+# The metrics the author PUBLISHES numbers for (plus `rpe` if RPE is the author's
+# primary scale). Cycling: power, lthr, hrmax. Running: pace, lthr, power, hrmax.
+# Every other metric of the sport is estimated at build time.
+available_metrics: [pace]
 
 # Human-readable physiological references shown in the generated header.
 primary_metrics:
-  - Power
-  - Lactate Threshold Heart Rate (LTHR)
+  - Lactate Threshold (LT) Pace
 
 # Optional. How anchors are displayed. Defaults to available_metrics when omitted.
-# intensity_anchors: ["% FTP", "% LTHR"]
+# intensity_anchors: ["% Threshold Pace"]
 
-# Whether each metric is native to the author or a cross-referenced estimate.
 metric_status:
-  power: native
-  lthr: native
+  pace: native
 
-# NOTE: ramp eligibility is NOT an author property. It depends on discipline and
-# metric, and lives in config/decision_thresholds.yaml under `ramps`.
+# ── Optional: author publishes % HRmax ────────────────────────────
+# Where threshold sits on the author's own HRmax scale, when the author states it
+# (e.g. "threshold ≈ 90% HRmax"). Converts % HRmax → % LTHR. Omit to use the
+# crosswalk default. Never estimate it yourself.
+# hrmax_threshold_pct:
+#   value: 90
+#   source: Book title, chapter/table where the author states it.
+
+# ── Optional: non-threshold anchor ────────────────────────────────
+# Use ONLY when the author's percentages are of something other than threshold
+# (worked example: Carmichael's CTS Field Test, 10% above threshold).
+# anchor:
+#   metric: power
+#   reference: What the author's 100% is, in words
+#   factor_from_threshold: 1.10
+#   source: Where the book states the factor. Never an estimate.
+#   equivalent_column_label: "% FTP (equivalent)"
 
 # ── Optional: dual-layer ──────────────────────────────────────────
 # Use ONLY when the athlete-facing cue metric differs from the engine-facing load metric.
@@ -67,29 +99,37 @@ notes:
 # ── Zones ─────────────────────────────────────────────────────────
 # List in ascending intensity order.
 #
-# physiological_class is the ONLY valid bridge between methodologies. It drives TSS cost.
-#   recovery | endurance | tempo | threshold | supra
-# Never use RPE to compare across authors — RPE reflects each author's own calibration.
-#
-# Range notation:
+# Range notation (native values only):
 #   {min: 55, max: 74}     → 55–74%
 #   {min: null, max: 55}   → < 55%
 #   {min: 150, max: null}  → > 150%
-#   omit the metric entirely → renders as N/A
+#   omit the metric entirely → estimated at build time (or N/A)
+#
+# stated_class — ONLY when the author explicitly names the physiological target.
+#   recovery | endurance | tempo | sub_threshold | threshold | supra_threshold
+#   | vo2max | anaerobic | neuromuscular
+#   Do not derive it from a workout name ("Tempo" as a session name is not a
+#   physiological claim). Required when the zone has no numbers at all.
 zones:
   - key: Zone 1
-    name: Active Recovery
-    physiological_class: recovery
+    name: Recovery
+    stated_class:
+      class: recovery
+      source: Book title, table/chapter — the author's words.
     ranges:
-      power: {min: null, max: 55}
-      lthr:  {min: null, max: 81}
+      pace: {min: null, max: 78}
     rpe: {min: 1, max: 2}
 
-  - key: Zone 2
-    name: Endurance
-    physiological_class: endurance
+  - key: Zone 4
+    name: Threshold
+    stated_class:
+      class: threshold
+      source: Book title, table/chapter — the author's words.
+    # Only if `validate` reports that the numbers compute a different class:
+    # resolution:
+    #   use: stated        # or: computed
+    #   reason: Why the author's statement (or the numbers) governs here.
     ranges:
-      power: {min: 55, max: 74}
-      lthr:  {min: 82, max: 89}
-    rpe: {min: 3, max: 4}
+      pace: {min: 95, max: 101}
+    rpe: {min: 6, max: 7}
     note: Row-level notes are optional.

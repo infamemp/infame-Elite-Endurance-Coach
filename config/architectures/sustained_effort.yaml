@@ -11,7 +11,7 @@ intent: >
 rep_shape: steady
 set_shape: single
 
-applicable_classes: [endurance, tempo, sub_threshold, threshold, vo2max]
+applicable_classes: [endurance, tempo, sub_threshold, threshold, supra_threshold, vo2max]
 disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
 
 progression_levers: [bout_duration, intensity]

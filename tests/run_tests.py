@@ -40,6 +40,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "engine"))
 sys.path.insert(0, os.path.join(ROOT, "verify"))
+sys.path.insert(0, ROOT)
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures")
 BLOCKS = os.path.join(ROOT, "tests", "blocks")
@@ -112,8 +113,9 @@ def load_cfg():
     def rd(n):
         with open(os.path.join(ROOT, "config", n), encoding="utf-8") as f:
             return yaml.safe_load(f)
-    return rd("decision_thresholds.yaml"), rd("tss_classes.yaml"), \
-        rd("power_profile.yaml")
+    import zone_model
+    return zone_model.with_derived_cutpoints(rd("decision_thresholds.yaml")), \
+        rd("tss_classes.yaml"), rd("power_profile.yaml")
 
 
 def unit_tests():
@@ -321,8 +323,8 @@ def unit_tests():
           "a cap would prohibit a progressive ramp test")
 
     # ── Anchored authors are converted before matching ────────────
-    carm = yaml.safe_load(open(os.path.join(ROOT, "config", "authors",
-                                            "carmichael.yaml"), encoding="utf-8"))
+    import zone_model
+    carm = zone_model.load_author("carmichael")
     anc = carm.get("anchor")
     check("anchor: carmichael declares a non-threshold anchor", bool(anc))
     if anc:
@@ -347,6 +349,80 @@ def unit_tests():
     equal("precedence: author zone governs", (cls, src), ("tempo", "coggan Level 3"))
     cls, src = vb.classify(150, "power", author, th)
     equal("precedence: cutpoints are the fallback", src, "cutpoints")
+
+    # ── v7.2 zone model: native values → estimates, class, domain ──
+    import zone_model as zm
+    import glob
+    for sport in ("cycling", "running"):
+        b = sorted(((v.get("min") or 0), v.get("max"))
+                   for v in tssc["bands"][sport].values())
+        gaps = [(x, y) for x, y in zip(b, b[1:]) if x[1] != y[0]]
+        check(f"bands: {sport} canonical bands are disjoint and contiguous",
+              not gaps, str(gaps))
+    for c, spec in tssc["classes"].items():
+        check(f"classes: {c} belongs to a declared domain",
+              spec.get("domain") in tssc["domains"])
+    m9 = [tssc["classes"][c]["tss_per_min"] for c in zm.CLASS_ORDER]
+    equal("tss: multipliers ascend through all nine classes", m9, sorted(m9))
+    equal("tss: supra_threshold sits between threshold and vo2max",
+          m["threshold"] < tssc["classes"]["supra_threshold"]["tss_per_min"]
+          < m["vo2max"], True)
+    for sport in ("cycling", "running"):
+        for c in zm.CLASS_ORDER:
+            doms = {zm.domain_of_class(c)}
+            check(f"domain: {sport} {c} maps to exactly one domain", len(doms) == 1)
+    # Crosswalk: anchor holds and conversions are monotonic
+    equal("crosswalk: 100% FTP = 100% LTHR (cycling)",
+          zm.from_canonical(100, "lthr", "cycling"), 100.0)
+    equal("crosswalk: 100% pace = 100% LTHR (running)",
+          zm.from_canonical(100, "lthr", "running"), 100.0)
+    equal("crosswalk: running power equals pace", zm.from_canonical(93, "power", "running"), 93.0)
+    for sport, canon in (("cycling", "power"), ("running", "pace")):
+        vals = [zm.from_canonical(t, "lthr", sport) for t in range(45, 111, 5)]
+        vals = [v for v in vals if v is not None]
+        equal(f"crosswalk: {sport} LTHR is monotonic", vals, sorted(vals))
+        rt = zm.to_canonical(zm.from_canonical(92, "lthr", sport), "lthr", sport)
+        check(f"crosswalk: {sport} LTHR round-trips", abs(rt - 92) < 0.01, rt)
+    check("crosswalk: no extrapolation past the last knot",
+          zm.from_canonical(160, "lthr", "cycling") is None)
+    equal("crosswalk: Olbrich HRmax 90% = 100% LTHR (author's own point)",
+          round(zm.to_canonical(90, "hrmax", "running",
+                                zm.load_author_raw("olbrich")), 1), 100.0)
+    # Every author resolves with no errors, and no author file carries a
+    # hand-assigned class
+    for f in sorted(glob.glob(os.path.join(ROOT, "config", "authors", "[!_]*.yaml"))):
+        aid = os.path.basename(f)[:-5]
+        raw = zm.load_author_raw(aid)
+        _, errs, _ = zm.resolve_author(raw)
+        check(f"authors: {aid} resolves without class conflicts", not errs, errs)
+        check(f"authors: {aid} carries no hand-assigned class",
+              not any("physiological_class" in z for z in raw["zones"]))
+    # Known classes after the v7.2 reclassification
+    def zc(aid, key):
+        return next(z for z in zm.load_author(aid)["zones"] if str(z["key"]) == key)
+    for aid, key, want in [
+            ("coggan", "Level 4", "threshold"), ("friel_cycling", "Zone 4", "threshold"),
+            ("carmichael", "T", "sub_threshold"), ("carmichael", "CR", "vo2max"),
+            ("daniels", "M", "tempo"), ("daniels", "T", "threshold"),
+            ("palladino", "3A", "sub_threshold"), ("palladino", "4", "supra_threshold"),
+            ("friel_running", "Zone 5a", "supra_threshold"),
+            ("friel_running", "Zone 5c", "anaerobic"),
+            ("olbrich", "TER", "threshold"), ("olbrich", "INT", "vo2max"),
+            ("koop", "SSR", "sub_threshold")]:
+        equal(f"reclass: {aid} {key}", zc(aid, key)["physiological_class"], want)
+    equal("domain: Coggan Level 4 crosses heavy→severe",
+          _dom_cell := zc("coggan", "Level 4")["flags"][0], "spans heavy→severe")
+    equal("estimate: Daniels E gets an estimated LTHR range",
+          zc("daniels", "E")["range_status"]["lthr"], "estimated")
+    check("estimate: no heart-rate estimate in the extreme domain",
+          "lthr" not in zc("daniels", "R")["ranges"])
+    equal("estimate: native values are never overwritten",
+          zc("coggan", "Level 3")["ranges"]["lthr"], {"min": 84, "max": 94})
+    # A stated class that disagrees with the numbers must fail without a resolution
+    bad = zm.load_author_raw("coggan")
+    bad["zones"][2]["stated_class"] = {"class": "vo2max", "source": "test"}
+    _, errs, _ = zm.resolve_author(bad)
+    check("conflict: stated vs computed class fails the build", bool(errs))
 
     # ── Delta bands ───────────────────────────────────────────────
     cb = th["longitudinal"]["delta_bands"]["cycling"]
@@ -734,9 +810,12 @@ def architecture_tests():
     equal("architecture: %Pace classifies the same way as %power",
           r["architecture"], "endurance_cadence")
 
-    r = classify("Main Set 5x\n- 4m 100-105%\n- 4m 50-55%")
+    r = classify("Main Set 5x\n- 8m 95-100%\n- 4m 50-55%")
     equal("class: a threshold interval reads as threshold from generic cutpoints",
           r["class"], "threshold")
+    r = classify("Main Set 5x\n- 4m 100-105%\n- 4m 50-55%")
+    equal("class: 100-105% (above LT2/CP) reads as supra_threshold (v7.2)",
+          r["class"], "supra_threshold")
 
     # ── Frequency tally (the idea-bank input) ───────────────────────
     rows = [

@@ -1,0 +1,115 @@
+# Crosswalk — Infame Elite Endurance Coach v7.2
+# ==================================================================
+# The single conversion table between intensity metrics, per sport.
+#
+# Every author file under config/authors/ carries ONLY the numbers the author
+# publishes (native values). Every other column in the generated zone tables —
+# the estimated metrics, the physiological class and the domain — is computed
+# from those native numbers through this file by zone_model.py. Nobody types an
+# estimate by hand. Adding an author = native zones only; the rest is derived.
+#
+# CANONICAL AXIS
+#   Every metric is converted to "% of threshold" (T): 100 = FTP = LTHR =
+#   threshold pace = running threshold power. FTP, LTHR, MLSS and CP are not
+#   physiologically identical (CP typically sits a few percent above FTP and
+#   MLSS slightly below it), but they describe the same boundary — the top of
+#   the heavy domain — and every author in this repository anchors on it.
+#   Treating them as one anchor is the working assumption of the whole system.
+#
+# CONVERSIONS ARE PIECEWISE, NOT LINEAR
+#   Heart rate rises steeply at low intensity and saturates above threshold, so
+#   a single ratio would be wrong at both ends. Each conversion is a list of
+#   knots [canonical, metric]; values between knots are interpolated linearly.
+#   Values beyond the last knot are NOT extrapolated — they render as an open
+#   bound or N/A.
+#
+# HOW THE KNOTS WERE BUILT
+#   Only from authors who publish BOTH metrics natively in the same table.
+#   A knot is the mean of the authors' shared zone edges. The first knot of each
+#   heart-rate list maps the prescription floors onto each other (a convention,
+#   not a measurement). Residuals against every dual-metric author are printed
+#   by `python build_zone_tables.py validate`, so the error is visible, not
+#   assumed.
+# ==================================================================
+
+version: 1.0
+
+cycling:
+  canonical_metric: power          # % FTP is the canonical axis for cycling
+  metrics: [power, lthr]           # every cycling table carries these columns
+  conversions:
+    power:
+      identity: true
+    lthr:
+      # [% FTP, % LTHR]
+      knots:
+        - [25, 50]       # prescription floors (convention)
+        - [55, 75]       # Coggan L1/L2 edge 55↔68.5 · Friel Z1/Z2 edge 55↔81.5 → mean
+        - [75, 86.5]     # Coggan L2/L3 edge 75.5↔83.5 · Friel Z2/Z3 edge 74.5↔89.5
+        - [90, 94]       # Coggan L3/L4 edge 90.5↔94.5 · Friel Z3/Z4 edge 89.5↔93.5
+        - [100, 100]     # universal anchor
+        - [105, 102.5]   # Coggan L4/L5 edge 105.5↔105.5 · Friel Z4/Z5 edge 104.5↔99.5
+        - [120, 104]     # Friel Z5/Z6 edge 120.5↔102.5 · Coggan L5 (106–120%) ↔ > 106
+        - [150, 106.5]   # Friel Z6/Z7 edge 150.5↔106.5 (single source)
+      sources:
+        - Coggan & Allen, Training and Racing with a Power Meter — Levels 1–7 (power + FTHR)
+        - Friel, The Cyclist's Training Bible — Zones 1–7 (power + LTHR)
+      residual_check: [coggan, friel_cycling, carmichael]
+
+running:
+  canonical_metric: pace           # % threshold pace is the canonical axis for running
+  metrics: [pace, lthr, power]     # every running table carries these columns
+  conversions:
+    pace:
+      identity: true
+    power:
+      # Running power scales with speed on level ground; Palladino publishes
+      # identical % FTP/CP and % threshold pace ranges for every zone.
+      identity: true
+      sources:
+        - Palladino, Running with Power — zone table (power and pace given with equal percentages)
+    lthr:
+      # [% threshold pace, % LTHR]
+      # Two sources: Friel (pace + % LTHR) and Daniels (pace + % HRmax, converted
+      # with his own threshold point, T = 88-92% HRmax → 90%). Where both give a
+      # value at the same pace, the knot is their mean.
+      knots:
+        - [40, 50]       # prescription floors (convention)
+        - [75, 77]       # Daniels E bottom 75↔72.2 · Friel (interp.) 75↔82.2
+        - [85, 88.3]     # Daniels E top / M bottom 85↔87.8–88.9 · Friel (interp.) 85↔88.2
+        - [95, 97]       # Daniels M top 95↔98.9 · Friel Z3/Z4 edge 95↔95
+        - [100, 100]     # universal anchor (Daniels T 88–92% HRmax ↔ 98–102; Friel Z4/Z5a edge)
+        - [103.5, 102.5] # Friel Z5a/Z5b edge 103↔102 / 104↔103 (single source)
+        - [111, 106]     # Friel Z5b top (single source)
+      sources:
+        - Friel, running zones (pace + LTHR)
+        - Daniels' Running Formula — master zone table (pace + % HRmax)
+      caveat: >
+        Above threshold only Friel publishes running pace and heart rate
+        together. When another author does, add it to residual_check.
+      residual_check: [friel_running, daniels]
+
+# ──────────────────────────────────────────────────────────────────
+# HRmax → LTHR
+# ──────────────────────────────────────────────────────────────────
+# % HRmax is never emitted in syntax (see output_formats). It is kept only as
+# an author's native column and converted to % LTHR by a ratio (both are
+# percentages of a heart rate in bpm, so a ratio — not an offset — is correct):
+#     % LTHR = % HRmax × 100 / threshold_pct_of_hrmax
+# An author who states where threshold sits on their own HRmax scale declares
+# it in `hrmax_threshold_pct` in the author file; that value wins. Otherwise
+# this default applies.
+hrmax_to_lthr:
+  default_threshold_pct_of_hrmax: 90
+  sources:
+    - "Olbrich, Ultramarathon Training (2012): intervals run 'above the anaerobic threshold (>= 90% of max)'; tempo endurance run 85–90% HRmax for 'threshold development' → threshold ≈ 90% HRmax"
+    - "Daniels' Running Formula: T = 88–92% HRmax (well-trained) → 90%"
+    - "Cross-check, not yet in the repository: Fitzgerald & Rosario, Run Like a Pro (2022), Ch. 4 — VT2 ≈ 91–93% HRmax"
+
+# ──────────────────────────────────────────────────────────────────
+# Heart rate is not estimated for extreme-domain zones.
+# ──────────────────────────────────────────────────────────────────
+# Efforts under ~2 minutes end before heart rate catches up; an estimated
+# % LTHR there would be a number the athlete can never see on the device.
+# A native value published by the author is still shown.
+no_hr_estimate_domains: [extreme]

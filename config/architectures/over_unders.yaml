@@ -12,7 +12,7 @@ intent: >
 rep_shape: over_under
 set_shape: identical
 
-applicable_classes: [threshold, vo2max]
+applicable_classes: [threshold, supra_threshold, vo2max]
 disciplines: [trainer, road_bike, road_run, treadmill]
 
 progression_levers: [reps, bout_duration, intensity]

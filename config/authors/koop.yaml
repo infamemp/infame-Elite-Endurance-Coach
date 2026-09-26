@@ -11,14 +11,26 @@ zone_identifier_style: Letter code (workout code)
 
 default_metric: rpe
 default_metric_label: RPE (workout-code specific)
-available_metrics: [rpe, lthr]
+available_metrics: [rpe]
 primary_metrics:
   - Perceived Exertion
   - Physiological Adaptation Target
-intensity_anchors: ["RPE", "% LTHR"]
+intensity_anchors: ["RPE"]
 
-metric_status:
-  lthr: estimated
+# v7.2: Koop publishes no pace, heart-rate or power numbers — only RPE and the
+# physiological target of each workout code. The class of each zone therefore
+# comes from that stated target, and every numeric column (pace, % LTHR, power)
+# is the class band estimated through config/crosswalk.yaml.
+
+notes:
+  - >-
+    Koop also states each workout code as a fraction of VO2max (ER ~50-65%,
+    SSR ~65-75%, TR ~75-85%, RI >= 90%). There is no %VO2max column in the
+    standard tables, so those figures stay in his knowledge base.
+  - >-
+    Koop's RPE scale runs higher than the standard reference (RecoveryRun 4-5,
+    EnduranceRun 5-6). His RPE is what is emitted; the difference is reported
+    by the build as a warning, not corrected.
 
 dual_layer:
   required: true
@@ -30,40 +42,50 @@ dual_layer:
 zones:
   - key: RR
     name: RecoveryRun
-    physiological_class: recovery
-    ranges:
-      lthr: {min: null, max: 75}
+    stated_class:
+      class: recovery
+      source: >-
+        Koop, Training Essentials for Ultrarunning — intensity table, physiological target: Active recovery.
+    ranges: {}
     rpe: {min: 4, max: 5}
     note: "Physiological target: Active Recovery"
 
   - key: ER
     name: EnduranceRun
-    physiological_class: endurance
-    ranges:
-      lthr: {min: 75, max: 85}
+    stated_class:
+      class: endurance
+      source: >-
+        Koop, Training Essentials for Ultrarunning — intensity table, physiological target: Aerobic base; predominantly fat oxidation; ~50–65% VO2max.
+    ranges: {}
     rpe: {min: 5, max: 6}
     note: "Physiological target: Aerobic Endurance / \"Forever\" Pace"
 
   - key: SSR
     name: SteadyStateRun
-    physiological_class: sub_threshold
-    ranges:
-      lthr: {min: 85, max: 95}
+    stated_class:
+      class: sub_threshold
+      source: >-
+        Koop, Training Essentials for Ultrarunning — intensity table, physiological target: High aerobic; below lactate threshold; ~65–75% VO2max; 20–60 min continuous intervals.
+    ranges: {}
     rpe: {min: 7, max: 8}
     note: "Physiological target: High-End Aerobic"
 
   - key: TR
     name: TempoRun
-    physiological_class: threshold
-    ranges:
-      lthr: {min: 95, max: 102}
+    stated_class:
+      class: threshold
+      source: >-
+        Koop, Training Essentials for Ultrarunning — intensity table, physiological target: At or near lactate threshold; ~75–85% VO2max; all-out time-trial pace for 40–90 min.
+    ranges: {}
     rpe: {min: 8, max: 9}
     note: "Physiological target: Lactate Threshold"
 
   - key: RI
     name: RunningIntervals
-    physiological_class: vo2max
-    ranges:
-      lthr: {min: 102, max: null}
+    stated_class:
+      class: vo2max
+      source: >-
+        Koop, Training Essentials for Ultrarunning — intensity table, physiological target: VO2max intensity; >= 90% VO2max.
+    ranges: {}
     rpe: {min: 9, max: 10}
     note: "Physiological target: VO2 Max"

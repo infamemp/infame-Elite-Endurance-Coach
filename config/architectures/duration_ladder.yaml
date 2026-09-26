@@ -16,7 +16,7 @@ intent: >
 rep_shape: steady
 set_shape: [duration_ladder_up, duration_ladder_down]
 
-applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+applicable_classes: [tempo, sub_threshold, threshold, supra_threshold, vo2max]
 disciplines: [trainer, road_run, trail_run, treadmill, track_run]
 
 progression_levers: [reps, bout_duration, intensity, recovery_duration]

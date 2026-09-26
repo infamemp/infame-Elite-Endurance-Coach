@@ -12,7 +12,7 @@ intent: >
 rep_shape: stepped_build
 set_shape: identical
 
-applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+applicable_classes: [tempo, sub_threshold, threshold, supra_threshold, vo2max]
 disciplines: [trainer, road_run, treadmill]
 
 progression_levers: [reps, bout_duration, intensity]

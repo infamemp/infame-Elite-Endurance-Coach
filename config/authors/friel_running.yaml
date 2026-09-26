@@ -19,10 +19,24 @@ metric_status:
   pace: native
   lthr: native
 
+notes:
+  - >-
+    Verified against Friel's published run zones (TrainingPeaks, "Joe Friel's
+    Quick Guide to Setting Zones"). His pace zones are given as % of threshold
+    pace TIME (e.g. Zone 2 = 114-129%); the values here are the same zones as %
+    of threshold SPEED, the form Intervals.icu uses (Zone 2 = 78-88%).
+  - >-
+    This is the only author in the repository that publishes running pace and
+    heart rate natively in the same table; the running pace-to-LTHR crosswalk
+    is built from it.
+
 zones:
   - key: Zone 1
     name: Active Recovery
-    physiological_class: recovery
+    stated_class:
+      class: recovery
+      source: >-
+        Friel running zones — zone named "Active Recovery".
     ranges:
       pace: {min: null, max: 78}
       lthr: {min: null, max: 85}
@@ -30,7 +44,10 @@ zones:
 
   - key: Zone 2
     name: Endurance
-    physiological_class: endurance
+    stated_class:
+      class: endurance
+      source: >-
+        Friel running zones — zone named "Endurance".
     ranges:
       pace: {min: 78, max: 88}
       lthr: {min: 85, max: 89}
@@ -38,7 +55,10 @@ zones:
 
   - key: Zone 3
     name: Tempo
-    physiological_class: tempo
+    stated_class:
+      class: tempo
+      source: >-
+        Friel running zones — zone named "Tempo".
     ranges:
       pace: {min: 88, max: 94}
       lthr: {min: 90, max: 94}
@@ -46,7 +66,10 @@ zones:
 
   - key: Zone 4
     name: Lactate Threshold
-    physiological_class: threshold
+    stated_class:
+      class: threshold
+      source: >-
+        Friel running zones — zone named "Lactate Threshold".
     ranges:
       pace: {min: 95, max: 101}
       lthr: {min: 95, max: 99}
@@ -54,7 +77,6 @@ zones:
 
   - key: Zone 5a
     name: Sub-Aerobic Threshold
-    physiological_class: vo2max
     ranges:
       pace: {min: 100, max: 103}
       lthr: {min: 100, max: 102}
@@ -62,7 +84,10 @@ zones:
 
   - key: Zone 5b
     name: Aerobic Capacity / VO2max
-    physiological_class: vo2max
+    stated_class:
+      class: vo2max
+      source: >-
+        Friel running zones — zone named "Aerobic Capacity / VO2max".
     ranges:
       pace: {min: 104, max: 111}
       lthr: {min: 103, max: 106}
@@ -70,7 +95,15 @@ zones:
 
   - key: Zone 5c
     name: Anaerobic Capacity
-    physiological_class: anaerobic
+    stated_class:
+      class: anaerobic
+      source: >-
+        Friel running zones — zone named "Anaerobic Capacity".
+    resolution:
+      use: stated
+      reason: >-
+        Open-ended zone that begins at 111% of threshold pace, the top of Zone 5b, so its lower bound alone computes as VO2max. Friel defines it as the anaerobic-capacity zone; efforts there are short maximal repetitions.
     ranges:
       pace: {min: 111, max: null}
+      lthr: {min: 106, max: null}
     rpe: {min: 10, max: 10}

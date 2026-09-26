@@ -174,90 +174,20 @@ tss_rules:
   # only needs to absorb header rounding — not a margin for disagreement.
 
 # ══════════════════════════════════════════════════════════════════
-# CLASSIFICATION CUTPOINTS
+# CLASSIFICATION CUTPOINTS — derived, no longer stored here (v7.2)
 # ══════════════════════════════════════════════════════════════════
-# Disjoint semi-open intervals [min, max) used to classify an intensity target
-# into a physiological class. Derived from the class boundaries the authors
-# themselves declare, not invented: cycling power is verified against Coggan,
-# Friel and Carmichael (14/14 zones agree); running power comes entirely from
-# Palladino (9/9); % LTHR reflects a six-author consensus on the sub-threshold
-# to threshold boundary at 95%; % HRmax comes from Olbrich, the only author
-# defining it.
+# The class bands live in ONE place: config/tss_classes.yaml → bands, on the
+# canonical axis (% of threshold) per sport. The per-metric cutpoints the
+# validator and the state engine use for loose targets are computed from those
+# bands through config/crosswalk.yaml by zone_model.derived_cutpoints() and
+# injected at load time as `classification_cutpoints`. Keeping a second copy
+# here is what let the two drift apart before v7.2.
 #
-# PRECEDENCE — this matters more than the numbers themselves:
-#   1. The physiological_class assigned to a zone in config/authors/*.yaml is
-#      AUTHORITATIVE. When a target falls inside a declared zone of the active
-#      methodology, that zone's class governs and these cutpoints are not used.
-# Above threshold the scale splits three ways, following the authors' own zone
-# names: VO2max, anaerobic capacity, and neuromuscular power. Boundaries come from
-# where Coggan, Friel and Palladino place those transitions.
-#
-#   2. These cutpoints apply only as a fallback, when a target matches no
-#      declared zone — e.g. the validator costing "85-95%" emitted in a block.
-#
-# Authors genuinely disagree: Friel Zone 5a is supra at 100-102% LTHR while
-# Coggan Level 4 is still threshold up to 105%. No single set of cutpoints can
-# satisfy both, which is precisely why author class wins. 67 of 78 zones agree
-# with these cutpoints; the 11 that diverge are author disagreements, not errors.
-#
-# Palladino and Olbrich define no tempo zone. That gap is preserved rather than
-# invented: under running power, 75-88% is endurance per Palladino.
-
-classification_cutpoints:
-  cycling:
-    power:
-      recovery:      {min: 0,   max: 55}
-      endurance:     {min: 55,  max: 75}
-      tempo:         {min: 75,  max: 88}
-      sub_threshold: {min: 88,  max: 95}
-      threshold:     {min: 95,  max: 106}
-      vo2max:        {min: 106, max: 121}
-      anaerobic:     {min: 121, max: 150}
-      neuromuscular: {min: 150, max: null}
-    lthr:
-      recovery:      {min: 0,   max: 80}
-      endurance:     {min: 80,  max: 88}
-      tempo:         {min: 88,  max: 92}
-      sub_threshold: {min: 92,  max: 95}
-      threshold:     {min: 95,  max: 103}
-      vo2max:        {min: 103, max: 107}
-      anaerobic:     {min: 107, max: 112}
-      neuromuscular: {min: 112, max: null}
-  running:
-    power:
-      recovery:      {min: 0,   max: 75}
-      endurance:     {min: 75,  max: 88}
-      sub_threshold: {min: 88,  max: 95}
-      threshold:     {min: 95,  max: 101}
-      vo2max:        {min: 101, max: 116}
-      anaerobic:     {min: 116, max: 150}
-      neuromuscular: {min: 150, max: null}
-    lthr:
-      recovery:      {min: 0,   max: 80}
-      endurance:     {min: 80,  max: 88}
-      tempo:         {min: 88,  max: 92}
-      sub_threshold: {min: 92,  max: 95}
-      threshold:     {min: 95,  max: 103}
-      vo2max:        {min: 103, max: 107}
-      anaerobic:     {min: 107, max: 112}
-      neuromuscular: {min: 112, max: null}
-    pace:
-      recovery:      {min: 0,   max: 75}
-      endurance:     {min: 75,  max: 85}
-      tempo:         {min: 85,  max: 91}
-      sub_threshold: {min: 91,  max: 97}
-      threshold:     {min: 97,  max: 103}
-      vo2max:        {min: 103, max: 115}
-      anaerobic:     {min: 115, max: 150}
-      neuromuscular: {min: 150, max: null}
-    hrmax:
-      recovery:      {min: 0,   max: 75}
-      endurance:     {min: 75,  max: 80}
-      sub_threshold: {min: 80,  max: 85}
-      threshold:     {min: 85,  max: 90}
-      vo2max:        {min: 90,  max: 95}
-      anaerobic:     {min: 95,  max: 100}
-      neuromuscular: {min: 100, max: null}
+# PRECEDENCE — unchanged:
+#   1. A target that falls inside a zone of the active methodology takes that
+#      zone's class (now computed by zone_model.py, including the author's
+#      crosswalk-estimated columns).
+#   2. The derived cutpoints apply only when no zone contains the target.
 
 class_resolution:
   order: [author_zone, cutpoints]
