@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.7.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.8.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,14 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.8 — provisional thresholds, done properly (2026-09-26)**
+
+When `#STATE` contradicts a threshold, Endurance steps stay in the lower half of
+the zone (they are a percentage of a threshold that is probably too high), at
+most one test is scheduled per week (the sport the block needs first goes in
+week 1), and the declared profile's notes never override the weekly pattern the
+head coach saved.
 
 **v7.7 — decisions survive the chat (2026-09-26)**
 

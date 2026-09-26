@@ -557,6 +557,9 @@ def unit_tests():
          "Saved at every gate, not only at block end"),
         ("prompt: #SESSION supports phases 1-6", "<1 | 2 | 3 | 4 | 5 | 6>"),
         ("prompt: contradicted thresholds are provisional", "A threshold `#STATE` contradicts is provisional"),
+        ("prompt: provisional thresholds keep Endurance in the lower half", "lower half of that zone"),
+        ("prompt: at most one threshold test per week", "Schedule at most one test per week"),
+        ("prompt: profile notes never override the saved weekly pattern", "they never override a pattern saved in `#SESSION`"),
     ]:
         check(name, needle in _pr, needle)
 
