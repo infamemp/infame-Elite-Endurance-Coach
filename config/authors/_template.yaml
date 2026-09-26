@@ -132,6 +132,15 @@ notes:
 #     race_anchor: {duration_min: 120, source: "..."}
 #     race_anchor: {from: {duration_min: 30}, to: {duration_min: 6}, source: "..."}
 #     race_anchor: {from: {duration_min: 6}, to: null, source: "..."}  # open-ended
+#     race_anchor: {any_of: [{distance: 5K}, {distance: 10K}], source: "..."}  # "5K or 10K pace"
+#     race_anchor: {distance: marathon, offset_s_per_mile: {min: 60, max: 120},
+#                   source: "..."}      # "goal marathon pace + 1:00 to 2:00 per mile"
+#     race_anchor: {distance: marathon, offset_s_per_mile: -10, source: "..."}  # MP minus 10 s/mi
+#   An offset is in SECONDS PER MILE (positive = slower). Because the pace at the
+#   anchor depends on the runner's level, an offset zone is read across runners of
+#   VDOT 35-65 (a 4:16 to a 2:32 marathoner), so its range is wide by design.
+#   An author who publishes NO numbers at all (every zone anchored) sets
+#   `available_metrics: []`.
 #   The range and the class are then computed and every metric is estimated (~).
 #   If the zone ALSO has native numbers, those govern and the anchor is only a
 #   consistency check (`validate` warns above 3 points of disagreement).

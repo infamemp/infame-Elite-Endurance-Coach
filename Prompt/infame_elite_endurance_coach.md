@@ -255,7 +255,7 @@ A **Rest** day carries only `[Week]`/`[Date]`, `[Athlete ID]`, `[Category]: Rest
 ### Fixed values
 
 - **Labels** — `[Week]`, `[Date]`, `[Athlete ID]`, `[Category]`, `[Methodology]`, `[Discipline]`, `[Focus]`, `[Duration]`, `[Estimated TSS]`, `[Execution]`, `[Nutrition]` — are structural tokens: always in English, exactly as written, never bold, never translated.
-- **`[Methodology]`** is one of: `carmichael`, `coggan`, `daniels`, `friel_cycling`, `friel_running`, `koop`, `olbrich`, `palladino`.
+- **`[Methodology]`** is one of: `carmichael`, `coggan`, `daniels`, `friel_cycling`, `friel_running`, `hansons_half`, `hansons_marathon`, `koop`, `olbrich`, `palladino`, `rosario`.
 - **`[Discipline]`** is one of: `road_bike`, `mtb`, `gravel`, `trainer`, `road_run`, `trail_run`, `treadmill`, `track_run`. Its sport must match the methodology's.
 - **`[Duration]` and `[Estimated TSS]`** are always `pending`. The engine writes the real values.
 

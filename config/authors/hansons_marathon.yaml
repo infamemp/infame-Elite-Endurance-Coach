@@ -1,0 +1,107 @@
+# Hansons Marathon Method Zones
+# Conforms to config/schema/author.schema.json (v7.2 — race anchors)
+# Source: Luke Humphrey, "Hansons Marathon Method" (2nd ed., 2016), Ch. 3
+# ("How to Pace Workouts"), extracted via the book-processing pipeline
+# (hansons-marathon-method-2nd-ed_kb.md, sections Q-1, Q-2, glossary, P-1 to P-5).
+#
+# The Hansons Half-Marathon Method is a SEPARATE methodology (hansons_half.yaml):
+# it uses the same names (Tempo, Strength, Speed) anchored to the goal HALF-marathon
+# pace, so "Tempo" means a different intensity in each book.
+
+id: hansons_marathon
+name: Hansons Marathon Method Zones
+sport: running
+sport_note: Marathon
+
+zone_identifier_style: Named run type (SOS workouts), anchored to goal marathon pace (GMP)
+
+default_metric: pace
+available_metrics: []
+primary_metrics:
+  - Goal Marathon Pace (GMP)
+intensity_anchors: ["goal marathon pace (GMP) ± seconds per mile"]
+
+notes:
+  - >-
+    Every zone is defined RELATIVE TO THE RUNNER'S GOAL MARATHON PACE (GMP), not
+    to threshold and not as a percentage: Easy = GMP + 1:00 to 2:00 per mile,
+    Tempo = GMP, Strength = GMP - 0:10 per mile, Speed = 5K or 10K goal pace
+    (Q-1). The book publishes no percentage, heart-rate or power scale, so every
+    number in the metric columns is an estimate (`~`) read through the race
+    anchors in config/crosswalk.yaml (distances from Palladino's published
+    table; pace offsets and durations from the Daniels-Gilbert model).
+  - >-
+    Offset zones (Easy, Strength) are read across runners of VDOT 35-65 (from a
+    4:16 to a 2:32 marathoner), because a fixed number of seconds per mile is a
+    different fraction of pace for a slow runner and a fast one. That is why
+    their ranges are wide; the athlete's own goal pace gives the exact value.
+  - >-
+    The anchor is the GOAL pace and the conversion assumes the goal is
+    realistic. The author says the same from the other side: a runner who
+    cannot hold GMP through the long tempos has set the goal too aggressively.
+  - >-
+    Long run: run at the faster end of the easy range (about GMP + 1:00,
+    "easy-to-moderate", Q-1), capped at 16 miles and 3 hours. The book gives it
+    no separate pace, so it has no row of its own.
+  - >-
+    The author also states each type as a fraction of VO2max: easy 55-75%,
+    strength 60-80%, speed 80-95% ("just under 100%"), with anaerobic threshold
+    at 60-90+% (Q-2). There is no %VO2max column in the standard tables, so
+    those figures stay in the knowledge base.
+  - >-
+    Table 3.5 (the Training Intensity Chart with exact paces by goal time) is
+    image-only in the source and could not be extracted; the paces here are
+    reconstructed from the published offsets.
+
+zones:
+  - key: Easy
+    name: Easy Aerobic
+    stated_class:
+      class: endurance
+      source: >-
+        Hansons Marathon Method, P-1: goal "aerobic development (mitochondria,
+        capillaries, fat-burning), active recovery"; 55-75% VO2max.
+    race_anchor:
+      distance: marathon
+      offset_s_per_mile: {min: 60, max: 120}
+      source: >-
+        Q-1: "GMP + 1:00 to 2:00 min/mi slower"; "fast easy" = GMP + 1:00,
+        "slow easy" = GMP + 2:00 (glossary).
+    ranges: {}
+
+  - key: Tempo
+    name: Tempo (= marathon pace)
+    race_anchor:
+      distance: marathon
+      source: "Q-1: Tempo = Marathon Pace, GMP (exact); P-5: below anaerobic threshold."
+    ranges: {}
+
+  - key: Strength
+    name: Strength
+    race_anchor:
+      distance: marathon
+      offset_s_per_mile: -10
+      source: >-
+        Q-1/P-4: GMP - 0:10 per mile (MP minus 10); 60-80% VO2max; "near
+        half-marathon pace for faster runners."
+    ranges: {}
+
+  - key: Speed
+    name: Speed
+    stated_class:
+      class: vo2max
+      source: >-
+        Hansons Marathon Method, P-3: goal "VO2max, AT, running economy";
+        run "just under 100% VO2max" (80-95% VO2max, Q-2).
+    resolution:
+      use: computed
+      reason: >-
+        The zone spans 5K to 10K goal pace (100-108% of threshold pace), which
+        the class bands split between Supra-threshold (the 10K side) and VO2max
+        (the 5K side); its midpoint (104%) computes to Supra-threshold. The
+        author's VO2max target applies to the 5K end of the zone, so the
+        computed class governs the zone as a whole.
+    race_anchor:
+      any_of: [{distance: 5K}, {distance: 10K}]
+      source: "Q-1/P-3: 5K or 10K goal pace, just below VO2max."
+    ranges: {}
