@@ -10,6 +10,9 @@
 
 id: hansons_marathon
 name: Hansons Marathon Method Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Hansons_Marathon_Method.md
 sport: running
 sport_note: Marathon
 

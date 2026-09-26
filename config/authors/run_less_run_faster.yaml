@@ -6,6 +6,9 @@
 
 id: run_less_run_faster
 name: Run Less Run Faster (FIRST) Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Run_Less_Run_Faster.md
 sport: running
 sport_note: 5K to marathon, three quality runs a week
 

@@ -4,6 +4,9 @@
 
 id: olbrich
 name: Olbrich Running Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Wolfgang_Olbrich_Ultramarathon_Training.md
 sport: running
 sport_note: Ultramarathon / Running
 

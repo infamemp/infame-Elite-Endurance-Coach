@@ -542,6 +542,16 @@ def unit_tests():
     check("prompt: the [Methodology] list names every author file", listed == on_disk,
           f"missing from prompt: {sorted(on_disk - listed)}; not on disk: {sorted(listed - on_disk)}")
 
+    # Every author declares its KB file; every KB on disk is claimed (Mujika is a topic KB)
+    claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
+    check("authors: every author declares an existing knowledge_file",
+          all(k and os.path.isfile(os.path.join(ROOT, "Knowledge", k)) for k in claimed), claimed)
+    kb_disk = {os.path.relpath(f, os.path.join(ROOT, "Knowledge")).replace(os.sep, "/")
+               for f in glob.glob(os.path.join(ROOT, "Knowledge", "**", "*.md"), recursive=True)
+               if os.sep + "Catalogs" + os.sep not in f}
+    orphans = {k for k in kb_disk - claimed if "Mujika" not in k}
+    check("authors: no Knowledge file is left without an author", not orphans, sorted(orphans))
+
     # ── Run Less Run Faster ────────────────────────────────────────
     def rl(key):
         return next(z for z in zm.load_author("run_less_run_faster")["zones"] if str(z["key"]) == key)

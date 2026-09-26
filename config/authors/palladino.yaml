@@ -4,6 +4,9 @@
 
 id: palladino
 name: Palladino Running Power/Pace Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Steve_Palladino_Running_with_Power.md
 sport: running
 
 zone_identifier_style: Number with letter sub-zone (e.g. "1A", "3B")

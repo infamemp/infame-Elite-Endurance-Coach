@@ -4,6 +4,9 @@
 
 id: coggan
 name: Coggan Cycling Levels
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md
 sport: cycling
 
 zone_identifier_style: Level N

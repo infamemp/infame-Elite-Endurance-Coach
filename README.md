@@ -28,7 +28,7 @@ authoritative. The model prescribes on top of it and never recalculates it.
 
 ### What lives where
 
-- **`config/`** — 8 methodologies as YAML validated against a JSON schema, plus
+- **`config/`** — 13 methodologies as YAML validated against a JSON schema, plus
   physiological classes, decision thresholds, the Coggan power profile, and
   athlete profiles. Zero magic numbers anywhere else.
 - **`engine/`** — pulls wellness, PMC series, activities and power/pace curves
@@ -47,10 +47,12 @@ authoritative. The model prescribes on top of it and never recalculates it.
   `dry_run=False` and `confirm=True` are passed explicitly, and refuses a
   BLOCKED block unless `override_validation=True` is also passed. See
   `manual/OPERATIONS_MANUAL.md` §4a.
-- **`tests/`** — 193 regression tests over synthetic athletes with frozen expected
+- **`tests/`** — 390 regression tests over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
-- **`Knowledge/`** — 8 book-derived knowledge bases. 6 are split into `Principles/`
+- **`Knowledge/`** — 13 book-derived knowledge bases (each methodology's YAML
+  declares its file in `knowledge_file`; Friel cycling and running share one, and
+  Mujika on tapering belongs to no single methodology). 11 are split into `Principles/`
   (binding zone definitions, ratios, ceilings — loaded in the Project) and
   `Catalogs/` (the author's own named worked examples, for calibration only,
   never loaded by default). The other 2 (Friel, Palladino) have no worked-plan
@@ -134,7 +136,7 @@ out/             per-athlete state.md/profile.md/continuity.md — what you drag
                  into the Claude Project; out/roster.md lists every athlete
 tests/           fixtures, golden baselines, the regression runner
 Prompt/          the coach system prompt, with dated archive
-Knowledge/       8 book-derived methodology KBs — 6 split into Principles/ (loaded
+Knowledge/       13 book-derived KBs — 11 split into Principles/ (loaded
                  in the Project) + Catalogs/ (worked examples, not loaded by
                  default); Friel and Palladino stay single-file (no plan content
                  to split)
@@ -303,7 +305,7 @@ worked. What changed:
 Rebuilt around four layers so that computation and judgement stop competing for
 the same pass. What changed:
 
-- **Configuration became data.** 8 methodologies as schema-validated YAML; zone
+- **Configuration became data.** 13 methodologies as schema-validated YAML; zone
   tables generated from them and never hand-edited. Adding an author is a file,
   not a code change.
 - **TSS left the prompt.** Computed by the verification engine from the zone
@@ -314,7 +316,7 @@ the same pass. What changed:
   figure.
 - **A verification gate** checks every generated block against the hard
   constraints before it can reach an athlete.
-- **A regression suite** of 193 tests over synthetic athletes with frozen expected
+- **A regression suite** of 392 tests over synthetic athletes with frozen expected
   outputs.
 - **Non-threshold anchors** declared per author, keeping zones interchangeable
   across methodologies without altering any author's published numbers.
@@ -335,7 +337,7 @@ Any change to `config/` or `engine/` follows the same sequence:
 ```bash
 python build_zone_tables.py validate    # schema-check the authors
 python build_zone_tables.py build       # regenerate the zone tables
-python tests/run_tests.py               # 193 regression tests
+python tests/run_tests.py               # 392 regression tests
 ```
 
 A failing golden test does not automatically mean a bug — it means output

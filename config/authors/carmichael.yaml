@@ -4,6 +4,9 @@
 
 id: carmichael
 name: Carmichael / CTS Cycling Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Chris_Carmichael_Time_Crunched_Cyclist.md
 sport: cycling
 
 zone_identifier_style: Letter code (2–3 letters)

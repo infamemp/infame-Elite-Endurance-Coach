@@ -133,6 +133,11 @@ def cross_field_errors(data, stem):
     extra = []
     if data.get("id") != stem:
         extra.append(f"id '{data.get('id')}' does not match filename stem '{stem}'")
+    kf = data.get("knowledge_file")
+    if kf is None:
+        extra.append("knowledge_file is missing (path relative to Knowledge/)")
+    elif not os.path.isfile(os.path.join(ROOT, "Knowledge", kf)):
+        extra.append(f"knowledge_file 'Knowledge/{kf}' does not exist")
     available = set(data.get("available_metrics", []))
     resolvable = available | set(zm.sport_metrics(data.get("sport", "cycling")))
     if data.get("default_metric") not in resolvable:

@@ -28,6 +28,10 @@ id: your_id
 # Display name, as it appears in the generated Markdown heading.
 name: Author Name Zones
 
+# Knowledge base the coach reads for this methodology, path relative to Knowledge/.
+# Must exist. Prefer Principles/<file>.md when the book is split.
+knowledge_file: Principles/Author_Book_Title.md
+
 # cycling | running
 sport: running
 

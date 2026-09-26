@@ -7,6 +7,9 @@
 
 id: hudson
 name: Hudson (Adaptive Running) Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Hudson_Run_Faster_From_5K_to_Marathon.md
 sport: running
 sport_note: 5K to marathon
 

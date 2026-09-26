@@ -4,6 +4,9 @@
 
 id: daniels
 name: Daniels Running Zones
+
+# Knowledge base the coach reads for this methodology (path relative to Knowledge/).
+knowledge_file: Principles/Jack_Daniels_Running_Formula.md
 sport: running
 
 zone_identifier_style: Letter code
