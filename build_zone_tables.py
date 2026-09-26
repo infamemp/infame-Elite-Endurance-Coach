@@ -225,7 +225,9 @@ def validate_all():
             for msg in res_errors:
                 print(f"        [class] {msg}")
         else:
-            natives = [m for m in data['available_metrics'] if m != 'rpe'] or ["none (stated classes)"]
+            natives = [m for m in data['available_metrics'] if m != 'rpe'] or [
+                "none (race anchors)" if any(z.get("race_anchor") for z in data["zones"])
+                else "none (stated classes)"]
             print(f"OK    {fn}  ({len(data['zones'])} zones, native: {', '.join(natives)})")
 
     print()
@@ -378,9 +380,12 @@ def render_author(author, thresholds):
     L.append("* **Default Metric:** " +
              (author.get("default_metric_label") or labels.get(author["default_metric"],
                                                               author["default_metric"])))
+    anchored = any(z.get("race_anchor") for z in author["zones"])
     L.append("* **Native Metrics (author's own numbers):** " +
              (", ".join(labels[m] for m in natives) or
-              "none — RPE and the physiological target of each zone"))
+              ("none — zones are defined by a race pace or a sustainable duration "
+               "(see `Anchor:` in the Notes)" if anchored else
+               "none — RPE and the physiological target of each zone")))
     est = [m for m in zm.sport_metrics(sport) if m not in natives]
     if est:
         L.append("* **Estimated Metrics (`~`, computed through the crosswalk):** " +

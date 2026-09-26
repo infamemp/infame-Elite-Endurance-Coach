@@ -54,7 +54,6 @@
     },
     "available_metrics": {
       "type": "array",
-      "minItems": 1,
       "uniqueItems": true,
       "items": {
         "type": "string",
@@ -66,7 +65,7 @@
           "rpe"
         ]
       },
-      "description": "Metrics the author PUBLISHES (native), plus 'rpe' when RPE is the author's primary scale. Every other metric of the sport is estimated at build time. A zone range column may only exist for a metric listed here."
+      "description": "Metrics the author PUBLISHES (native), plus 'rpe' when RPE is the author's primary scale. Every other metric of the sport is estimated at build time. A zone range column may only exist for a metric listed here. May be empty for an author who defines every zone by a race_anchor or a stated_class."
     },
     "primary_metrics": {
       "type": "array",
@@ -293,7 +292,7 @@
           "race_anchor": {
             "type": "object",
             "additionalProperties": false,
-            "description": "Running only. For a zone the author defines by a race distance or a sustainable duration instead of a percentage. Give ONE of `distance` (800m, 1600m/mile/1500m, 3200m/3K/2mile, 5K, 10K, 10mile, half_marathon, marathon), `duration_min`, or a span with `from` and `to` (`to: null` = open-ended). The range is read from config/crosswalk.yaml → running.race_anchors. If the zone also has native numbers, those govern and the anchor is only a consistency check.",
+            "description": "Running only. For a zone the author defines by a race distance or a sustainable duration instead of a percentage. Give ONE of: `distance` (800m, 1600m/mile/1500m, 3200m/3K/2mile, 5K, 10K, 10mile, half_marathon, marathon) optionally with `offset_s_per_mile` (\"goal marathon pace + 1:00 to 2:00\" = {min: 60, max: 120}); `duration_min`; a span `from`/`to` (`to: null` = open-ended); or `any_of` (a list of two or more of these: \"5K or 10K pace\"). The range is read from config/crosswalk.yaml → running.race_anchors. If the zone also has native numbers, those govern and the anchor is only a consistency check.",
             "properties": {
               "distance": {
                 "type": "string"
@@ -315,6 +314,26 @@
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "maximum": 600
+                  },
+                  "offset_s_per_mile": {
+                    "description": "Seconds per mile added to the anchor pace; positive = slower, negative = faster. A number or {min, max}. Distance anchors only.",
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "min": {
+                            "type": "number"
+                          },
+                          "max": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    ]
                   }
                 }
               },
@@ -332,6 +351,26 @@
                         "type": "number",
                         "exclusiveMinimum": 0,
                         "maximum": 600
+                      },
+                      "offset_s_per_mile": {
+                        "description": "Seconds per mile added to the anchor pace; positive = slower, negative = faster. A number or {min, max}. Distance anchors only.",
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "min": {
+                                "type": "number"
+                              },
+                              "max": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        ]
                       }
                     }
                   },
@@ -343,6 +382,65 @@
               "source": {
                 "type": "string",
                 "description": "Where the author defines the zone this way."
+              },
+              "offset_s_per_mile": {
+                "description": "Seconds per mile added to the anchor pace; positive = slower, negative = faster. A number or {min, max}. Distance anchors only.",
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                ]
+              },
+              "any_of": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "One of the alternatives.",
+                  "properties": {
+                    "distance": {
+                      "type": "string"
+                    },
+                    "duration_min": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 600
+                    },
+                    "offset_s_per_mile": {
+                      "description": "Seconds per mile added to the anchor pace; positive = slower, negative = faster. A number or {min, max}. Distance anchors only.",
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "min": {
+                              "type": "number"
+                            },
+                            "max": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
               }
             }
           }

@@ -37,8 +37,11 @@ Resolution rules (deterministic — the same input always gives the same output)
   5. Domain. The domain of the class. The zone is additionally flagged when its
      range crosses into another domain, or touches the LT1 band.
   5b. Race anchors (running). A zone may declare `race_anchor` — a race
-     distance ("marathon"), a sustainable duration (`duration_min: 120`) or a
-     span between two of them — instead of a number. The range is read from
+     distance ("marathon"), a sustainable duration (`duration_min: 120`), a
+     span between two of them (`from`/`to`), either of two (`any_of`), or a
+     distance with a pace offset in seconds per mile (`offset_s_per_mile`,
+     positive = slower: "goal marathon pace + 1:00 to 2:00") — instead of a
+     number. The range is read from
      config/crosswalk.yaml → running.race_anchors: distances from Palladino's
      published table, durations from the Daniels-Gilbert model. When a zone has
      both native numbers and an anchor, the native numbers govern and the
@@ -231,12 +234,59 @@ def _anchor_point(spec):
         if not k:
             raise ValueError(f"unknown race distance '{spec['distance']}'")
         d = _ra()["distances"][k]
-        return float(d["min"]), float(d["max"]), f"{k.replace('_', ' ')} race pace"
+        name = k.replace("_", " ")
+        if spec.get("offset_s_per_mile") is not None:
+            lo_off, hi_off = _offset_bounds(spec["offset_s_per_mile"])
+            lo, hi = model_pct_for_offset(d["meters"], lo_off, hi_off)
+            return lo, hi, f"{name} race pace {_fmt_offset(lo_off, hi_off)}"
+        return float(d["min"]), float(d["max"]), f"{name} race pace"
     if "duration_min" in spec:
         c = speed_pct_at_duration(float(spec["duration_min"]))
         h = float(_dm()["half_width"])
         return c - h, c + h, f"{_num_min(spec['duration_min'])} sustainable pace"
     raise ValueError("race anchor needs `distance` or `duration_min`")
+
+
+def _offset_bounds(off):
+    """`offset_s_per_mile`: a number or {min, max}, in seconds per mile,
+    positive = slower than the anchor pace. Returns (lo, hi)."""
+    if isinstance(off, dict):
+        a, b = off.get("min"), off.get("max")
+    else:
+        a = b = off
+    if not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in (a, b)):
+        raise ValueError("offset_s_per_mile must be a number or {min, max} in seconds")
+    return float(min(a, b)), float(max(a, b))
+
+
+def _fmt_offset(lo, hi):
+    def one(x):
+        s = abs(int(round(x)))
+        return f"{s // 60}:{s % 60:02d}"
+    sign = lambda x: "+" if x >= 0 else "-"  # noqa: E731
+    if lo == hi:
+        return f"{sign(lo)}{one(lo)} per mile"
+    if lo >= 0 and hi >= 0:
+        return f"+{one(lo)} to +{one(hi)} per mile"
+    return f"{sign(lo)}{one(lo)} to {sign(hi)}{one(hi)} per mile"
+
+
+MILE_M = 1609.344
+
+
+def model_pct_for_offset(meters, off_lo, off_hi):
+    """Pace at a race distance plus an offset in seconds per mile, as a % of the
+    60-minute speed, across the reference VDOTs. The anchor pace depends on the
+    runner's level, so the range is the full spread over levels and offsets."""
+    dm = _dm()
+    xs = []
+    for v in dm["reference_vdots"]:
+        speed = meters / _race_minutes(v, meters)               # m/min at the anchor
+        pace = MILE_M / speed * 60.0                            # s per mile
+        for off in (off_lo, off_hi):
+            new_speed = MILE_M / (pace + off) * 60.0            # m/min
+            xs.append(100.0 * new_speed / _speed_at(v, dm["threshold_duration_min"]))
+    return min(xs), max(xs)
 
 
 def _num_min(v):
@@ -249,6 +299,10 @@ def _num_min(v):
 
 def race_anchor_range(ra):
     """(t_lo, t_hi, description) on the canonical axis. t_hi None = open."""
+    if "any_of" in ra:
+        pts = [_anchor_point(p) for p in ra["any_of"]]
+        return (min(p[0] for p in pts), max(p[1] for p in pts),
+                " or ".join(p[2] for p in pts))
     if "from" in ra or "to" in ra:
         a = _anchor_point(ra["from"])
         centre_a = (a[0] + a[1]) / 2.0
@@ -271,8 +325,12 @@ def validate_race_anchor(ra, sport):
         race_anchor_range(ra)
     except (ValueError, KeyError, TypeError) as e:
         errs.append(str(e))
-    if not ({"distance", "duration_min", "from"} & set(ra)):
-        errs.append("race_anchor needs `distance`, `duration_min` or `from`")
+    if not ({"distance", "duration_min", "from", "any_of"} & set(ra)):
+        errs.append("race_anchor needs `distance`, `duration_min`, `from` or `any_of`")
+    if "any_of" in ra and (not isinstance(ra["any_of"], list) or len(ra["any_of"]) < 2):
+        errs.append("any_of needs a list of at least two anchors")
+    if ra.get("offset_s_per_mile") is not None and "distance" not in ra:
+        errs.append("offset_s_per_mile only applies to a distance anchor")
     return errs
 
 

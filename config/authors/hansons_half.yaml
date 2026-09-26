@@ -1,0 +1,137 @@
+# Hansons Half-Marathon Method Zones
+# Conforms to config/schema/author.schema.json (v7.2 — race anchors)
+# Source: Luke Humphrey & Keith Hanson, "Hansons Half-Marathon Method" (2014), Ch. 3
+# (Figure 3.3, Table 3.5), extracted via the book-processing pipeline
+# (hansons-half-marathon-method-keith-hanson_kb.md, ZONE-001 to ZONE-003, P-001 to P-013).
+#
+# A SEPARATE methodology from hansons_marathon.yaml: the same names anchored to the
+# goal HALF-marathon pace, so "Tempo" and "Strength" mean different intensities.
+
+id: hansons_half
+name: Hansons Half-Marathon Method Zones
+sport: running
+sport_note: Half marathon
+
+zone_identifier_style: Named run type (SOS workouts), anchored to goal half-marathon pace (HMP)
+
+default_metric: pace
+available_metrics: []
+primary_metrics:
+  - Goal Half-Marathon Pace (HMP)
+intensity_anchors: ["goal half-marathon pace (HMP) ± seconds per mile"]
+
+notes:
+  - >-
+    Every zone is defined RELATIVE TO THE RUNNER'S GOAL HALF-MARATHON PACE, not
+    to threshold and not as a percentage: Easy = HMP + 1:30 to 2:30 per mile,
+    Long run = HMP + 1:10 to 2:30, Tempo = HMP, Strength = HMP - 0:10 per mile
+    (about 10K-15K pace), Speed = 5K to 10K goal pace (ZONE-002). The book
+    publishes no percentage, heart-rate or power scale, so every number in the
+    metric columns is an estimate (`~`) read through the race anchors in
+    config/crosswalk.yaml.
+  - >-
+    Offset zones (Easy, Long run, Strength) are read across runners of VDOT
+    35-65, because a fixed number of seconds per mile is a different fraction
+    of pace for a slow runner and a fast one; their ranges are wide by design.
+    The author's own check agrees: Strength (HMP - 10 s) lands where he says it
+    should, between 10K and 15K pace.
+  - >-
+    The anchor is the GOAL pace and the conversion assumes the goal is
+    realistic.
+  - >-
+    The author's pace continuum (ZONE-001) has six zones: easy, moderate,
+    marathon pace, tempo (= half-marathon pace), strength (10K-15K pace) and
+    speed (5K-10K pace). The "moderate aerobic" zone has no published numbers
+    (its column in Table 3.5 is image-only) and is not a row here; the long run
+    covers its role.
+  - >-
+    The author also states intensity as a fraction of VO2max (easy 55-75%,
+    strength 60-80%, speed 95-98%, ZONE-003); there is no %VO2max column in the
+    standard tables, so those figures stay in the knowledge base.
+
+zones:
+  - key: Easy
+    name: Easy
+    stated_class:
+      class: endurance
+      source: >-
+        Hansons Half-Marathon Method, ZONE-001/ZONE-003: the easy pace zone is
+        "below aerobic threshold" (55-75% VO2max).
+    race_anchor:
+      distance: half_marathon
+      offset_s_per_mile: {min: 90, max: 150}
+      source: >-
+        ZONE-002: HM pace + 1:30 to 2:30 per mile ("fast easy" = +1:30; "slow
+        easy" = +2:30).
+    ranges: {}
+
+  - key: Long
+    name: Long run
+    race_anchor:
+      distance: half_marathon
+      offset_s_per_mile: {min: 70, max: 150}
+      source: "ZONE-002: HM pace + 1:10 to 2:30 per mile (easy-to-moderate)."
+    ranges: {}
+
+  - key: Marathon
+    name: Marathon pace
+    race_anchor:
+      distance: marathon
+      source: >-
+        ZONE-001: the third zone of the continuum is marathon pace (the runner's
+        own current or goal marathon pace).
+    ranges: {}
+
+  - key: Tempo
+    name: Tempo (= half-marathon pace)
+    race_anchor:
+      distance: half_marathon
+      source: >-
+        ZONE-001/ZONE-002: Tempo = HM goal pace, "above aerobic threshold, below
+        anaerobic threshold."
+    ranges: {}
+
+  - key: Strength
+    name: Strength
+    stated_class:
+      class: sub_threshold
+      source: >-
+        Hansons Half-Marathon Method, ZONE-001: strength pace is 10-15K pace,
+        "just below anaerobic threshold."
+    resolution:
+      use: computed
+      reason: >-
+        The author places the zone just below his anaerobic threshold, but he
+        defines that threshold loosely (60-90+% VO2max, no duration). The
+        numbers put HMP - 10 s at 97-102% of the 60-minute pace, the top of the
+        Sub-threshold band and the Threshold band, and the midpoint (99.5%)
+        computes to Threshold. His own "10K-15K pace" is itself centred on the
+        60-minute pace (10K = 100-104%, 15K = 98-101% in the model). The
+        computed class governs; the margin is thin.
+    race_anchor:
+      distance: half_marathon
+      offset_s_per_mile: -10
+      source: >-
+        ZONE-002: HM pace - 0:10 per mile (about 10K-15K pace; for novices,
+        between HM and 10K, about 15K).
+    ranges: {}
+
+  - key: Speed
+    name: Speed
+    stated_class:
+      class: vo2max
+      source: >-
+        Hansons Half-Marathon Method, ZONE-001/ZONE-003: the speed pace zone is
+        "just below VO2max" (95-98% VO2max).
+    resolution:
+      use: computed
+      reason: >-
+        The zone spans 5K to 10K pace (100-108% of threshold pace), which the
+        class bands split between Supra-threshold (the 10K side) and VO2max (the
+        5K side); its midpoint (104%) computes to Supra-threshold. The author's
+        VO2max target applies to the 5K end, so the computed class governs the
+        zone as a whole.
+    race_anchor:
+      any_of: [{distance: 5K}, {distance: 10K}]
+      source: "ZONE-002: 5K to 10K goal pace."
+    ranges: {}

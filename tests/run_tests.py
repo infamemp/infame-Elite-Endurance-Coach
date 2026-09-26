@@ -489,6 +489,59 @@ def unit_tests():
     check("palladino: his 10K range and the 60-minute model overlap",
           pal10[0] <= mhi and mlo <= pal10[1])
 
+    # ── v7.2 pace offsets and Hansons ──────────────────────────────
+    lo, hi, desc = zm.race_anchor_range({"distance": "marathon",
+                                          "offset_s_per_mile": {"min": 60, "max": 120}})
+    check("offset: goal marathon pace +1:00 to +2:00 reads 70-84% of threshold",
+          69.5 < lo < 71 and 83.5 < hi < 85, (lo, hi))
+    check("offset: the description names the offset", "+1:00 to +2:00 per mile" in desc, desc)
+    slow = zm.model_pct_for_offset(42195, 60, 60)
+    check("offset: a slower pace than the anchor is a lower % of threshold",
+          slow[1] < zm.model_pct_for_distance(42195)[0])
+    fast = zm.race_anchor_range({"distance": "marathon", "offset_s_per_mile": -10})
+    check("offset: 10 s per mile faster than marathon pace sits 1-4 points above it",
+          94 < fast[0] and fast[1] < 98, fast)
+    z0 = zm.model_pct_for_offset(42195, 0, 0)
+    equal("offset: a zero offset reproduces the model's own marathon range",
+          (round(z0[0], 1), round(z0[1], 1)),
+          tuple(round(x, 1) for x in zm.model_pct_for_distance(42195)))
+    # the half-marathon book says strength (HMP - 10 s) is about 10K-15K pace
+    hs = zm.race_anchor_range({"distance": "half_marathon", "offset_s_per_mile": -10})
+    m10, m15 = zm.model_pct_for_distance(10000), zm.model_pct_for_distance(15000)
+    check("hansons: HMP - 10 s lands between the model's 15K and 10K paces",
+          m15[0] - 1 <= hs[0] and hs[1] <= m10[1] + 1, (hs, m15, m10))
+    su = zm.race_anchor_range({"any_of": [{"distance": "5K"}, {"distance": "10K"}]})
+    equal("any_of: '5K or 10K pace' is the union of both ranges", (su[0], su[1]), (100.0, 108.0))
+    check("any_of: needs at least two alternatives",
+          bool(zm.validate_race_anchor({"any_of": [{"distance": "5K"}]}, "running")))
+    check("offset: a text offset is rejected",
+          bool(zm.validate_race_anchor({"distance": "marathon", "offset_s_per_mile": "1:00"}, "running")))
+    check("offset: refused on a duration anchor",
+          bool(zm.validate_race_anchor({"duration_min": 30, "offset_s_per_mile": 10}, "running")))
+    def hz(aid, key):
+        return next(z for z in zm.load_author(aid)["zones"] if str(z["key"]) == key)
+    for aid, key, want in [
+            ("hansons_marathon", "Easy", "endurance"), ("hansons_marathon", "Tempo", "sub_threshold"),
+            ("hansons_marathon", "Strength", "sub_threshold"), ("hansons_marathon", "Speed", "supra_threshold"),
+            ("hansons_half", "Easy", "endurance"), ("hansons_half", "Long", "endurance"),
+            ("hansons_half", "Marathon", "sub_threshold"), ("hansons_half", "Tempo", "sub_threshold"),
+            ("hansons_half", "Strength", "threshold"), ("hansons_half", "Speed", "supra_threshold")]:
+        equal(f"{aid}: {key} class", hz(aid, key)["physiological_class"], want)
+    check("hansons: the two books are separate authors with different Tempo anchors",
+          hz("hansons_marathon", "Tempo")["canonical"] != hz("hansons_half", "Tempo")["canonical"])
+    check("hansons: an author with no native numbers still gets every metric estimated",
+          all(hz("hansons_marathon", "Tempo")["ranges"].get(m) for m in ("pace", "lthr", "power")))
+    # Every author file must be offered to the coach in the prompt
+    import re as _re
+    ptxt = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"),
+                encoding="utf-8").read()
+    mm = _re.search(r"\[Methodology\][`*]* is one of: (.*?)\.\n", ptxt)
+    listed = set(_re.findall(r"`([a-z_]+)`", mm.group(1))) if mm else set()
+    on_disk = {os.path.basename(f)[:-5] for f in
+               glob.glob(os.path.join(ROOT, "config", "authors", "[!_]*.yaml"))}
+    check("prompt: the [Methodology] list names every author file", listed == on_disk,
+          f"missing from prompt: {sorted(on_disk - listed)}; not on disk: {sorted(listed - on_disk)}")
+
     # ── Delta bands ───────────────────────────────────────────────
     cb = th["longitudinal"]["delta_bands"]["cycling"]
     equal("bands: cycling stable floor widened to -2.5", cb["stable"], -2.5)

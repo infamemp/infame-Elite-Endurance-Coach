@@ -92,6 +92,55 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 
 ---
 
+## Methodology: Hansons Half-Marathon Method Zones
+* **Sport:** Half marathon
+* **Zone Identifier Style:** Named run type (SOS workouts), anchored to goal half-marathon pace (HMP)
+* **Default Metric:** % Threshold Pace
+* **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
+* **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
+* **Primary Metrics:** Goal Half-Marathon Pace (HMP)
+* **Dual-Layer Required:** No
+* **Note:** Every zone is defined RELATIVE TO THE RUNNER'S GOAL HALF-MARATHON PACE, not to threshold and not as a percentage: Easy = HMP + 1:30 to 2:30 per mile, Long run = HMP + 1:10 to 2:30, Tempo = HMP, Strength = HMP - 0:10 per mile (about 10K-15K pace), Speed = 5K to 10K goal pace (ZONE-002). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
+* **Note:** Offset zones (Easy, Long run, Strength) are read across runners of VDOT 35-65, because a fixed number of seconds per mile is a different fraction of pace for a slow runner and a fast one; their ranges are wide by design. The author's own check agrees: Strength (HMP - 10 s) lands where he says it should, between 10K and 15K pace.
+* **Note:** The anchor is the GOAL pace and the conversion assumes the goal is realistic.
+* **Note:** The author's pace continuum (ZONE-001) has six zones: easy, moderate, marathon pace, tempo (= half-marathon pace), strength (10K-15K pace) and speed (5K-10K pace). The "moderate aerobic" zone has no published numbers (its column in Table 3.5 is image-only) and is not a row here; the long run covers its role.
+* **Note:** The author also states intensity as a fraction of VO2max (easy 55-75%, strength 60-80%, speed 95-98%, ZONE-003); there is no %VO2max column in the standard tables, so those figures stay in the knowledge base.
+
+| Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | RPE (1-10) | Domain | Class | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Easy | Easy | ~68–82% | ~72–85% | ~68–82% | ~2–3 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Anchor: half marathon race pace +1:30 to +2:30 per mile; Borderline: within 1 point of the recovery/endurance boundary |
+| Long | Long run | ~68–85% | ~72–88% | ~68–85% | ~2–3 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Anchor: half marathon race pace +1:10 to +2:30 per mile |
+| Marathon | Marathon pace | ~91–94% | ~94–96% | ~91–94% | ~4–5 | Heavy | Sub-threshold | Anchor: marathon race pace; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| Tempo | Tempo (= half-marathon pace) | ~95–98% | ~97–99% | ~95–98% | ~4–5 | Heavy | Sub-threshold | Anchor: half marathon race pace; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| Strength | Strength | ~97–102% | ~98–101% | ~97–102% | ~6–7 | Heavy→Severe | Threshold | Anchor: half marathon race pace -0:10 per mile; Author's stated target is Sub-threshold; class follows the prescribed intensity |
+| Speed | Speed | ~100–108% | ~100–105% | ~100–108% | ~7–8 | Heavy→Severe | Supra-threshold | Anchor: 5K race pace or 10K race pace; Author's stated target is VO2max; class follows the prescribed intensity |
+
+---
+
+## Methodology: Hansons Marathon Method Zones
+* **Sport:** Marathon
+* **Zone Identifier Style:** Named run type (SOS workouts), anchored to goal marathon pace (GMP)
+* **Default Metric:** % Threshold Pace
+* **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
+* **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
+* **Primary Metrics:** Goal Marathon Pace (GMP)
+* **Dual-Layer Required:** No
+* **Note:** Every zone is defined RELATIVE TO THE RUNNER'S GOAL MARATHON PACE (GMP), not to threshold and not as a percentage: Easy = GMP + 1:00 to 2:00 per mile, Tempo = GMP, Strength = GMP - 0:10 per mile, Speed = 5K or 10K goal pace (Q-1). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml (distances from Palladino's published table; pace offsets and durations from the Daniels-Gilbert model).
+* **Note:** Offset zones (Easy, Strength) are read across runners of VDOT 35-65 (from a 4:16 to a 2:32 marathoner), because a fixed number of seconds per mile is a different fraction of pace for a slow runner and a fast one. That is why their ranges are wide; the athlete's own goal pace gives the exact value.
+* **Note:** The anchor is the GOAL pace and the conversion assumes the goal is realistic. The author says the same from the other side: a runner who cannot hold GMP through the long tempos has set the goal too aggressively.
+* **Note:** Long run: run at the faster end of the easy range (about GMP + 1:00, "easy-to-moderate", Q-1), capped at 16 miles and 3 hours. The book gives it no separate pace, so it has no row of its own.
+* **Note:** The author also states each type as a fraction of VO2max: easy 55-75%, strength 60-80%, speed 80-95% ("just under 100%"), with anaerobic threshold at 60-90+% (Q-2). There is no %VO2max column in the standard tables, so those figures stay in the knowledge base.
+* **Note:** Table 3.5 (the Training Intensity Chart with exact paces by goal time) is image-only in the source and could not be extracted; the paces here are reconstructed from the published offsets.
+
+| Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | RPE (1-10) | Domain | Class | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Easy | Easy Aerobic | ~70–84% | ~73–87% | ~70–84% | ~2–3 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Anchor: marathon race pace +1:00 to +2:00 per mile |
+| Tempo | Tempo (= marathon pace) | ~91–94% | ~94–96% | ~91–94% | ~4–5 | Heavy | Sub-threshold | Anchor: marathon race pace; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| Strength | Strength | ~94–97% | ~96–98% | ~94–97% | ~4–5 | Heavy | Sub-threshold | Anchor: marathon race pace -0:10 per mile |
+| Speed | Speed | ~100–108% | ~100–105% | ~100–108% | ~7–8 | Heavy→Severe | Supra-threshold | Anchor: 5K race pace or 10K race pace; Author's stated target is VO2max; class follows the prescribed intensity |
+
+---
+
 ## Methodology: Koop Running Workout Zones
 * **Sport:** Ultrarunning / Running
 * **Zone Identifier Style:** Letter code (workout code)
