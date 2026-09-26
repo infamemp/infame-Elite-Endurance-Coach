@@ -21,6 +21,7 @@ that makes it safe to exist.
 | `list_roster` | reads | `out/roster.md`, no network call |
 | `save_continuity` | writes | `out/<athlete>/continuity.md` — requires a `#SESSION ... #END` envelope |
 | `save_race_result` | writes | Appends a `#RACE_RESULT` block to `race_notes.md`, never overwrites |
+| `save_availability` | writes | `out/<athlete>/availability.md` — the head coach's stated daily maximums, returned by `get_athlete_state` |
 | `save_block` | writes | `out/<athlete>/blocks/<today>_bloque.md` |
 | `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess |
 | `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** |

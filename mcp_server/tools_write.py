@@ -31,6 +31,27 @@ _RACE_RESULT_DATE_RE = re.compile(r"^Date:\s*(\S+)", re.M)
 
 
 @guarded
+def save_availability(athlete_id: str, text: str, athlete_name: str | None = None) -> dict:
+    """Write out/<athlete>/availability.md, always overwriting: the head
+    coach's stated daily maximums, so they are asked for once and read back
+    by get_athlete_state instead of being re-asked (or invented) in every
+    conversation. Requires an #AVAILABILITY ... #END envelope. It never
+    judges the numbers — that stays with the head coach."""
+    body = (text or "").strip()
+    if not body:
+        raise ToolError("Refusing to write an empty availability.md.")
+    if not re.match(r"^#AVAILABILITY\b", body):
+        raise ToolError("This must start with '#AVAILABILITY'. Nothing was written.")
+    if "#END" not in body:
+        raise ToolError("No '#END' found — the block looks incomplete. Nothing was written.")
+    out_dir = safe_out_dir(athlete_id, athlete_name)
+    path = os.path.join(out_dir, "availability.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(body.rstrip() + "\n")
+    return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
+
+
+@guarded
 def save_continuity(athlete_id: str, text: str, athlete_name: str | None = None) -> dict:
     """Write out/<athlete>/continuity.md, always overwriting — the same
     file coach.py's check_continuity() only ever reports the presence/age

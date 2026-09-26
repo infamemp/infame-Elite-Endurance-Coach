@@ -39,9 +39,9 @@ authoritative. The model prescribes on top of it and never recalculates it.
   constraint, recomputing TSS from the same config the engine uses. A block that
   fails is not uploaded.
 - **`generated/`** — zone tables built from `config/`, never hand-edited.
-- **`mcp_server/`** — the primary way to work: a local MCP server exposing the engine as 8 tools
+- **`mcp_server/`** — the primary way to work: a local MCP server exposing the engine as 9 tools
   (`get_athlete_state`, `get_athlete_profile`, `list_roster`, `save_continuity`,
-  `save_race_result`, `save_block`, `validate_block`, `push_block`) to Claude
+  `save_race_result`, `save_availability`, `save_block`, `validate_block`, `push_block`) to Claude
   Desktop, so a conversation can pull state, save a block, validate it, and
   upload it without dragging files. `push_block` stays dry-run unless both
   `dry_run=False` and `confirm=True` are passed explicitly, and refuses a
@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.3.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.5.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,17 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.5 — the coach stops asking for what it can read (2026-09-26)**
+
+Three failures seen in real sessions, fixed in the prompt and tested:
+the coach asked the head coach to confirm that Project files were present
+(it has the search); it left the Metric Map's anchor and dual-layer fields
+"to be confirmed" for a later phase (they are in the zone-table header); and
+it proposed its own daily time ceilings, lower than the ones the head coach
+had stated. Availability is now only ever a stated number; the new
+`save_availability` tool stores it once and `get_athlete_state` returns it,
+so it is not asked or invented again. `friel_running` is zones-only (v7.4).
 
 **v7.3 — MCP is the primary path (2026-09-26)**
 

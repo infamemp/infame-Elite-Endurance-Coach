@@ -1,4 +1,4 @@
-"""server.py — the 8 tools, wired to a stdio MCP server
+"""server.py — the 9 tools, wired to a stdio MCP server
 ==========================================================
 Not what Claude Desktop should actually be configured to launch — see
 `run_server.py` for that. This module only builds the tool surface and
@@ -22,7 +22,7 @@ from . import cancel_patch
 from .tools_push import push_block
 from .tools_read import get_athlete_state, get_athlete_profile, list_roster
 from .tools_validate import validate_block
-from .tools_write import save_block, save_continuity, save_race_result
+from .tools_write import save_availability, save_block, save_continuity, save_race_result
 
 logger = logging.getLogger("mcp_server")
 
@@ -36,7 +36,7 @@ def _configure_logging() -> None:
 
 
 def build_app():
-    """Construct the FastMCP app and register all 8 tools. Deferred inside
+    """Construct the FastMCP app and register all 9 tools. Deferred inside
     a function (rather than at import time) so importing this module for
     introspection or testing never requires the `mcp` package to already be
     on the path — only actually building or running the server does."""
@@ -67,6 +67,7 @@ def build_app():
     # files a head coach otherwise pastes by hand.
     app.tool()(save_continuity)
     app.tool()(save_race_result)
+    app.tool()(save_availability)
     app.tool()(save_block)
 
     # validate_block — runs the existing gate as a subprocess.

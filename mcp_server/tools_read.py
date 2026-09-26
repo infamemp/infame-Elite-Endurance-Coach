@@ -50,6 +50,7 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         # yet (new macrocycle / no race logged), never an error.
         "continuity": _optional_text(os.path.join(info["out_dir"], "continuity.md")),
         "race_notes": _optional_text(os.path.join(info["out_dir"], "race_notes.md")),
+        "availability": _optional_text(os.path.join(info["out_dir"], "availability.md")),
     }
 
 

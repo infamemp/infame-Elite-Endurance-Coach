@@ -542,6 +542,20 @@ def unit_tests():
     check("prompt: the [Methodology] list names every author file", listed == on_disk,
           f"missing from prompt: {sorted(on_disk - listed)}; not on disk: {sorted(listed - on_disk)}")
 
+    # Behavioural rules the head coach had to correct by hand in real sessions.
+    _pr = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
+    for name, needle in [
+        ("prompt: coach searches Project files itself (never asks to confirm them)",
+         "Never ask the head coach to confirm that a file is present"),
+        ("prompt: Metric Map may not carry placeholders",
+         "is a failure. Read `preferences.methodology"),
+        ("prompt: availability is never invented by the coach",
+         "never a number you proposed"),
+        ("prompt: stated availability is saved with save_availability",
+         "save it at once with `save_availability`"),
+    ]:
+        check(name, needle in _pr, needle)
+
     # Every author declares its KB file; every KB on disk is claimed (Mujika is a topic KB)
     claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
     check("authors: every author declares an existing knowledge_file (or `none`)",

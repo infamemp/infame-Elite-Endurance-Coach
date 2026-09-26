@@ -613,7 +613,7 @@ def test_mcp_first_workflow():
     from mcp_server.tools_push import _iso_date, push_block
     from mcp_server.tools_read import get_athlete_state
     from mcp_server.tools_validate import validate_block
-    from mcp_server.tools_write import save_block, save_continuity
+    from mcp_server.tools_write import save_availability, save_block, save_continuity
 
     # 1 — continuity travels with #STATE
     _seed_athlete_data(fresh=True)
@@ -624,6 +624,16 @@ def test_mcp_first_workflow():
           "#SESSION" in (r.get("continuity") or ""), r.get("continuity"))
     check("workflow: get_athlete_state has a `race_notes` key (None or text)",
           "race_notes" in r)
+
+    # 1b — stated availability is saved once and comes back with #STATE
+    ra = save_availability(AID, "just some days", athlete_name="Test Fixture")
+    equal("workflow: save_availability rejects text without #AVAILABILITY", ra.get("ok"), False)
+    ra = save_availability(AID, "#AVAILABILITY\nAthlete ID: " + AID + "\ntue: 90\nmon: rest\n#END",
+                           athlete_name="Test Fixture")
+    equal("workflow: save_availability accepts a well-formed block", ra.get("ok"), True)
+    r = get_athlete_state(AID)
+    check("workflow: get_athlete_state returns the saved `availability`",
+          "tue: 90" in (r.get("availability") or ""), r.get("availability"))
 
     # 2 — one file per week, newest is the default target
     good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
