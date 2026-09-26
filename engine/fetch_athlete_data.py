@@ -28,6 +28,13 @@ Version: 1.1 — profile now also carries age, city, country, per-sport pace
 units and eFTP (from the cached athlete-summary.json row); events now carry
 distance. Added to retire intervals_export.py + convert.py from the daily
 workflow, so athlete_data.json alone can supply everything the old Excel did.
+
+Version: 1.2 — adds fetch_recent_sessions(): the same /events endpoint,
+looked backward instead of forward, reading each event's own `description`
+field (the exact code block the coach wrote and the head coach pasted into
+Intervals.icu, or that push_block sent directly). This is the coach's own
+record of what it already prescribed, so an architecture classifier can
+read it without anyone pasting continuity.md by hand. schema_version -> 2.
 """
 
 import argparse
@@ -314,6 +321,44 @@ def fetch_events(aid):
     return out
 
 
+RECENT_SESSIONS_DAYS = 56  # 8 weeks — enough for the monotony check to have
+                           # real history without pulling the whole macrocycle.
+
+
+def fetch_recent_sessions(aid, days=RECENT_SESSIONS_DAYS):
+    """The last `days` days of events, looked backward instead of forward.
+
+    Same endpoint as fetch_events(), same row shape, plus the one field that
+    function does not need: `description` — the event's own saved text. For
+    a session the coach designed, this is the exact code block (Warmup /
+    Main Set / Cooldown, one line per step) that was pasted into
+    Intervals.icu or sent by push_block. For anything else on the calendar
+    (an imported ride, a race with no code block, a rest day), it is empty.
+
+    Returns every event in the window regardless of content — deciding what
+    counts as a real, classifiable session is the classifier's job, not the
+    fetcher's.
+    """
+    oldest = (date.today() - timedelta(days=days)).isoformat()
+    newest = date.today().isoformat()
+    evs = get(f"/athlete/{aid}/events",
+              params={"oldest": oldest, "newest": newest}, optional=True) or []
+
+    out = []
+    for e in evs:
+        out.append({
+            "date": (e.get("start_date_local") or "")[:10],
+            "name": e.get("name"),
+            "category": e.get("category"),
+            "type": e.get("type"),
+            "description": e.get("description") or "",
+            "planned_load": e.get("icu_training_load") or e.get("training_load"),
+            "planned_time": e.get("moving_time"),
+        })
+    out.sort(key=lambda x: x["date"])
+    return out
+
+
 def calc_age(dob_str):
     """Age in years from an ISO date string (icu_date_of_birth). None if
     missing or unparseable — this is optional context, never blocking."""
@@ -443,8 +488,13 @@ def fetch_one(aid, name, days, outdir):
     events = fetch_events(aid)
     print(f"      {len(events)} events")
 
+    print("   recent sessions (past 8 weeks, for the architecture record)...")
+    recent_sessions = fetch_recent_sessions(aid)
+    with_text = sum(1 for s in recent_sessions if s["description"].strip())
+    print(f"      {len(recent_sessions)} events, {with_text} with a code block")
+
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "fetched_at": date.today().isoformat(),
         "window_days": days,
         "profile": profile,
@@ -453,6 +503,7 @@ def fetch_one(aid, name, days, outdir):
         "activities": activities,
         "curves": curves,
         "events": events,
+        "recent_sessions": recent_sessions,
     }
 
     dest = os.path.join(outdir, str(aid))
