@@ -64,7 +64,14 @@ def load_thresholds():
     if not os.path.exists(path):
         sys.exit(f"Config not found: {path}")
     with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        th = yaml.safe_load(f)
+    # Class cutpoints are derived (config/tss_classes.yaml + crosswalk.yaml),
+    # never stored — inject them for the architecture record.
+    root = os.path.dirname(CONFIG)
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    import zone_model
+    return zone_model.with_derived_cutpoints(th)
 
 
 def load_athlete(aid):

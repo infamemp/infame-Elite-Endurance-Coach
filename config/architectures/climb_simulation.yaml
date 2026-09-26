@@ -12,7 +12,7 @@ intent: >
 rep_shape: climb_simulation
 set_shape: identical
 
-applicable_classes: [threshold, vo2max, anaerobic]
+applicable_classes: [threshold, supra_threshold, vo2max, anaerobic]
 disciplines: [trainer, road_bike, mtb]
 
 progression_levers: [reps, bout_duration, intensity]

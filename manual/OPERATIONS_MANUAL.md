@@ -653,6 +653,8 @@ GitHub → Settings → Danger Zone → Change visibility.
 ```
 infame_elite_endurance_coach/
 ├── coach.py                      single entry point: prep / new / check / review
+├── build_zone_tables.py          validates author files and rebuilds generated/ tables
+├── zone_model.py                 native author values → estimates, class, domain
 ├── requirements.txt               dependencies — pip install -r requirements.txt
 ├── engine/
 │   ├── fetch_athlete_data.py     pulls Intervals.icu data → athlete_data.json
@@ -677,8 +679,9 @@ infame_elite_endurance_coach/
 │   │   ├── _template.yaml        template used by coach.py new
 │   │   ├── ATHLETE_INTAKE.md     script for the onboarding conversation
 │   │   └── <id>.yaml             one file per athlete — declared, not measured
-│   ├── authors/*.yaml            per-methodology zones (Coggan, Daniels, etc.)
-│   ├── tss_classes.yaml          training-load multipliers by physiological class
+│   ├── authors/*.yaml            per-methodology zones — the author's NATIVE values only
+│   ├── crosswalk.yaml            conversions between % FTP, % LTHR, % pace, % HRmax
+│   ├── tss_classes.yaml          intensity domains, classes, class bands, TSS multipliers
 │   └── decision_thresholds.yaml  decision bands — no number lives in code instead
 ├── generated/                    zone tables — never hand-edited
 ├── data/<id>/                    the engine's internal layer — don't browse by hand

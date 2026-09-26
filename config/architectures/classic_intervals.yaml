@@ -13,7 +13,7 @@ intent: >
 rep_shape: steady
 set_shape: identical
 
-applicable_classes: [tempo, sub_threshold, threshold, vo2max, anaerobic, neuromuscular]
+applicable_classes: [tempo, sub_threshold, threshold, supra_threshold, vo2max, anaerobic, neuromuscular]
 disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
 
 progression_levers: [reps, bout_duration, recovery_duration, intensity]

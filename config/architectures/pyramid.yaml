@@ -12,7 +12,7 @@ intent: >
 rep_shape: steady
 set_shape: pyramid
 
-applicable_classes: [tempo, sub_threshold, threshold, vo2max]
+applicable_classes: [tempo, sub_threshold, threshold, supra_threshold, vo2max]
 disciplines: [trainer, road_bike, road_run, treadmill]
 
 progression_levers: [bout_duration, intensity, reps]

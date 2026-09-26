@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "author.schema.json",
-  "title": "Infame Coaching Methodology (Author) Definition",
-  "description": "Schema for a single coaching methodology. One file per author under config/authors/. This is the single source of truth: the engine, the validator, and the generated Claude Project files all read from here.",
+  "title": "Infame Coaching Methodology (Author) Definition — v7.2 (native values only)",
+  "description": "Schema for a single coaching methodology. One file per author under config/authors/. Holds ONLY what the author publishes: native ranges, RPE, and — where the author states it — the physiological target of a zone. Estimated metrics, physiological class and domain are computed by zone_model.py through config/crosswalk.yaml and config/tss_classes.yaml; they are never typed here.",
   "type": "object",
   "required": [
     "id",
@@ -66,7 +66,7 @@
           "rpe"
         ]
       },
-      "description": "Metrics this author defines. A zone range column may only exist for a metric listed here (Schema Extension Rule 1)."
+      "description": "Metrics the author PUBLISHES (native), plus 'rpe' when RPE is the author's primary scale. Every other metric of the sport is estimated at build time. A zone range column may only exist for a metric listed here."
     },
     "primary_metrics": {
       "type": "array",
@@ -85,7 +85,7 @@
     },
     "metric_status": {
       "type": "object",
-      "description": "Whether each metric is native to the author or a cross-referenced estimate. Keys must appear in available_metrics.",
+      "description": "Status of each listed metric. 'native' = the author's own numbers. Use 'estimated' only for a legacy homologation carried over where the author publishes no numbers of their own (prefer stated_class instead).",
       "additionalProperties": {
         "type": "string",
         "enum": [
@@ -178,9 +178,7 @@
         "type": "object",
         "required": [
           "key",
-          "name",
-          "physiological_class",
-          "ranges"
+          "name"
         ],
         "additionalProperties": false,
         "properties": {
@@ -192,23 +190,9 @@
             "type": "string",
             "description": "Zone name. E.g. 'Lactate Threshold'."
           },
-          "physiological_class": {
-            "type": "string",
-            "enum": [
-              "recovery",
-              "endurance",
-              "tempo",
-              "sub_threshold",
-              "threshold",
-              "vo2max",
-              "anaerobic",
-              "neuromuscular"
-            ],
-            "description": "Cross-author physiological class. Drives TSS cost via config/tss_classes.yaml. This is the only valid bridge between methodologies — never RPE (Schema Extension Rule 4)."
-          },
           "ranges": {
             "type": "object",
-            "description": "Numeric range per metric. Keys must appear in available_metrics. Omit a metric entirely where the author defines none (renders as N/A).",
+            "description": "Native numeric range per metric, exactly as the author publishes it. Keys must appear in available_metrics. Omit a metric the author does not publish — it is estimated at build time.",
             "additionalProperties": {
               "type": "object",
               "additionalProperties": false,
@@ -256,6 +240,55 @@
           "note": {
             "type": "string",
             "description": "Row-level note. Rendered in the Notes column."
+          },
+          "stated_class": {
+            "type": "object",
+            "required": [
+              "class",
+              "source"
+            ],
+            "additionalProperties": false,
+            "description": "The physiological target the AUTHOR explicitly names for this zone (e.g. 'Lactate Threshold', 'VO2max'), mapped to a class. Compared with the class computed from the numbers; a disagreement fails the build until `resolution` is given. Required when the zone has no native numeric range. Do not fill it from the zone name alone when the name is a workout name rather than a physiological claim.",
+            "properties": {
+              "class": {
+                "type": "string",
+                "enum": [
+                  "recovery",
+                  "endurance",
+                  "tempo",
+                  "sub_threshold",
+                  "threshold",
+                  "supra_threshold",
+                  "vo2max",
+                  "anaerobic",
+                  "neuromuscular"
+                ]
+              },
+              "source": {
+                "type": "string"
+              }
+            }
+          },
+          "resolution": {
+            "type": "object",
+            "required": [
+              "use",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "description": "Present only when stated_class and the computed class disagree. Records which one governs and why.",
+            "properties": {
+              "use": {
+                "type": "string",
+                "enum": [
+                  "stated",
+                  "computed"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -316,6 +349,26 @@
           ],
           "default": "equivalent",
           "description": "Which column determines physiological_class. Defaults to the threshold equivalent, because the classification cutpoints are calibrated on threshold and TSS must be comparable across authors."
+        }
+      }
+    },
+    "hrmax_threshold_pct": {
+      "type": "object",
+      "required": [
+        "value",
+        "source"
+      ],
+      "additionalProperties": false,
+      "description": "Where threshold (LTHR) sits on this author's own % HRmax scale, when the author states it. Converts native % HRmax to % LTHR by ratio. Omit to use the crosswalk default.",
+      "properties": {
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 70,
+          "maximum": 100
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the author states it. Never an estimate."
         }
       }
     }

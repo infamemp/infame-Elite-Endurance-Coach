@@ -25,7 +25,10 @@ notes:
 zones:
   - key: Level 1
     name: Active Recovery
-    physiological_class: recovery
+    stated_class:
+      class: recovery
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Active Recovery".
     ranges:
       power: {min: null, max: 55}
       lthr:  {min: null, max: 68}
@@ -33,7 +36,10 @@ zones:
 
   - key: Level 2
     name: Endurance
-    physiological_class: endurance
+    stated_class:
+      class: endurance
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Endurance".
     ranges:
       power: {min: 56, max: 75}
       lthr:  {min: 69, max: 83}
@@ -41,7 +47,10 @@ zones:
 
   - key: Level 3
     name: Tempo
-    physiological_class: tempo
+    stated_class:
+      class: tempo
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Tempo".
     ranges:
       power: {min: 76, max: 90}
       lthr:  {min: 84, max: 94}
@@ -49,7 +58,10 @@ zones:
 
   - key: Level 4
     name: Lactate Threshold
-    physiological_class: threshold
+    stated_class:
+      class: threshold
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Lactate Threshold".
     ranges:
       power: {min: 91, max: 105}
       lthr:  {min: 95, max: 105}
@@ -57,7 +69,10 @@ zones:
 
   - key: Level 5
     name: VO2max
-    physiological_class: vo2max
+    stated_class:
+      class: vo2max
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "VO2max".
     ranges:
       power: {min: 106, max: 120}
       lthr:  {min: 106, max: null}
@@ -65,13 +80,19 @@ zones:
 
   - key: Level 6
     name: Anaerobic Capacity
-    physiological_class: anaerobic
+    stated_class:
+      class: anaerobic
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Anaerobic Capacity".
     ranges:
       power: {min: 121, max: 150}
     rpe: {min: 7, max: null}
 
   - key: Level 7
     name: Neuromuscular Power
-    physiological_class: neuromuscular
+    stated_class:
+      class: neuromuscular
+      source: >-
+        Coggan & Allen, Training and Racing with a Power Meter — level named "Neuromuscular Power (no numeric range published — maximal)".
     ranges: {}
     rpe: {label: Maximal}

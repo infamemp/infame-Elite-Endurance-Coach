@@ -11,7 +11,7 @@ intent: >
 rep_shape: ramp
 set_shape: single
 
-applicable_classes: [threshold, vo2max]
+applicable_classes: [threshold, supra_threshold, vo2max]
 disciplines: [trainer, treadmill]
 
 progression_levers: [bout_duration, intensity]

@@ -1,11 +1,13 @@
 """
-build_zone_tables.py — Infame Elite Endurance Coach v6, Stage 1
-===============================================================
-Validates author configuration files against the schema and regenerates the
-Markdown zone tables consumed by the Claude Project.
+build_zone_tables.py — Infame Elite Endurance Coach v7.2
+========================================================
+Validates author configuration files and regenerates the standardized Markdown
+zone tables consumed by the Claude Project.
 
-The YAML files under config/authors/ are the single source of truth. The Markdown
-under generated/ is derived output and must never be hand-edited.
+The YAML files under config/authors/ hold ONLY each author's native values.
+Estimated metrics, physiological class and intensity domain are computed by
+zone_model.py through config/crosswalk.yaml and config/tss_classes.yaml. The
+Markdown under generated/ is derived output and must never be hand-edited.
 
 Usage:
     python build_zone_tables.py validate
@@ -13,13 +15,15 @@ Usage:
     python build_zone_tables.py diff <reference-markdown-file>
 
 Commands:
-    validate   Check every author file against config/schema/author.schema.json.
+    validate   Check every author file against the schema, resolve it (class,
+               domain, estimates), report conflicts, RPE warnings and the
+               crosswalk residuals. Exit code 1 on any error.
     build      Regenerate the Markdown zone tables into generated/.
     diff       Compare generated output against a reference file (migration check).
 
 Paths are resolved relative to the repository root.
 
-Version: 1.0
+Version: 2.0 (v7.2 — native values + crosswalk + computed class/domain)
 """
 
 import argparse
@@ -40,6 +44,8 @@ except ImportError:
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ROOT)
+import zone_model as zm  # noqa: E402
 AUTHORS_DIR = os.path.join(ROOT, "config", "authors")
 SCHEMA_PATH = os.path.join(ROOT, "config", "schema", "author.schema.json")
 THRESHOLDS_PATH = os.path.join(ROOT, "config", "decision_thresholds.yaml")
@@ -67,9 +73,21 @@ CLASS_LABELS = {
     "tempo": "Tempo",
     "sub_threshold": "Sub-threshold",
     "threshold": "Threshold",
+    "supra_threshold": "Supra-threshold",
     "vo2max": "VO2max",
     "anaerobic": "Anaerobic",
     "neuromuscular": "Neuromuscular",
+}
+
+DOMAIN_LABELS = {"moderate": "Moderate", "heavy": "Heavy",
+                 "severe": "Severe", "extreme": "Extreme"}
+
+# Column label per sport. Running power is % of running threshold power
+# (Stryd-type devices); it is written with the same bare "%" as cycling power.
+SPORT_METRIC_LABELS = {
+    "cycling": {"power": "% FTP", "lthr": "% LTHR", "hrmax": "% HRmax"},
+    "running": {"pace": "% Threshold Pace", "lthr": "% LTHR",
+                "power": "% FTP (run power)", "hrmax": "% HRmax"},
 }
 
 SPORT_TITLES = {
@@ -110,8 +128,61 @@ def load_authors():
     return out
 
 
+def cross_field_errors(data, stem):
+    """Checks the JSON Schema cannot express."""
+    extra = []
+    if data.get("id") != stem:
+        extra.append(f"id '{data.get('id')}' does not match filename stem '{stem}'")
+    available = set(data.get("available_metrics", []))
+    resolvable = available | set(zm.sport_metrics(data.get("sport", "cycling")))
+    if data.get("default_metric") not in resolvable:
+        extra.append(f"default_metric '{data.get('default_metric')}' is neither published "
+                     f"by the author nor a {data.get('sport')} metric")
+    for key in data.get("metric_status", {}):
+        if key not in available:
+            extra.append(f"metric_status has '{key}' which is not in available_metrics")
+    native_numeric = [m for m in available if m != "rpe"]
+    for z in data.get("zones", []):
+        for metric in (z.get("ranges") or {}):
+            if metric not in available:
+                extra.append(f"zone '{z.get('key')}' has a range for '{metric}' which is "
+                             f"not in available_metrics — only native values belong here; "
+                             f"estimates are computed")
+    for m in native_numeric:
+        if not any(m in (z.get("ranges") or {}) for z in data.get("zones", [])):
+            extra.append(f"'{m}' is listed in available_metrics but no zone publishes it")
+    if data.get("sport") == "cycling" and "pace" in available:
+        extra.append("pace is not a cycling metric")
+    anc = data.get("anchor")
+    if anc:
+        if anc.get("metric") not in available:
+            extra.append(f"anchor metric '{anc.get('metric')}' is not in available_metrics")
+        f = anc.get("factor_from_threshold")
+        if not isinstance(f, (int, float)) or not 0.5 < f < 2.0:
+            extra.append(f"anchor factor_from_threshold {f!r} is outside a plausible range")
+        if f == 1.0:
+            extra.append("anchor factor is 1.0 — the author anchors on threshold, so the "
+                         "anchor block should be removed")
+    if data.get("hrmax_threshold_pct") and "hrmax" not in available:
+        extra.append("hrmax_threshold_pct is declared but the author publishes no % HRmax")
+    dl = data.get("dual_layer")
+    if dl and dl.get("required"):
+        if not dl.get("engine_metric"):
+            extra.append("dual_layer.required is true but engine_metric is missing")
+        elif dl["engine_metric"] not in resolvable:
+            extra.append(f"dual_layer engine_metric '{dl['engine_metric']}' is not a "
+                         f"{data.get('sport')} metric")
+    sor = data.get("special_output_rule")
+    if sor:
+        if sor.get("native_metric") == sor.get("output_metric"):
+            extra.append("special_output_rule native_metric equals output_metric")
+        if sor.get("native_metric") not in available:
+            extra.append("special_output_rule native_metric is not published by the author")
+    return extra
+
+
 def validate_all():
-    """Schema-validate every author file. Returns the number of failures."""
+    """Schema-validate and resolve every author file. Returns the number of failures."""
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = json.load(f)
     validator = Draft7Validator(schema)
@@ -122,46 +193,17 @@ def validate_all():
         return 1
 
     failures = 0
+    all_warns = []
     for fn, data in authors:
         stem = os.path.splitext(fn)[0]
         errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
+        extra = cross_field_errors(data, stem)
+        res_errors, warns = [], []
+        if not errors and not extra:
+            _, res_errors, warns = zm.resolve_author(data)
+            all_warns += warns
 
-        # Cross-field checks the JSON Schema cannot express
-        extra = []
-        if data.get("id") != stem:
-            extra.append(f"id '{data.get('id')}' does not match filename stem '{stem}'")
-        available = set(data.get("available_metrics", []))
-        if data.get("default_metric") not in available:
-            extra.append(f"default_metric '{data.get('default_metric')}' not in available_metrics")
-        for key in data.get("metric_status", {}):
-            if key not in available:
-                extra.append(f"metric_status has '{key}' which is not in available_metrics")
-        for i, z in enumerate(data.get("zones", [])):
-            for metric in z.get("ranges", {}):
-                if metric not in available:
-                    extra.append(f"zone '{z.get('key')}' has range for '{metric}' "
-                                 f"which is not in available_metrics")
-        anc = data.get("anchor")
-        if anc:
-            if anc.get("metric") not in available:
-                extra.append(f"anchor metric '{anc.get('metric')}' is not in "
-                             f"available_metrics")
-            f = anc.get("factor_from_threshold")
-            if not isinstance(f, (int, float)) or not 0.5 < f < 2.0:
-                extra.append(f"anchor factor_from_threshold {f!r} is outside a "
-                             f"plausible range")
-            if f == 1.0:
-                extra.append("anchor factor is 1.0 — the author anchors on "
-                             "threshold, so the anchor block should be removed")
-
-        dl = data.get("dual_layer")
-        if dl and dl.get("required") and not dl.get("engine_metric"):
-            extra.append("dual_layer.required is true but engine_metric is missing")
-        sor = data.get("special_output_rule")
-        if sor and sor.get("native_metric") == sor.get("output_metric"):
-            extra.append("special_output_rule native_metric equals output_metric")
-
-        if errors or extra:
+        if errors or extra or res_errors:
             failures += 1
             print(f"FAIL  {fn}")
             for e in errors:
@@ -169,91 +211,52 @@ def validate_all():
                 print(f"        [{loc}] {e.message}")
             for msg in extra:
                 print(f"        [cross-field] {msg}")
+            for msg in res_errors:
+                print(f"        [class] {msg}")
         else:
-            print(f"OK    {fn}  ({len(data['zones'])} zones, "
-                  f"metrics: {', '.join(data['available_metrics'])})")
+            natives = [m for m in data['available_metrics'] if m != 'rpe'] or ["none (stated classes)"]
+            print(f"OK    {fn}  ({len(data['zones'])} zones, native: {', '.join(natives)})")
 
     print()
     print(f"{len(authors) - failures}/{len(authors)} author files valid.")
 
-    check_cutpoints([a for _, a in authors])
-    return failures
+    if all_warns:
+        print()
+        print("RPE notes (warnings only — the author's own RPE is what is emitted):")
+        for w in all_warns:
+            print(f"        {w}")
 
-
-def check_cutpoints(authors):
-    """Report where an author's declared zone class differs from the fallback
-    cutpoints. Divergences are expected: authors genuinely disagree, and the
-    author's class is authoritative. This is a visibility check, not a failure."""
-    th = load_thresholds()
-    cuts = th.get("classification_cutpoints", {})
-    if not cuts:
-        return
-
-    def classify(sport, metric, mid):
-        bands = cuts.get(sport, {}).get(metric)
-        if not bands:
-            return None
-        for cls, r in bands.items():
-            lo = r.get("min") or 0
-            hi = r.get("max")
-            if lo <= mid and (hi is None or mid < hi):
-                return cls
-        return None
-
-    total = diverge = 0
-    lines = []
-    for a in authors:
-        anc = a.get("anchor")
-        for z in a["zones"]:
-            for metric, r in (z.get("ranges") or {}).items():
-                lo, hi = r.get("min"), r.get("max")
-                if lo is None or hi is None:
-                    continue
-                # Compare against the cutpoints on the same scale they were
-                # calibrated on: threshold. An anchored column must be converted
-                # first or every zone reads as a false divergence.
-                if anc and anc["metric"] == metric:
-                    f = anc["factor_from_threshold"]
-                    lo, hi = lo * f, hi * f
-                pred = classify(a["sport"], metric, (lo + hi) / 2)
-                if pred is None:
-                    continue
-                total += 1
-                if pred != z["physiological_class"]:
-                    diverge += 1
-                    lines.append(f"        {a['id']} {z['key']} ({metric} {_num(lo)}\u2013{_num(hi)}%): "
-                                 f"author says {z['physiological_class']}, cutpoints say {pred}")
     print()
-    print(f"Cutpoint agreement: {total - diverge}/{total} zones.")
-    if lines:
-        print("      Divergences below are author disagreements, not errors \u2014")
-        print("      the author's class governs (see class_resolution in decision_thresholds.yaml):")
-        for l in lines:
-            print(l)
+    print("Crosswalk residuals against authors publishing two metrics natively")
+    print("(mean / max absolute difference, in percentage points):")
+    for sport, aid, metric, n, mae, mx in zm.residuals():
+        print(f"        {sport:8} {aid:14} {metric:6} n={n:<3} mean {mae:4.1f}   max {mx:4.1f}")
+    return failures
 
 
 # ──────────────────────────────────────────────────────────────────
 # Rendering
 # ──────────────────────────────────────────────────────────────────
 
-def fmt_range(rng, floor=None):
+def fmt_range(rng, floor=None, estimated=False):
     """Render a {min,max} pair. An open lower bound renders from the prescription
     floor for that metric, so the table shows the usable range rather than an
-    implied zero. The author's source value is preserved in the YAML."""
+    implied zero. Estimated values carry a leading '~'."""
     if rng is None:
         return "N/A"
     lo, hi = rng.get("min"), rng.get("max")
     if lo is None and hi is None:
         return "N/A"
+    t = "~" if estimated else ""
     if lo is None:
         if floor is not None and (hi is None or floor < hi):
-            return f"{_num(floor)}\u2013{_num(hi)}%"
-        return f"< {_num(hi)}%"
+            return f"{t}{_num(floor)}–{_num(hi)}%"
+        return f"{t}< {_num(hi)}%"
     if hi is None:
-        return f"> {_num(lo)}%"
+        return f"{t}> {_num(lo)}%"
     if lo == hi:
-        return f"{_num(lo)}%"
-    return f"{_num(lo)}\u2013{_num(hi)}%"
+        return f"{t}{_num(lo)}%"
+    return f"{t}{_num(lo)}–{_num(hi)}%"
 
 
 def scale_range(rng, factor):
@@ -267,7 +270,7 @@ def scale_range(rng, factor):
     return out
 
 
-def fmt_rpe(rpe):
+def fmt_rpe(rpe, estimated=False):
     if not rpe:
         return ""
     if rpe.get("label"):
@@ -275,13 +278,14 @@ def fmt_rpe(rpe):
     lo, hi = rpe.get("min"), rpe.get("max")
     if lo is None and hi is None:
         return ""
+    t = "~" if estimated else ""
     if lo is None:
-        return f"< {_num(hi)}"
+        return f"{t}< {_num(hi)}"
     if hi is None:
-        return f"> {_num(lo)}"
+        return f"{t}> {_num(lo)}"
     if lo == hi:
-        return _num(lo)
-    return f"{_num(lo)}\u2013{_num(hi)}"
+        return t + _num(lo)
+    return f"{t}{_num(lo)}–{_num(hi)}"
 
 
 def _num(v):
@@ -290,56 +294,90 @@ def _num(v):
     return str(int(v)) if float(v).is_integer() else str(v)
 
 
+def _zone_notes(z):
+    parts = []
+    for f in z.get("flags") or []:
+        if f.startswith("spans "):
+            continue                      # shown in the Domain cell
+        if f.startswith("touches the LT1"):
+            parts.append("LT1 is individual: moderate or heavy depending on the athlete")
+        elif f.startswith("open upper"):
+            parts.append("Open-ended upward")
+    prov = z.get("class_provenance", "")
+    if prov.startswith("stated by author"):
+        parts.append("Class as stated by the author (numbers alone compute a different class)")
+    elif prov.startswith("stated (no native"):
+        parts.append("Class from the author's stated physiological target")
+    elif "(author states" in prov:
+        stated = prov.split("(author states ", 1)[1].split(";", 1)[0]
+        parts.append(f"Author's stated target is {CLASS_LABELS.get(stated, stated)}; "
+                     f"class follows the prescribed intensity")
+    if z.get("note"):
+        parts.append(z["note"].strip())
+    return "; ".join(parts)
+
+
+def _domain_cell(z):
+    label = DOMAIN_LABELS[z["domain"]]
+    for f in z.get("flags") or []:
+        if f.startswith("spans "):
+            a, b = f[6:].split("→")
+            return f"{DOMAIN_LABELS.get(a, a)}→{DOMAIN_LABELS.get(b, b)}"
+    return label
+
+
 def render_author(author, thresholds):
-    """Render one methodology section."""
+    """Render one methodology section from the RESOLVED author."""
     floors = (thresholds or {}).get("prescription_floors", {})
-    labels = dict(METRIC_LABELS)
+    sport = author["sport"]
+    labels = dict(SPORT_METRIC_LABELS[sport])
+    labels["rpe"] = "RPE"
     labels.update(author.get("metric_labels") or {})
+    natives = author.get("native_metrics") or []
+    anchor = author.get("anchor")
 
     L = []
     L.append(f"## Methodology: {author['name']}")
 
-    sport_label = author.get("sport_note") or author["sport"].capitalize()
+    sport_label = author.get("sport_note") or sport.capitalize()
     L.append(f"* **Sport:** {sport_label}")
     L.append(f"* **Zone Identifier Style:** {author['zone_identifier_style']}")
     L.append("* **Default Metric:** " +
-             (author.get("default_metric_label") or labels[author["default_metric"]]))
-    L.append("* **Available Metrics:** " +
-             ", ".join(labels[m] for m in author["available_metrics"]))
+             (author.get("default_metric_label") or labels.get(author["default_metric"],
+                                                              author["default_metric"])))
+    L.append("* **Native Metrics (author's own numbers):** " +
+             (", ".join(labels[m] for m in natives) or
+              "none — RPE and the physiological target of each zone"))
+    est = [m for m in zm.sport_metrics(sport) if m not in natives]
+    if est:
+        L.append("* **Estimated Metrics (`~`, computed through the crosswalk):** " +
+                 ", ".join(labels[m] for m in est))
     L.append("* **Primary Metrics:** " + ", ".join(author["primary_metrics"]))
-    anchors = author.get("intensity_anchors") or [labels[m] for m in author["available_metrics"]]
-    L.append("* **Intensity Anchors:** " + ", ".join(anchors))
-
-    for metric, status in (author.get("metric_status") or {}).items():
-        if metric == "power":
-            continue
-        L.append(f"* **{STATUS_LABELS.get(metric, metric.upper())} Status:** {status.capitalize()}")
 
     dl = author.get("dual_layer") or {"required": False}
     L.append(f"* **Dual-Layer Required:** {'Yes' if dl.get('required') else 'No'}")
     if dl.get("required"):
         L.append(f"* **Dual-Layer Engine:** {labels[dl['engine_metric']]} Range "
-                 f"\u2014 feeds Intervals.icu load calculation")
+                 f"— feeds Intervals.icu load calculation")
         L.append("* **Dual-Layer Steering:** " +
                  (dl.get("steering_label") or f"{labels[dl['steering_metric']]} per zone") +
-                 " \u2014 athlete reads on device")
+                 " — athlete reads on device")
 
     sor = author.get("special_output_rule")
     if sor:
-        status = (author.get("metric_status") or {}).get(sor["output_metric"], "")
-        qualifier = "Estimated " if status == "estimated" else ""
         L.append(f"* **Special Output Rule:** Native metric is "
-                 f"{labels[sor['native_metric']]}, but Intervals.icu syntax MUST use "
-                 f"{qualifier}{labels[sor['output_metric']]} {sor['rationale']}. "
+                 f"{labels[sor['native_metric']]}, but Intervals.icu syntax MUST use the "
+                 f"estimated {labels[sor['output_metric']]} {sor['rationale']}. "
                  f"Never output {labels[sor['native_metric']]} in syntax.")
+
+    hp = author.get("hrmax_threshold_pct")
+    if hp:
+        L.append(f"* **Threshold on the author's HRmax scale:** {_num(hp['value'])}% HRmax "
+                 f"= 100% LTHR. Source: {hp['source'].strip()}")
 
     for n in author.get("notes", []):
         L.append(f"* **Note:** {n}")
 
-    # An author whose percentages are not measured against threshold gets a
-    # second column for the same metric, converted so it can be read against
-    # threshold. The author's own numbers stay untouched in the native column.
-    anchor = author.get("anchor")
     if anchor:
         f = anchor["factor_from_threshold"]
         L.append(f"* **Anchor:** {anchor['reference']}. This is NOT threshold — "
@@ -347,66 +385,110 @@ def render_author(author, thresholds):
                  f"{labels[anchor['metric']]} column below is the author's own "
                  f"scale and cannot be read as a percentage of threshold.")
         L.append(f"* **{anchor.get('equivalent_column_label', 'Threshold equivalent')}:** "
-                 f"generated by multiplying the author's percentages by {f}. Use "
-                 f"this column for an athlete who has a threshold value but has "
-                 f"not performed the author's own test. Source: "
-                 f"{anchor['source'].strip()}")
-        L.append(f"* **Class assigned from:** the "
-                 f"{anchor.get('class_from', 'equivalent')} column — "
-                 f"classification cutpoints are calibrated on threshold, so TSS "
-                 f"stays comparable with the other methodologies.")
+                 f"the author's percentages multiplied by {f}. Use this column for an "
+                 f"athlete who has a threshold value but has not performed the author's "
+                 f"own test. Source: {anchor['source'].strip()}")
 
-    # Table
-    metrics = [m for m in author["available_metrics"] if m != "rpe"]
+    # Columns: the sport's metrics in crosswalk order, then native HRmax.
+    metrics = list(zm.sport_metrics(sport))
+    if "hrmax" in natives:
+        metrics.append("hrmax")
     headers = ["Zone Key", "Zone Name"]
     for m in metrics:
-        headers.append(f"{labels[m]} Range")
+        headers.append(labels[m])
         if anchor and anchor["metric"] == m:
-            headers.append(anchor.get("equivalent_column_label",
-                                      "Threshold equivalent"))
-    headers += ["RPE (1-10)", "Class", "Notes"]
+            headers.append(anchor.get("equivalent_column_label", "Threshold equivalent"))
+    headers += ["RPE (1-10)", "Domain", "Class", "Notes"]
 
     L.append("")
     L.append("| " + " | ".join(headers) + " |")
     L.append("| " + " | ".join([":---"] * len(headers)) + " |")
     for z in author["zones"]:
-        row = [z["key"], z["name"]]
+        row = [str(z["key"]), z["name"]]
+        status = z.get("range_status") or {}
         for m in metrics:
-            rng = z.get("ranges", {}).get(m)
-            row.append(fmt_range(rng, floors.get(m)))
+            rng = (z.get("ranges") or {}).get(m)
+            estimated = status.get(m) in ("estimated", "declared_estimate")
+            fl = floors.get(m)
+            if anchor and anchor["metric"] == m and fl is not None:
+                fl = round(fl / anchor["factor_from_threshold"])
+            row.append(fmt_range(rng, fl, estimated))
             if anchor and anchor["metric"] == m:
-                row.append(fmt_range(scale_range(rng,
-                                                 anchor["factor_from_threshold"]),
+                row.append(fmt_range(scale_range(rng, anchor["factor_from_threshold"]),
                                      floors.get(m)))
-        row += [fmt_rpe(z.get("rpe")),
+        row += [fmt_rpe(z.get("rpe"), z.get("rpe_status") == "estimated"),
+                _domain_cell(z),
                 CLASS_LABELS[z["physiological_class"]],
-                z.get("note", "")]
+                _zone_notes(z)]
         L.append("| " + " | ".join(row) + " |")
 
     return "\n".join(L)
 
 
-HEADER_NOTES = """**Schema notes:**
-- `Zone Key` preserves each author's native zone identifier vocabulary (e.g. "Zone 1", "Level 1", letter codes).
-- `Class` is the cross-author physiological class that determines TSS cost. It is the only valid bridge between methodologies.
-- Metric status fields indicate whether a metric is native to that methodology or a cross-referenced estimate.
-- Notation: ranges use `X\u2013Y%` (en dash), open lower bound `< X%`, open upper bound `> X%`, undefined value `N/A`.
-- Compound or non-numeric details are captured in the `Notes` column rather than embedded in range cells.
-- Zones with an open lower bound in the source are rendered from the prescription floor for that metric (see below), not from zero.
+HEADER_NOTES = """**How to read these tables (v7.2):**
+- `Zone Key` and `Zone Name` preserve each author's own vocabulary.
+- Values without a mark are the author's own numbers (native). Values marked `~` are ESTIMATES computed through `config/crosswalk.yaml` from the author's native numbers — use them when the athlete's metric is not one the author publishes. `N/A` means the author publishes nothing there and no estimate is meaningful (e.g. heart rate for efforts under ~2 minutes).
+- `Domain` is the physiological intensity domain (Moderate · Heavy · Severe · Extreme). `A→B` means the zone's range crosses from one domain into the next.
+- `Class` determines TSS cost and is the only valid bridge between methodologies (never RPE). It is COMPUTED from the zone's position on the threshold scale, never assigned by hand; where the author explicitly states a different physiological target, the Notes say which one governs.
+- `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.
+- Notation: ranges use `X–Y%` (en dash), open lower bound `< X%`, open upper bound `> X%`, undefined value `N/A`. Zones with an open lower bound are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE \u2014 DO NOT EDIT.** Built {BUILD_DATE} by `build_zone_tables.py`.
-If this date is older than your last change to `config/`, this file is stale \u2014
+**GENERATED FILE — DO NOT EDIT.** Built {BUILD_DATE} by `build_zone_tables.py`.
+If this date is older than your last change to `config/`, this file is stale —
 run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
-`config/authors/_template.yaml`, fill it in, run `validate`, then `build`.
-Hand edits here are lost on the next build."""
+`config/authors/_template.yaml`, fill in the author's NATIVE values only, run
+`validate`, then `build`. Hand edits here are lost on the next build."""
+
+
+def render_class_reference(sport, thresholds):
+    """Domains and classes with their band on every metric of the sport."""
+    cls_cfg = zm.load_classes()
+    cuts = zm.derived_cutpoints()[sport]
+    labels = SPORT_METRIC_LABELS[sport]
+    metrics = zm.sport_metrics(sport)
+    lt1 = cls_cfg["lt1_band"][sport]
+    canon = zm.load_crosswalk()[sport]["canonical_metric"]
+
+    def band(metric, c):
+        b = cuts.get(metric, {}).get(c)
+        if not b:
+            return "N/A"
+        lo, hi = b.get("min"), b.get("max")
+        if not lo:
+            return f"< {_num(hi)}%"
+        if hi is None:
+            return f"≥ {_num(lo)}%"
+        return f"{_num(lo)}–{_num(hi)}%"
+
+    L = ["**Domains and classes — the standard every table below is resolved against:**",
+         "",
+         "| Domain | Class | " + " | ".join(labels[m] for m in metrics) +
+         " | Standard RPE | Sustainable | TSS/min |",
+         "| " + " | ".join([":---"] * (len(metrics) + 5)) + " |"]
+    for c in zm.CLASS_ORDER:
+        cc = cls_cfg["classes"][c]
+        r = cc["rpe"]
+        rpe = _num(r["min"]) if r["min"] == r["max"] else f"{_num(r['min'])}–{_num(r['max'])}"
+        L.append(f"| {DOMAIN_LABELS[cc['domain']]} | {CLASS_LABELS[c]} | " +
+                 " | ".join(band(m, c) for m in metrics) +
+                 f" | {rpe} | {cc['max_sustainable']} | {_num(cc['tss_per_min'])} |")
+    L.append("")
+    L.append(f"Bands on {labels[canon]} are the standard; the other columns are the same "
+             f"bands converted through the crosswalk. Heart rate cannot separate classes "
+             f"above ~{_num(cuts['lthr'].get('vo2max', {}).get('min') or 0)}% LTHR "
+             f"(it lags and saturates), so those efforts are governed by power, pace or RPE.")
+    L.append(f"The moderate/heavy boundary (LT1) is individual: on {labels[canon]} it lies "
+             f"between {_num(lt1['min'])}% and {_num(lt1['max'])}% for most athletes. "
+             f"Zones touching that band are flagged in their Notes.")
+    return "\n".join(L)
 
 
 def render_syntax_block(thresholds):
     """Render the output-format and floor rules that govern generated syntax."""
     of = thresholds.get("output_formats", {})
     floors = thresholds.get("prescription_floors", {})
-    L = ["**Output format \u2014 how these zones are written in Intervals.icu syntax:**",
+    L = ["**Output format — how these zones are written in Intervals.icu syntax:**",
          "",
          "| Metric | Table column | Emitted in syntax as | Never use |",
          "| :--- | :--- | :--- | :--- |"]
@@ -414,14 +496,15 @@ def render_syntax_block(thresholds):
         spec = of.get(key)
         if not spec:
             continue
-        syntax = spec.get("syntax") or "never emitted \u2014 see Special Output Rule"
-        forbidden = ", ".join(f"`{x}`" for x in spec.get("forbidden_suffixes", [])) or "\u2014"
+        syntax = spec.get("syntax") or "never emitted — see Special Output Rule"
+        forbidden = ", ".join(f"`{x}`" for x in spec.get("forbidden_suffixes", [])) or "—"
         L.append(f"| {spec.get('table_label', key)} | {spec.get('table_label', key)} "
                  f"| `{syntax}` | {forbidden} |")
     L.append("")
     L.append("The table columns below are documentation of where each zone lies. "
-             "What is emitted in a workout block is the `Emitted in syntax as` form above \u2014 "
-             "power is a bare percentage with no metric suffix.")
+             "What is emitted in a workout block is the `Emitted in syntax as` form above — "
+             "power (cycling or running) is a bare percentage with no metric suffix, and the "
+             "`~` estimate mark is never written in syntax.")
     L.append("")
     L.append("**Prescription floors.** Lowest intensity that may be prescribed for each metric: " +
              ", ".join(f"{of.get(k, {}).get('table_label', k)} {v}%" for k, v in floors.items()) +
@@ -432,17 +515,27 @@ def render_syntax_block(thresholds):
 
 def build():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    authors = [a for _, a in load_authors()]
     thresholds = load_thresholds()
+    resolved = []
+    for fn, raw in load_authors():
+        a, errors, _ = zm.resolve_author(raw)
+        if errors:
+            print(f"FAIL  {fn}")
+            for e in errors:
+                print(f"        {e}")
+            print("\nNothing written. Run `python build_zone_tables.py validate` for details.")
+            return 1
+        resolved.append(a)
     written = []
 
     for sport in ("cycling", "running"):
-        group = [a for a in authors if a["sport"] == sport]
+        group = [a for a in resolved if a["sport"] == sport]
         if not group:
             continue
         header_notes = HEADER_NOTES.replace("{BUILD_DATE}", _dt.date.today().isoformat())
         parts = [f"# {SPORT_TITLES[sport]}", "", header_notes, "",
-                 render_syntax_block(thresholds), "", "---", ""]
+                 render_syntax_block(thresholds), "",
+                 render_class_reference(sport, thresholds), "", "---", ""]
         for i, a in enumerate(group):
             parts.append(render_author(a, thresholds))
             parts.append("")
@@ -459,7 +552,7 @@ def build():
     for path, n in written:
         print(f"Wrote {os.path.relpath(path, ROOT)}  ({n} methodologies)")
     if not written:
-        print("Nothing to build \u2014 no author files found.")
+        print("Nothing to build — no author files found.")
     return 0
 
 

@@ -10,15 +10,22 @@ sport_note: Ultramarathon / Running
 zone_identifier_style: Descriptive name (no native code; codes below derived for schema consistency)
 
 default_metric: lthr
-available_metrics: [lthr, hrmax]
+available_metrics: [hrmax]
 primary_metrics:
   - Maximum Heart Rate (HRmax)
-  - Estimated LTHR
-intensity_anchors: ["% LTHR", "% HRmax"]
+intensity_anchors: ["% HRmax"]
 
 metric_status:
-  lthr: estimated
   hrmax: native
+
+# Where threshold sits on Olbrich's own HRmax scale. Used to convert his native
+# % HRmax to % LTHR (ratio, not offset).
+hrmax_threshold_pct:
+  value: 90
+  source: >-
+    Ultramarathon Training (2012): tempo endurance run 85-90% HRmax for
+    "threshold development" (Ch. 17.2); intervals "usually above the anaerobic
+    threshold (>= 90% of max)" (Ch. 6.2.5).
 
 special_output_rule:
   native_metric: hrmax
@@ -32,9 +39,10 @@ notes:
     running coach; the methodology targets 100 km, 24-hour and multi-day racing,
     not shorter road distances.
   - >-
-    The book defines zones in % HRmax only. The % LTHR column is a
-    cross-reference estimate, which is why the Special Output Rule exists: HRmax
-    is native but cannot be emitted, so syntax uses estimated % LTHR.
+    The book defines zones in % HRmax only. The % LTHR column is computed from
+    it with the author's own threshold point (90% HRmax, see
+    hrmax_threshold_pct), which is why the Special Output Rule exists: HRmax is
+    native but cannot be emitted, so syntax uses the estimated % LTHR.
   - >-
     Olbrich prefers heart rate over pace outright, on the grounds that terrain,
     temperature and weather change daily while heart rate does not lie.
@@ -49,49 +57,57 @@ notes:
 zones:
   - key: LRJ
     name: Long recovery jog
-    physiological_class: recovery
     ranges:
-      lthr:  {min: null, max: 80}
       hrmax: {min: null, max: 70}
     rpe: {min: 1, max: 2}
 
   - key: EER
     name: Extensive endurance run
-    physiological_class: endurance
     ranges:
-      lthr:  {min: 85, max: 90}
       hrmax: {min: 75, max: 80}
     rpe: {min: 2, max: 3}
 
   - key: IER
     name: Intensive endurance run
-    physiological_class: sub_threshold
     ranges:
-      lthr:  {min: 90, max: 95}
       hrmax: {min: 80, max: 85}
     rpe: {min: 4, max: 5}
 
   - key: TER
     name: Tempo endurance run
-    physiological_class: threshold
+    stated_class:
+      class: threshold
+      source: >-
+        Olbrich, Ultramarathon Training (2012), Ch. 17.2: tempo endurance run — goal "threshold development".
+    resolution:
+      use: stated
+      reason: >-
+        The zone ends exactly at the author's own threshold (90% HRmax = 100%
+        LTHR) and is prescribed as one continuous run for threshold
+        development. A heart-rate target for a sustained threshold run sits
+        just below LTHR because heart rate drifts upward over the effort, so the
+        heart-rate midpoint reads slightly low on the threshold scale.
     ranges:
-      lthr:  {min: 95, max: 100}
       hrmax: {min: 85, max: 90}
     rpe: {min: 6, max: 7}
 
   - key: INT
     name: Interval
-    physiological_class: vo2max
+    stated_class:
+      class: vo2max
+      source: >-
+        Olbrich, Ultramarathon Training (2012), Ch. 6.2.5: intervals "very intensive, usually above the anaerobic threshold".
+    resolution:
+      use: stated
+      reason: >-
+        The zone is heart-rate native (> 90% HRmax) with an open upper bound that begins exactly at the author's threshold, so its lower bound alone computes as Threshold. Olbrich places it above the anaerobic threshold, 200 m–5 km repeats — the severe domain; heart rate cannot separate supra-threshold from VO2max there.
     ranges:
-      lthr:  {min: 100, max: null}
       hrmax: {min: 90, max: null}
     rpe: {min: 8, max: 10}
 
   - key: FAR
     name: Fartlek
-    physiological_class: endurance
     ranges:
-      lthr:  {min: 80, max: 100}
       hrmax: {min: 70, max: 90}
     rpe: {min: 2, max: 7}
     note: Variable effort by design

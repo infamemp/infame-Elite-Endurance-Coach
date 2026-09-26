@@ -9,52 +9,82 @@ sport: running
 zone_identifier_style: Letter code
 
 default_metric: pace
-available_metrics: [pace, lthr]
+available_metrics: [pace, hrmax]
 primary_metrics:
-  - Lactate Threshold (LT) Pace
-  - Lactate Threshold Heart Rate (LTHR)
-intensity_anchors: ["% Threshold Pace", "% LTHR"]
+  - Lactate Threshold (LT) Pace (T-pace, from VDOT)
+  - Maximum Heart Rate (HRmax) — secondary, conditions-dependent
+intensity_anchors: ["% Threshold Pace", "% HRmax"]
 
 metric_status:
   pace: native
-  lthr: estimated
+  hrmax: native
+
+# Daniels places T at 88-92% HRmax for well-trained runners; its midpoint is
+# where threshold sits on his HRmax scale.
+hrmax_threshold_pct:
+  value: 90
+  source: >-
+    Daniels' Running Formula — master zone table: T = 85-88% VO2max,
+    88-92% HRmax (well-trained).
+
+# v7.2: only the author's own numbers live here. % LTHR and running power are
+# estimated by zone_model.py through config/crosswalk.yaml. % HRmax is Daniels'
+# own secondary anchor (never emitted in syntax); I is "at or very close to
+# HRmax" with no range, and R has no heart-rate value.
+
+notes:
+  - >-
+    Pace is the operational primary signal; heart rate is secondary and
+    conditions-dependent (Daniels: follow HR when the purpose is intensity,
+    ignore it when the purpose is a specific speed). % HRmax is documentation
+    only and is never emitted — the syntax uses the estimated % LTHR.
 
 zones:
   - key: E
     name: Easy
-    physiological_class: endurance
+    stated_class:
+      class: endurance
+      source: >-
+        Daniels' Running Formula — purpose / physiological target: easy aerobic running (E).
     ranges:
       pace: {min: 75, max: 85}
-      lthr: {min: 72, max: 88}
+      hrmax: {min: 65, max: 79}
     rpe: {min: 1, max: 3}
 
   - key: M
     name: Marathon
-    physiological_class: tempo
     ranges:
       pace: {min: 85, max: 95}
-      lthr: {min: 89, max: 99}
+      hrmax: {min: 80, max: 89}
     rpe: {min: 3, max: 4}
 
   - key: T
     name: Threshold
-    physiological_class: threshold
+    stated_class:
+      class: threshold
+      source: >-
+        Daniels' Running Formula — purpose / physiological target: threshold pace (T).
     ranges:
       pace: {min: 100, max: 100}
-      lthr: {min: 100, max: 100}
+      hrmax: {min: 88, max: 92}
     rpe: {min: 4, max: 5}
 
   - key: I
     name: Interval
-    physiological_class: vo2max
+    stated_class:
+      class: vo2max
+      source: >-
+        Daniels' Running Formula — purpose / physiological target: intensity at or very near VO2max (I).
     ranges:
       pace: {min: 105, max: 115}
-      lthr: {min: 100, max: null}
     rpe: {min: 6, max: 8}
 
   - key: R
     name: Repetition
-    physiological_class: anaerobic
+    stated_class:
+      class: anaerobic
+      source: >-
+        Daniels' Running Formula — purpose / physiological target: R — "Anaerobic power", speed and economy.
     ranges:
       pace: {min: 115, max: 125}
     rpe: {min: 9, max: 10}

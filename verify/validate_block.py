@@ -50,6 +50,9 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+import zone_model  # noqa: E402  — resolves native author files (v7.2)
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -66,7 +69,7 @@ def load_thresholds_only():
     if not os.path.exists(path):
         sys.exit(f"Config file not found: {path}")
     with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return zone_model.with_derived_cutpoints(yaml.safe_load(f))
 
 
 def load_config(methodology):
@@ -77,7 +80,8 @@ def load_config(methodology):
         with open(full, encoding="utf-8") as f:
             return yaml.safe_load(f)
 
-    th = read("decision_thresholds.yaml")
+    # Class cutpoints are derived from config/tss_classes.yaml + crosswalk.yaml
+    th = zone_model.with_derived_cutpoints(read("decision_thresholds.yaml"))
     tss = read("tss_classes.yaml")
 
     author_path = os.path.join(CONFIG, "authors", f"{methodology}.yaml")
@@ -86,7 +90,13 @@ def load_config(methodology):
                            if f.endswith(".yaml") and not f.startswith("_"))
         sys.exit(f"Unknown methodology '{methodology}'.\nAvailable: {', '.join(available)}")
     with open(author_path, encoding="utf-8") as f:
-        author = yaml.safe_load(f)
+        raw = yaml.safe_load(f)
+    # The native file is resolved into the full standardized table: every
+    # metric of the sport (estimates included), computed class and domain.
+    author, errors, _ = zone_model.resolve_author(raw)
+    if errors:
+        sys.exit(f"Methodology '{methodology}' does not resolve — run "
+                 f"`python build_zone_tables.py validate`:\n  " + "\n  ".join(errors))
 
     return author, th, tss
 
@@ -457,8 +467,7 @@ def classify(mid, metric, author, thresholds):
 # What is kept: how many segments, their rough duration, whether each is a
 # ramp, and whether it is the work or the rest of the interval.
 
-CLASS_ORDER = ["recovery", "endurance", "tempo", "sub_threshold", "threshold",
-               "vo2max", "anaerobic", "neuromuscular"]
+CLASS_ORDER = zone_model.CLASS_ORDER
 CLASS_RANK = {c: i for i, c in enumerate(CLASS_ORDER)}
 
 # Seconds -> a coarse duration bucket. A structural comparison, not a
@@ -687,17 +696,20 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
                            f"{of[sor['native_metric']]['table_label']}"))
 
         # Metric — any methodology may use any metric of its sport. Where the
-        # author publishes no zones in that metric, the step is classified by
-        # physiological class with the generic ranges of the sport.
+        # author publishes no numbers in that metric, the step is classified
+        # against the author's crosswalk-estimated (~) zones.
         if metric != sor.get("native_metric"):
-            if metric not in author["available_metrics"] and metric not in cutpoints:
+            expected_here = set(author.get("native_metrics") or []) | {
+                sor.get("output_metric"), dl.get("engine_metric")}
+            if metric not in (author.get("resolved_metrics") or []) and \
+                    metric not in cutpoints:
                 errors.append(("HC-METRIC", s["line"],
                                f"{metric} is not a {sport} training metric"))
-            elif metric not in author["available_metrics"]:
+            elif metric not in expected_here:
                 warns.append(("CHK-METRIC", s["line"],
-                              f"{author['name']} publishes no {metric} zones — "
-                              f"classified by physiological class with the generic "
-                              f"{sport} {metric} ranges"))
+                              f"{author['name']} publishes no {metric} numbers — "
+                              f"classified against the estimated (~) {metric} "
+                              f"column of its zone table"))
 
         # The athlete's declared Metric Map governs the discipline
         if declared_metric in ("power", "lthr", "pace") and metric != declared_metric:

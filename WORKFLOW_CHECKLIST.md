@@ -242,16 +242,23 @@ copies are older than your last config change, they are stale.
 copy config\authors\_template.yaml config\authors\<author_id>.yaml
 ```
 
-**F2.** Fill it in: zones, metric metadata, physiological class per zone, and any
-special output rule. The file is commented field by field.
+**F2.** Fill it in with the author's NATIVE values only — the numbers the book
+publishes, its RPE, and (where the author states it) the physiological target of
+each zone as `stated_class` with its source. Do NOT type estimates for metrics
+the author does not publish, and do NOT assign a class: both are computed by
+`zone_model.py` through `config/crosswalk.yaml` and `config/tss_classes.yaml`.
+The file is commented field by field.
 
 **F3.** Validate:
 ```
 python build_zone_tables.py validate
 ```
-Expect the new author to appear as OK. The cutpoint agreement report will list any
-zone where the author disagrees with the fallback cutpoints — that is information,
-not an error.
+Expect the new author to appear as OK. If it FAILS with a `[class]` line, the
+author's stated target and the class computed from the numbers disagree: read the
+book again, then record which one governs and why in a `resolution` block on that
+zone. RPE notes are warnings only (authors calibrate RPE differently). The
+crosswalk residuals at the end show how far the conversions are from every author
+that publishes two metrics natively.
 
 **F4.** Build and test:
 ```
