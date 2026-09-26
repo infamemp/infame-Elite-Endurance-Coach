@@ -552,6 +552,26 @@ def unit_tests():
     orphans = {k for k in kb_disk - claimed if "Mujika" not in k}
     check("authors: no Knowledge file is left without an author", not orphans, sorted(orphans))
 
+    # The KB file reaches the coach: zone-table headers and profile.md name it
+    gen_txt = "".join(open(os.path.join(ROOT, "generated", fn), encoding="utf-8").read()
+                      for fn in ("Simple_Table_Cycling_Training_Zones.md",
+                                 "Simple_Table_Running_Training_Zones.md"))
+    for a_id in sorted(on_disk):
+        kf = zm.load_author_raw(a_id)["knowledge_file"]
+        check(f"generated: {a_id} header names its Knowledge Base file",
+              f"`Knowledge/{kf}`" in gen_txt, kf)
+    check("generated: one Knowledge Base line per methodology",
+          gen_txt.count("**Knowledge Base (Project file):**") == len(on_disk))
+    import build_profile as _bp
+    kl = "\n".join(_bp.knowledge_lines({"preferences": {"methodology": {
+        "road_run": "hudson", "road_bike": "coggan", "trail_run": None, "gravel": "nope"}}}))
+    check("profile: declared methodologies list their Knowledge file",
+          "Hudson_Run_Faster_From_5K_to_Marathon.md" in kl and
+          "Allen - Coggan_Training_and_Racing_With_a_Powermeter.md" in kl, kl)
+    check("profile: null or unknown methodologies add no line",
+          "nope" not in kl and "trail_run" not in kl)
+    equal("profile: no declared methodology adds nothing", _bp.knowledge_lines({}), [])
+
     # ── Run Less Run Faster ────────────────────────────────────────
     def rl(key):
         return next(z for z in zm.load_author("run_less_run_faster")["zones"] if str(z["key"]) == key)

@@ -396,6 +396,10 @@ def render_author(author, thresholds):
         L.append("* **Estimated Metrics (`~`, computed through the crosswalk):** " +
                  ", ".join(labels[m] for m in est))
     L.append("* **Primary Metrics:** " + ", ".join(author["primary_metrics"]))
+    if author.get("knowledge_file"):
+        L.append(f"* **Knowledge Base (Project file):** "
+                 f"`{os.path.basename(author['knowledge_file'])}` "
+                 f"(`Knowledge/{author['knowledge_file']}`)")
 
     dl = author.get("dual_layer") or {"required": False}
     L.append(f"* **Dual-Layer Required:** {'Yes' if dl.get('required') else 'No'}")

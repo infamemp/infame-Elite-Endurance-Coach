@@ -316,7 +316,7 @@ the same pass. What changed:
   figure.
 - **A verification gate** checks every generated block against the hard
   constraints before it can reach an athlete.
-- **A regression suite** of 392 tests over synthetic athletes with frozen expected
+- **A regression suite** of 409 tests over synthetic athletes with frozen expected
   outputs.
 - **Non-threshold anchors** declared per author, keeping zones interchangeable
   across methodologies without altering any author's published numbers.
@@ -337,7 +337,7 @@ Any change to `config/` or `engine/` follows the same sequence:
 ```bash
 python build_zone_tables.py validate    # schema-check the authors
 python build_zone_tables.py build       # regenerate the zone tables
-python tests/run_tests.py               # 392 regression tests
+python tests/run_tests.py               # 409 regression tests
 ```
 
 A failing golden test does not automatically mean a bug — it means output
