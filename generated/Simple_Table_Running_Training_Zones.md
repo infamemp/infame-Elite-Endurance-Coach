@@ -163,3 +163,34 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | 5 | Maximal Aerobic Power | ~106–116% | ~> 104% | 106–116% | 8–9 | Severe→Extreme | VO2max |  |
 | 6 | Anaerobic Power | ~116–150% | N/A | 116–150% | 9–10 | Extreme | Anaerobic |  |
 | 7 | Sprint / Maximal Power | ~> 150% | N/A | > 150% | 10 | Extreme | Neuromuscular |  |
+
+---
+
+## Methodology: Rosario / Fitzgerald Running Intensities
+* **Sport:** Road running (5K to marathon and ultramarathon)
+* **Zone Identifier Style:** Named intensity, anchored to sustainable duration rather than zone number
+* **Default Metric:** % LTHR
+* **Native Metrics (author's own numbers):** % HRmax
+* **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
+* **Primary Metrics:** Maximum Heart Rate (HRmax), Ventilatory Threshold reference points (VT1, VT2)
+* **Dual-Layer Required:** No
+* **Special Output Rule:** Native metric is % HRmax, but Intervals.icu syntax MUST use the estimated % LTHR per the Olbrich Exception (native % HRmax is never emitted in syntax). Never output % HRmax in syntax.
+* **Threshold on the author's HRmax scale:** 92% HRmax = 100% LTHR. Source: Run Like a Pro (2022), Ch. 4: VT2 = 91-93% HRmax, "aligns closely with critical velocity (CV); running to exhaustion at CV usually lasts 20-30 min" (QR-3). Midpoint of the stated range.
+* **Note:** This author defines intensity almost entirely by SUSTAINABLE DURATION (the fastest pace held for 6 min, 30 min, 1h, 2h, a race distance), not by a percentage table. Only two points carry a native number: VT1 (77-81% HRmax, the moderate/heavy boundary, QR-2) and VT2 (91-93% HRmax, the heavy/severe boundary, QR-3). Every other zone's class below is assigned from its stated duration against the sustainable-duration bands in config/tss_classes.yaml, not from a number the author gives — this is the coach's classification, not the author's own numeric claim, and it is marked as such in each zone's stated_class source.
+* **Note:** Because most zones carry no native number, most rows below show N/A in every metric column: there is nothing to estimate from. This is a known limitation, not an error (see IMPROVEMENT_BACKLOG.md) — a future engine enhancement can read the athlete's own pace-duration curve from Intervals.icu (already fetched by fetch_athlete_data.py) to give each of these duration-anchored zones a real, athlete-specific number.
+* **Note:** Population reference from the same source (QR-4/QR-5): ~80% of training time below VT1 (below ~82% HRmax) and ~20% at moderate+high combined, applied on weekly/monthly/yearly timescales — this is a training distribution, not a zone, and is not represented as a row here.
+* **Note:** T-1/T-2/T-3 give three field tests to locate VT1/VT2 without a lab: a 6-minute all-out test (pace x0.65 = VT1), an HRmax test, and the Talk Test.
+
+| Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | % HRmax | RPE (1-10) | Domain | Class | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Easy | Easy | ~40–85% | ~50–88% | ~40–85% | 40–81% | < 4 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Class as stated by the author (numbers alone compute a different class); Upper bound is the top of the author's own VT1 range (77-81% HRmax, "fitter runners are nearer the top"). |
+| MP | Marathon Pace (MP) | N/A | N/A | N/A | N/A | ~3–4 | Heavy | Tempo | Class from the author's stated physiological target |
+| SSP | Steady-State Pace (SSP) | N/A | N/A | N/A | N/A | ~4–5 | Heavy | Sub-threshold | Class from the author's stated physiological target |
+| HMP | Half-Marathon Pace (HMP) | N/A | N/A | N/A | N/A | ~4–5 | Heavy | Sub-threshold | Class from the author's stated physiological target |
+| LTP | Lactate-Threshold Pace (LTP) | N/A | N/A | N/A | N/A | ~6–7 | Heavy | Threshold | Class from the author's stated physiological target |
+| 10KP | 10K Pace (10KP) | N/A | N/A | N/A | N/A | ~7–8 | Severe | Supra-threshold | Class from the author's stated physiological target |
+| CV | Critical Velocity (CV) | ~98–102% | ~99–101% | ~98–102% | 91–93% | ~6–7 | Heavy→Severe | Threshold |  |
+| HI | High Intensity (HI) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
+| 5KP | 5K Pace (5KP) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
+| MAS | Maximum Aerobic Speed (MAS) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
+| VHI | Very-High Intensity (VHI) | N/A | N/A | N/A | N/A | ~9–10 | Extreme | Anaerobic | Class from the author's stated physiological target |
