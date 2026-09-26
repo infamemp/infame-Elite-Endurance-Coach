@@ -136,7 +136,10 @@ notes:
 #     race_anchor: {distance: marathon, offset_s_per_mile: {min: 60, max: 120},
 #                   source: "..."}      # "goal marathon pace + 1:00 to 2:00 per mile"
 #     race_anchor: {distance: marathon, offset_s_per_mile: -10, source: "..."}  # MP minus 10 s/mi
-#   An offset is in SECONDS PER MILE (positive = slower). Because the pace at the
+#     race_anchor: {distance: 5K, speed_ratio: 0.8675, source: "..."}  # "marathon pace is
+#                                                                     # 86.7% of 5K speed"
+#   An offset is in SECONDS PER MILE (positive = slower). A speed_ratio is a
+#   fraction of the anchor's speed (use one or the other, never both). Because the pace at the
 #   anchor depends on the runner's level, an offset zone is read across runners of
 #   VDOT 35-65 (a 4:16 to a 2:32 marathoner), so its range is wide by design.
 #   An author who publishes NO numbers at all (every zone anchored) sets

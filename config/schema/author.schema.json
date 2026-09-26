@@ -334,6 +334,12 @@
                         }
                       }
                     ]
+                  },
+                  "speed_ratio": {
+                    "type": "number",
+                    "exclusiveMinimum": 0.3,
+                    "exclusiveMaximum": 2.0,
+                    "description": "Fraction of the anchor's SPEED (0.867 = 86.7% of it). Distance anchors only; not with offset_s_per_mile."
                   }
                 }
               },
@@ -371,6 +377,12 @@
                             }
                           }
                         ]
+                      },
+                      "speed_ratio": {
+                        "type": "number",
+                        "exclusiveMinimum": 0.3,
+                        "exclusiveMaximum": 2.0,
+                        "description": "Fraction of the anchor's SPEED (0.867 = 86.7% of it). Distance anchors only; not with offset_s_per_mile."
                       }
                     }
                   },
@@ -438,9 +450,21 @@
                           }
                         }
                       ]
+                    },
+                    "speed_ratio": {
+                      "type": "number",
+                      "exclusiveMinimum": 0.3,
+                      "exclusiveMaximum": 2.0,
+                      "description": "Fraction of the anchor's SPEED (0.867 = 86.7% of it). Distance anchors only; not with offset_s_per_mile."
                     }
                   }
                 }
+              },
+              "speed_ratio": {
+                "type": "number",
+                "exclusiveMinimum": 0.3,
+                "exclusiveMaximum": 2.0,
+                "description": "Fraction of the anchor's SPEED (0.867 = 86.7% of it). Distance anchors only; not with offset_s_per_mile."
               }
             }
           }

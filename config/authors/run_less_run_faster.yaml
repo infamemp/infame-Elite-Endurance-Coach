@@ -1,0 +1,169 @@
+# Run Less Run Faster (FIRST) Zones
+# Conforms to config/schema/author.schema.json (v7.2 — race anchors)
+# Source: Bill Pierce, Scott Murr & Ray Moss, "Run Less Run Faster" (3rd ed., 2021),
+# Ch. 6 ("Three Quality Runs"), Tables 6.6-6.8, extracted via the book-processing
+# pipeline (run-less-run-faster-3rd-ed-bill-pierce_kb.md, sections 4, 5.1-5.6, P-01 to P-03).
+
+id: run_less_run_faster
+name: Run Less Run Faster (FIRST) Zones
+sport: running
+sport_note: 5K to marathon, three quality runs a week
+
+zone_identifier_style: Key run and pace label (ST, MT, LT, MP, HMP), anchored to the runner's current 5K time
+
+default_metric: pace
+available_metrics: []
+primary_metrics:
+  - Current 5K race pace (the reference for every pace in the book)
+intensity_anchors: ["5K race pace ± seconds per mile", "goal marathon / half-marathon pace"]
+
+notes:
+  - >-
+    Every pace in the program is derived from the runner's CURRENT 5K time
+    (Table 6.6 gives repeat targets by 5K time from 16:00 to 40:00; Tables 6.7
+    and 6.8 give tempo, marathon and half-marathon paces the same way). The book
+    publishes no percentage, heart-rate or power scale, so every number in the
+    metric columns is an estimate (`~`) read through the race anchors in
+    config/crosswalk.yaml.
+  - >-
+    Key Run #1 (track repeats, 400-2000 m): "5K race pace or slightly faster"
+    (G-02). Table 6.6 is more precise: across all 91 printed targets the repeats
+    run 7 to 39 seconds per mile faster than 5K pace, faster the shorter the
+    repeat (400 m about 37 s, 2000 m about 9 s).
+  - >-
+    Key Run #2 (tempo): "15-45 seconds slower than 5K race pace" per mile. The
+    book names three paces: ST = 5K + 15 s, MT = 5K + 30 s, LT = 5K + 45 s. Its
+    Table 6.7 printed values sit about 2 seconds per mile above those figures
+    (ST +17, MT +32, LT +47 across all 13 rows), so each pace is read from the
+    stated value up to the table value.
+  - >-
+    Label collision, flagged by the source itself: in the pace tables "LT" means
+    LONG TEMPO, not lactate threshold. Keep it as printed.
+  - >-
+    Key Run #3 (long run): about 30 seconds per mile slower than goal marathon
+    pace for half-marathon and marathon plans ("15 to 30 sec slower than planned
+    marathon pace"), and 5K pace + 45 s for 5K and 10K plans (5.2). Marathon and
+    half-marathon paces (MP, HMP) are the runner's planned race paces. The book
+    does not use the generic race anchors for these two: across the 13 printed
+    rows of Table 6.8 its MP is a constant 86.7% of 5K speed and its HMP 91.0%,
+    so both zones are read from those ratios. That puts the book's MP about two
+    points below the generic marathon anchor (Palladino, 91-94%) and its HMP
+    about one point below the generic half-marathon anchor.
+  - >-
+    Offset zones are read across runners of VDOT 35-65, because a fixed number
+    of seconds per mile is a different fraction of pace for a slow runner and a
+    fast one; their ranges are wide by design. The book's own tables give the
+    exact paces for each 5K time.
+  - >-
+    Cross-training (Tables 7.1-7.4) is prescribed by perceived effort (easy,
+    tempo, hard) and is not part of this pace scale.
+
+zones:
+  - key: Long (HM/M)
+    name: Key Run #3, long run (half-marathon and marathon plans)
+    stated_class:
+      class: endurance
+      source: >-
+        Run Less Run Faster, 5.1: Key Run #3 "improve endurance by raising
+        aerobic metabolism."
+    resolution:
+      use: computed
+      reason: >-
+        The author names the ADAPTATION the long run aims for (endurance,
+        aerobic metabolism), and the pace is "demanding" (G-04): 15-30 seconds
+        per mile slower than goal marathon pace, which is well above the
+        moderate/heavy boundary for most runners and computes as Tempo. Class
+        follows the prescribed intensity.
+    race_anchor:
+      distance: marathon
+      offset_s_per_mile: {min: 15, max: 30}
+      source: >-
+        5.2: "Long run (half/marathon) pace = 5K pace + 75 to 90 sec = 15 to 30
+        sec/mi slower than planned marathon pace"; G-11: "MP + 30".
+    ranges: {}
+
+  - key: MP
+    name: Marathon Pace (MP)
+    race_anchor:
+      distance: 5K
+      speed_ratio: 0.867
+      source: >-
+        G-08: planned/goal marathon pace. Key Run #2 for marathon plans is 8-10
+        miles at MP (G-03). Table 6.8, all 13 printed rows: MP pace = 1.153 x 5K
+        pace, i.e. 86.7% of 5K speed.
+    ranges: {}
+
+  - key: Long (5K/10K)
+    name: Key Run #3, long run (5K and 10K plans)
+    stated_class:
+      class: endurance
+      source: >-
+        Run Less Run Faster, 5.1: Key Run #3 "improve endurance by raising
+        aerobic metabolism."
+    resolution:
+      use: computed
+      reason: >-
+        Same as the half-marathon and marathon long run: the author names the
+        adaptation, while the prescribed pace (5K pace + 45 s per mile) computes
+        as Sub-threshold. Class follows the prescribed intensity.
+    race_anchor:
+      distance: 5K
+      offset_s_per_mile: 45
+      source: "5.2: Long run (5K/10K) pace = 5K pace + 45 sec."
+    ranges: {}
+
+  - key: LT
+    name: Long Tempo (LT pace)
+    race_anchor:
+      distance: 5K
+      offset_s_per_mile: {min: 45, max: 47.5}
+      source: >-
+        G-07/Table 6.7: LT = 5K pace + 45 s per mile (the printed table values
+        are about 47). Not lactate threshold.
+    ranges: {}
+
+  - key: HMP
+    name: Half-Marathon Pace (HMP)
+    race_anchor:
+      distance: 5K
+      speed_ratio: 0.910
+      source: >-
+        G-09: planned/goal half-marathon pace. Table 6.8, all 13 printed rows:
+        HMP pace = 1.098 x 5K pace, i.e. 91.0% of 5K speed.
+    ranges: {}
+
+  - key: MT
+    name: Mid Tempo (MT pace)
+    race_anchor:
+      distance: 5K
+      offset_s_per_mile: {min: 30, max: 32.5}
+      source: >-
+        G-06/Table 6.7: MT = ST + 15 s = 5K pace + 30 s per mile (the printed
+        table values are about 32).
+    ranges: {}
+
+  - key: ST
+    name: Short Tempo (ST pace)
+    race_anchor:
+      distance: 5K
+      offset_s_per_mile: {min: 15, max: 17.5}
+      source: >-
+        G-05/Table 6.7: ST = 5K per-mile pace + 15 s (the printed table values
+        are about 17). Key Run #2 "improve endurance by raising lactate
+        threshold" (5.1).
+    ranges: {}
+
+  - key: Repeats
+    name: Key Run #1, track repeats (400-2000 m)
+    stated_class:
+      class: vo2max
+      source: >-
+        Run Less Run Faster, 5.1/G-02: Key Run #1 "improve VO2 max, running
+        speed, running economy."
+    race_anchor:
+      distance: 5K
+      offset_s_per_mile: {min: -40, max: -7}
+      source: >-
+        G-02: "5K race pace or slightly faster." Table 6.6, all 91 printed
+        targets: 7 to 39 seconds per mile faster than 5K pace.
+    ranges: {}

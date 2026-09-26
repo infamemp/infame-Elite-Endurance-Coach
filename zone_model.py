@@ -40,8 +40,9 @@ Resolution rules (deterministic — the same input always gives the same output)
      distance ("marathon"), a sustainable duration (`duration_min: 120`), a
      span between two of them (`from`/`to`), either of two (`any_of`), or a
      distance with a pace offset in seconds per mile (`offset_s_per_mile`,
-     positive = slower: "goal marathon pace + 1:00 to 2:00") — instead of a
-     number. The range is read from
+     positive = slower: "goal marathon pace + 1:00 to 2:00") or with a
+     `speed_ratio` (a fraction of the anchor's speed: "marathon pace is 86.7% of
+     5K speed") — instead of a number. The range is read from
      config/crosswalk.yaml → running.race_anchors: distances from Palladino's
      published table, durations from the Daniels-Gilbert model. When a zone has
      both native numbers and an anchor, the native numbers govern and the
@@ -235,6 +236,10 @@ def _anchor_point(spec):
             raise ValueError(f"unknown race distance '{spec['distance']}'")
         d = _ra()["distances"][k]
         name = k.replace("_", " ")
+        if spec.get("speed_ratio") is not None:
+            r = float(spec["speed_ratio"])
+            lo, hi = model_pct_for_ratio(d["meters"], r)
+            return lo, hi, f"{r * 100:.1f}% of {name} race speed"
         if spec.get("offset_s_per_mile") is not None:
             lo_off, hi_off = _offset_bounds(spec["offset_s_per_mile"])
             lo, hi = model_pct_for_offset(d["meters"], lo_off, hi_off)
@@ -289,6 +294,15 @@ def model_pct_for_offset(meters, off_lo, off_hi):
     return min(xs), max(xs)
 
 
+def model_pct_for_ratio(meters, ratio):
+    """A fraction of the anchor's SPEED, as a % of the 60-minute speed, across the
+    reference VDOTs."""
+    dm = _dm()
+    xs = [100.0 * ratio * (meters / _race_minutes(v, meters)) /
+          _speed_at(v, dm["threshold_duration_min"]) for v in dm["reference_vdots"]]
+    return min(xs), max(xs)
+
+
 def _num_min(v):
     v = float(v)
     if v >= 60 and v % 30 == 0:
@@ -325,12 +339,24 @@ def validate_race_anchor(ra, sport):
         race_anchor_range(ra)
     except (ValueError, KeyError, TypeError) as e:
         errs.append(str(e))
+    for k in ("from", "to"):
+        if isinstance(ra.get(k), dict) and ra[k].get("speed_ratio") is not None \
+                and ra[k].get("offset_s_per_mile") is not None:
+            errs.append(f"{k}: use offset_s_per_mile or speed_ratio, not both")
     if not ({"distance", "duration_min", "from", "any_of"} & set(ra)):
         errs.append("race_anchor needs `distance`, `duration_min`, `from` or `any_of`")
     if "any_of" in ra and (not isinstance(ra["any_of"], list) or len(ra["any_of"]) < 2):
         errs.append("any_of needs a list of at least two anchors")
     if ra.get("offset_s_per_mile") is not None and "distance" not in ra:
         errs.append("offset_s_per_mile only applies to a distance anchor")
+    if ra.get("speed_ratio") is not None:
+        r = ra["speed_ratio"]
+        if "distance" not in ra:
+            errs.append("speed_ratio only applies to a distance anchor")
+        if ra.get("offset_s_per_mile") is not None:
+            errs.append("use offset_s_per_mile or speed_ratio, not both")
+        if not isinstance(r, (int, float)) or isinstance(r, bool) or not 0.3 < r < 2.0:
+            errs.append("speed_ratio must be a number between 0.3 and 2.0")
     return errs
 
 

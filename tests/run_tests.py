@@ -542,6 +542,34 @@ def unit_tests():
     check("prompt: the [Methodology] list names every author file", listed == on_disk,
           f"missing from prompt: {sorted(on_disk - listed)}; not on disk: {sorted(listed - on_disk)}")
 
+    # ── Run Less Run Faster ────────────────────────────────────────
+    def rl(key):
+        return next(z for z in zm.load_author("run_less_run_faster")["zones"] if str(z["key"]) == key)
+    for key, want in [("Long (HM/M)", "tempo"), ("MP", "sub_threshold"), ("Long (5K/10K)", "sub_threshold"),
+                      ("LT", "sub_threshold"), ("HMP", "sub_threshold"), ("MT", "threshold"),
+                      ("ST", "supra_threshold"), ("Repeats", "vo2max")]:
+        equal(f"run_less_run_faster: {key} class", rl(key)["physiological_class"], want)
+    tempo = [rl(k)["canonical"]["min"] for k in ("LT", "MT", "ST")]
+    equal("run_less_run_faster: the three tempo paces ascend (LT < MT < ST)", tempo, sorted(tempo))
+    check("run_less_run_faster: the repeats are faster than every tempo pace",
+          rl("Repeats")["canonical"]["min"] > rl("ST")["canonical"]["max"])
+    m5 = zm.model_pct_for_distance(5000)
+    equal("speed ratio: MP is 86.7% of 5K speed",
+          tuple(round(x, 1) for x in zm.race_anchor_range({"distance": "5K", "speed_ratio": 0.867})[:2]),
+          (round(0.867 * m5[0], 1), round(0.867 * m5[1], 1)))
+    check("speed ratio: refused together with an offset",
+          bool(zm.validate_race_anchor({"distance": "5K", "speed_ratio": 0.9, "offset_s_per_mile": 5}, "running")))
+    check("speed ratio: refused on a duration anchor",
+          bool(zm.validate_race_anchor({"duration_min": 30, "speed_ratio": 0.9}, "running")))
+    # The book's ratios sit close to the generic anchors: measured about 2.3 points
+    # (MP) and 1.7 points (HMP) below them at the range edges — a documented gap
+    check("run_less_run_faster: the book's MP is within 2.5 points of the marathon anchor",
+          all(abs(rl("MP")["canonical"][k] - v) <= 2.5 for k, v in
+              zip(("min", "max"), zm.model_pct_for_distance(42195))))
+    check("run_less_run_faster: the book's HMP is within 2.0 points of the half-marathon anchor",
+          all(abs(rl("HMP")["canonical"][k] - v) <= 2.0 for k, v in
+              zip(("min", "max"), zm.model_pct_for_distance(21097.5))))
+
     # ── Delta bands ───────────────────────────────────────────────
     cb = th["longitudinal"]["delta_bands"]["cycling"]
     equal("bands: cycling stable floor widened to -2.5", cb["stable"], -2.5)

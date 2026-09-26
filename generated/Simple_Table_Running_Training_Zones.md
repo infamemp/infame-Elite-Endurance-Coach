@@ -244,3 +244,32 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | 5KP | 5K Pace (5KP) | ~104–108% | ~103–105% | ~104–108% | N/A | ~8–9 | Severe | VO2max | Anchor: 5K race pace; Borderline: within 1 point of the supra-threshold/vo2max boundary |
 | MAS | Maximum Aerobic Speed (MAS) | ~114–118% | N/A | ~114–118% | N/A | ~8–9 | Severe→Extreme | VO2max | Anchor: 6 min sustainable pace; Class as stated by the author (numbers alone compute a different class) |
 | VHI | Very-High Intensity (VHI) | ~> 116% | N/A | ~> 116% | N/A | ~9–10 | Extreme | Anaerobic | Open-ended upward; Anchor: from 6 min sustainable pace upward |
+
+---
+
+## Methodology: Run Less Run Faster (FIRST) Zones
+* **Sport:** 5K to marathon, three quality runs a week
+* **Zone Identifier Style:** Key run and pace label (ST, MT, LT, MP, HMP), anchored to the runner's current 5K time
+* **Default Metric:** % Threshold Pace
+* **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
+* **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
+* **Primary Metrics:** Current 5K race pace (the reference for every pace in the book)
+* **Dual-Layer Required:** No
+* **Note:** Every pace in the program is derived from the runner's CURRENT 5K time (Table 6.6 gives repeat targets by 5K time from 16:00 to 40:00; Tables 6.7 and 6.8 give tempo, marathon and half-marathon paces the same way). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
+* **Note:** Key Run #1 (track repeats, 400-2000 m): "5K race pace or slightly faster" (G-02). Table 6.6 is more precise: across all 91 printed targets the repeats run 7 to 39 seconds per mile faster than 5K pace, faster the shorter the repeat (400 m about 37 s, 2000 m about 9 s).
+* **Note:** Key Run #2 (tempo): "15-45 seconds slower than 5K race pace" per mile. The book names three paces: ST = 5K + 15 s, MT = 5K + 30 s, LT = 5K + 45 s. Its Table 6.7 printed values sit about 2 seconds per mile above those figures (ST +17, MT +32, LT +47 across all 13 rows), so each pace is read from the stated value up to the table value.
+* **Note:** Label collision, flagged by the source itself: in the pace tables "LT" means LONG TEMPO, not lactate threshold. Keep it as printed.
+* **Note:** Key Run #3 (long run): about 30 seconds per mile slower than goal marathon pace for half-marathon and marathon plans ("15 to 30 sec slower than planned marathon pace"), and 5K pace + 45 s for 5K and 10K plans (5.2). Marathon and half-marathon paces (MP, HMP) are the runner's planned race paces. The book does not use the generic race anchors for these two: across the 13 printed rows of Table 6.8 its MP is a constant 86.7% of 5K speed and its HMP 91.0%, so both zones are read from those ratios. That puts the book's MP about two points below the generic marathon anchor (Palladino, 91-94%) and its HMP about one point below the generic half-marathon anchor.
+* **Note:** Offset zones are read across runners of VDOT 35-65, because a fixed number of seconds per mile is a different fraction of pace for a slow runner and a fast one; their ranges are wide by design. The book's own tables give the exact paces for each 5K time.
+* **Note:** Cross-training (Tables 7.1-7.4) is prescribed by perceived effort (easy, tempo, hard) and is not part of this pace scale.
+
+| Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | RPE (1-10) | Domain | Class | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Long (HM/M) | Key Run | ~87–91% | ~90–93% | ~87–91% | ~3–4 | Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete; Anchor: marathon race pace +0:15 to +0:30 per mile; Author's stated target is Endurance; class follows the prescribed intensity |
+| MP | Marathon Pace (MP) | ~90–93% | ~93–95% | ~90–93% | ~4–5 | Heavy | Sub-threshold | Anchor: 86.7% of 5K race speed; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| Long (5K/10K) | Key Run | ~94–96% | ~96–98% | ~94–96% | ~4–5 | Heavy | Sub-threshold | Anchor: 5K race pace +0:45 per mile; Author's stated target is Endurance; class follows the prescribed intensity |
+| LT | Long Tempo (LT pace) | ~93–96% | ~95–98% | ~93–96% | ~4–5 | Heavy | Sub-threshold | Anchor: 5K race pace +0:45 to +0:48 per mile |
+| HMP | Half-Marathon Pace (HMP) | ~95–98% | ~97–99% | ~95–98% | ~4–5 | Heavy | Sub-threshold | Anchor: 91.0% of 5K race speed; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| MT | Mid Tempo (MT pace) | ~97–99% | ~98–99% | ~97–99% | ~6–7 | Heavy | Threshold | Anchor: 5K race pace +0:30 to +0:32 per mile; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| ST | Short Tempo (ST pace) | ~101–102% | ~101–102% | ~101–102% | ~7–8 | Heavy→Severe | Supra-threshold | Anchor: 5K race pace +0:15 to +0:18 per mile; Borderline: within 1 point of the threshold/supra-threshold boundary |
+| Repeats | Key Run | ~106–123% | ~> 104% | ~106–123% | ~8–9 | Severe→Extreme | VO2max | Anchor: 5K race pace -0:40 to -0:07 per mile; Borderline: within 1 point of the vo2max/anaerobic boundary |
