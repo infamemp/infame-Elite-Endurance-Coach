@@ -216,3 +216,32 @@ def safe_out_dir(aid: str, name: str | None = None) -> str:
     out_dir = os.path.join(OUT, dest_name)
     os.makedirs(out_dir, exist_ok=True)
     return out_dir
+
+
+def block_file_name(week: int | None = None) -> str:
+    """Name for a saved block: <today>_bloque.md, or <today>_bloque_w<N>.md
+    when the week is given. The week suffix exists because the prompt
+    delivers one week per response: two weeks saved the same day must not
+    overwrite each other before either one is validated and pushed."""
+    from datetime import date as _date
+
+    base = _date.today().isoformat() + "_bloque"
+    return f"{base}_w{int(week)}.md" if week is not None else f"{base}.md"
+
+
+def latest_block_path(aid: str, name: str | None = None) -> str:
+    """Most recently written file in out/<athlete>/blocks/ — the default
+    target of validate_block and push_block when no file_path is given.
+    Newest by modification time, so the week just saved is always the one
+    checked, whatever day or week suffix it carries."""
+    blocks_dir = os.path.join(safe_out_dir(aid, name), "blocks")
+    files = []
+    if os.path.isdir(blocks_dir):
+        files = [os.path.join(blocks_dir, f) for f in os.listdir(blocks_dir) if f.endswith(".md")]
+    if not files:
+        raise ToolError(
+            f"No saved block for '{aid}' in "
+            f"{os.path.relpath(blocks_dir, os.path.dirname(OUT))} — call save_block "
+            f"first, or pass file_path explicitly."
+        )
+    return max(files, key=os.path.getmtime)

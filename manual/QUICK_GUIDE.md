@@ -10,7 +10,8 @@ of the exact steps.
 
 This guide assumes the `infame-coach` MCP server is connected in Claude
 Desktop. That's the everyday path from here on — you talk to the coach,
-it calls the tool, done. If the server is ever down, see the **Fallback:
+it calls the tools **by itself** (prompt v7.3+), you only approve.
+You never need to name a tool; the table below is for reference. If the server is ever down, see the **Fallback:
 without the MCP server** appendix at the end; nothing there is the normal
 path anymore.
 
@@ -23,9 +24,9 @@ path anymore.
 | `get_athlete_state` | Fetches the current `#STATE` (CTL/ATL/TSB, etc.). Skips re-downloading if the cache is fresh. | Opening any new chat with an athlete. Mid-week, if it's been a while since this chat last checked. | *"use get_athlete_state for `<id>`"* — to force a fresh pull: *"…forcing refresh"* | Nothing written to disk — returned straight into the chat. |
 | `get_athlete_profile` | Fetches the declared `#PROFILE` (methodology, metric map, availability, etc.). | Same moments as `get_athlete_state` — normally asked together. | *"use get_athlete_profile for `<id>`"* (asking both together never double-fetches) | Nothing written to disk — returned into the chat. |
 | `list_roster` | Lists every athlete and when each was last updated. | You forgot an athlete's ID, or want to see who's overdue for an update. | *"use list_roster"* | Nothing written — just reads `out/roster.md` as it was left by the last `prep` run. |
-| `save_block` | Saves the training block the coach just generated. Does not validate it. | Every time the coach hands you a new or corrected block, right before validating it. | *"save this block with save_block for `<id>`"* | Writes `out/<athlete>/blocks/<today>_bloque.md`. The name is set automatically (today's date) — saving again the same day **overwrites** that file; you never rename or delete anything. |
-| `validate_block` | Checks the saved block against the validator's rules (RPE tags, methodology, format, etc.) and reports `pending` / `BLOCKED` / upload-safe. Fixes nothing itself. | Immediately after `save_block`, every time — never skip straight to uploading. | *"run validate_block for `<id>`"* (no path needed — it grabs today's file automatically) | Nothing written — just a report in the chat. |
-| `push_block` | Uploads the block to Intervals.icu. By default sends nothing (dry-run); only sends when explicitly told to for real. Validates internally first and refuses a `BLOCKED` block unless told to override. | Only after `validate_block` reports upload-safe. | *"do push_block for `<id>`"* | Nothing written locally — sends events to Intervals.icu. Re-pushing a corrected block **updates** the same sessions instead of duplicating them; nothing to delete on the Intervals.icu side first. |
+| `save_block` | Saves each week the coach just wrote. Does not validate it. | Automatic, after every week (and again after a correction). | — (the coach does it) | Writes `out/<athlete>/blocks/<today>_bloque_w<week>.md`. A corrected week **overwrites** its own file; a different week saved the same day gets its own file. |
+| `validate_block` | Checks the saved block against the validator's rules (RPE tags, methodology, format, etc.) and reports `pending` / `BLOCKED` / upload-safe. Fixes nothing itself. | Immediately after `save_block`, every time — never skip straight to uploading. | — (the coach does it, on the file it just saved; without a path it checks the most recently saved week) | Nothing written — just a report in the chat. |
+| `push_block` | Uploads the block to Intervals.icu. By default sends nothing (dry-run); only sends when explicitly told to for real. Validates internally first and refuses a `BLOCKED` block unless told to override. | Automatic after a PASS: the coach first shows a dry-run (how many sessions, which dates) and **waits for your OK** before sending. | Approve with *"sí, súbela"* | Nothing written locally — sends events to Intervals.icu. Re-pushing a corrected block **updates** the same sessions instead of duplicating them; nothing to delete on the Intervals.icu side first. |
 | `save_continuity` | Saves the `#SESSION…#END` header that lets you resume the macrocycle in another chat. | Closing a chat you'll need to continue later (end of block, or before opening a new chat mid-week). | *"save this with save_continuity for `<id>`"* | Writes `out/<athlete>/continuity.md`, **always overwriting** what was there. Refuses to save if the block is incomplete, so it never leaves you with a half-written file. |
 | `save_race_result` | Saves a `#RACE_RESULT` summary after a race debrief. | Right after the coach gives you the race summary. | *"save this with save_race_result for `<id>`, date `<YYYY-MM-DD>`"* | **Appends** to `out/<athlete>/race_notes.md` — never deletes or overwrites what's already there. Adds the header/date automatically if the coach's text is missing them. |
 
@@ -40,26 +41,21 @@ path anymore.
 4. **There's no tool for this step yet** — it's the one piece of the
    whole flow still done by hand. Open `config/athletes/<id>.yaml` in
    Notepad, select all, replace with what the coach gave you, and save.
-5. Copy the file to both machines, commit, push — same as any other
-   config file.
+5. Tell the coach it's saved; it reloads the profile by itself.
 
-**Note:** athlete files like this one are gitignored by design (only the
-template is tracked) — copying by hand between machines is the correct
-flow, not a workaround.
+**Note:** athlete files are gitignored by design (they hold personal
+data). `config/athletes/`, `data/` and `out/` point to Google Drive on
+both machines, so the file is already available on the other machine —
+no copy, no commit.
 
 ---
 
 ## Opening a new chat with an athlete
 
-1. Tell the coach: **"use get_athlete_state and get_athlete_profile for `<id>`"**
-   → Returns `#STATE` and `#PROFILE` straight into the chat; asking for
-   both together never double-fetches.
-2. **Only if this athlete already has a `continuity.md`** (a session
-   already happened during this training block): open
-   `out/<athlete_name>/continuity.md` and paste its contents into the
-   chat as a message. There's no tool that reads this file for the coach
-   yet — it's the one paste left in the flow, but it's a paste, not a
-   drag.
+1. Tell the coach who: **"Trabajemos con `<nombre o id>`"**
+   → The coach calls `list_roster` (if needed), `get_athlete_state` and
+   `get_athlete_profile` by itself. `get_athlete_state` also brings the
+   saved `continuity.md` and race notes — nothing to paste or drag.
 
 Do this once per chat — not again partway through the same conversation.
 
@@ -73,13 +69,10 @@ first.
 
 ## Mid-week question, opening a brand-new chat instead
 
-1. Before closing the chat you're in now, ask the coach: **"give me the
-   continuity header"**
-2. Ask the coach: **"save this with save_continuity for `<id>`"**
-   → Overwrites `continuity.md` completely. If the `#SESSION…#END` block
-   is incomplete, the tool refuses — ask the coach to complete it and
-   try again.
-3. Open the new chat and repeat "Opening a new chat with an athlete"
+1. Before closing the chat you're in now, ask the coach: **"guarda la
+   continuidad"** — it emits `#SESSION` and saves it with
+   `save_continuity` by itself.
+2. Open the new chat and repeat "Opening a new chat with an athlete"
    above.
 
 ---
@@ -88,51 +81,39 @@ first.
 
 1. The coach shows you a boxed `#SESSION` block on its own once the
    block ends — you don't have to ask for it.
-2. Ask the coach: **"save this with save_continuity for `<id>`"**
-   → Same behavior: overwrites `continuity.md` completely.
-3. Optional: to see what actually changed, ask the coach to run
+   It saves it with `save_continuity` by itself (overwrites
+   `continuity.md` completely).
+2. Optional: to see what actually changed, ask the coach to run
    `python coach.py review <id> --since <block start date>` — this one
    is still a terminal command; there's no tool for it yet.
 
 ## After a race
 
 1. During the debrief, the coach gives you a `#RACE_RESULT` block.
-2. Ask the coach: **"save this with save_race_result for `<id>`, date
-   `<YYYY-MM-DD>`"**
-   → Appends to `race_notes.md`, never deleting what's there. Give the
-   date explicitly even if the coach's text already has one — it's the
-   value `review --since` filters on. If the header or date is missing
-   from the coach's text, the tool fills them in automatically.
+2. The coach saves it with `save_race_result` by itself → appends to
+   `race_notes.md`, never deleting what's there.
 3. The next time you run `review`, this result shows up automatically —
    no extra step.
 
 ---
 
-## Validating and uploading a block
+## Validating and uploading a week
 
-1. The coach gives you a training block in the chat.
-2. Ask the coach: **"save this block with save_block for `<id>`"**
-   → Lands in `out/<athlete>/blocks/<today>_bloque.md`. You don't need to
-   know or touch that path — it's just what's happening underneath.
-3. Ask the coach: **"run validate_block for `<id>`"**
-   → No need to point it at a file; it automatically checks the one you
-   just saved.
-4. What does `validate_block` report?
-   - **BLOCKED** → tell the coach the exact failure shown (e.g. a
-     missing `[RPE]` tag, a misspelled `[Methodology]`). Ask for the
-     correction, then repeat from step 2 — saving again the same day
-     **overwrites** automatically, no duplicate files.
-   - **upload-safe** → continue to step 5.
-5. Ask the coach: **"do push_block for `<id>`"**
-   - If it refuses because the block is still `BLOCKED`: don't reach for
-     an override unless you know exactly what you're bypassing and why.
-   - If it uploads successfully: done — nothing else to file away or
-     rename.
+All automatic after each week the coach writes — you only approve the upload:
 
-**Re-uploading note:** if you later fix and re-push the same block (same
-athlete, same date, same week), Intervals.icu **updates** those sessions
-instead of duplicating them — you never need to delete anything there
-before repeating the process.
+1. The coach writes the week, saves it (`save_block`) and validates it
+   (`validate_block`), and tells you **PASS** or **BLOCKED**.
+2. **BLOCKED** → the coach corrects the full week, saves and validates
+   again by itself. Nothing is uploaded.
+3. **PASS** → the coach shows a dry-run: how many sessions, which dates,
+   and any workouts already planned in Intervals.icu on those dates.
+4. You approve (*"sí, súbela"*) → the coach sends it with `push_block`.
+   Re-uploading a corrected week **updates** the same sessions, never
+   duplicates them. Workouts that were already planned on those dates
+   are not deleted — remove them in Intervals.icu if the coach flags any.
+
+Never ask for an override of a BLOCKED week unless you know exactly what
+you're bypassing.
 
 ---
 

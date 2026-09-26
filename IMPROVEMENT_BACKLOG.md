@@ -1,6 +1,6 @@
 # Improvement Backlog — Infame Elite Endurance Coach
 
-**Written:** 2026-08-22 · **Revised:** 2026-09-06 (MCP server) · 2026-09-07 (MCP server removed after production instability — history kept in `archive/RESTORE_POINT_v6.5.md`)
+**Written:** 2026-08-22 · **Revised:** 2026-09-06 (MCP server) · 2026-09-07 (MCP server removed after production instability — history kept in `archive/RESTORE_POINT_v6.5.md`) · 2026-09-13 (MCP server rebuilt, v6.7) · 2026-09-26 (MCP is the primary path, prompt v7.3 — see README changelog)
 **Status:** Nothing here is committed work. It is a considered list of where the
 system could go, with honest reasoning about what each item costs and what it is
 worth.

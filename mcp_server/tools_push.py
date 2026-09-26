@@ -38,7 +38,7 @@ from __future__ import annotations
 import os
 from datetime import date
 
-from .common import ROOT, ensure_import_paths, safe_out_dir
+from .common import ROOT, ensure_import_paths, safe_out_dir, latest_block_path
 from .guard import ToolError, guarded
 from .tools_validate import _run_validation
 
@@ -66,6 +66,24 @@ _DISCIPLINE_TO_TYPE = {
     ("running", "track_run"): "Run",
 }
 
+
+
+def _iso_date(date_str: str) -> str | None:
+    """Session headers carry [Date] as DD-MM-YYYY (the prompt's output
+    contract); Intervals.icu's start_date_local needs YYYY-MM-DD. Sending
+    the header string as-is is what made the first real push (21-sep-2026,
+    a real athlete) fail with HTTP 500. Accepts either form; returns None
+    for anything else so the session is skipped with a reason, never sent
+    with a date Intervals.icu would reject or misread."""
+    from datetime import datetime as _dt
+
+    raw = str(date_str or "").strip()
+    for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return _dt.strptime(raw, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
 
 def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
     """(type, is_inferred). is_inferred marks the one mapping above that
@@ -112,13 +130,7 @@ def push_block(
     import validate_block as vb
 
     if not file_path:
-        out_dir = safe_out_dir(athlete_id, athlete_name)
-        file_path = os.path.join(out_dir, "blocks", f"{date.today().isoformat()}_bloque.md")
-        if not os.path.exists(file_path):
-            raise ToolError(
-                f"No block saved today for '{athlete_id}' — call save_block "
-                f"first, or pass file_path explicitly."
-            )
+        file_path = latest_block_path(athlete_id, athlete_name)
     else:
         # Same class of bug fixed in tools_validate.py's validate_block:
         # a caller-supplied relative file_path must never be resolved
@@ -143,11 +155,25 @@ def push_block(
         category = header.get("Category", "Training")
         if category in ("Rest", "Travel") and not code.strip():
             continue
+        if category == "Race":
+            # The race itself already lives in Intervals.icu as a RACE_A/B/C
+            # event (it is how the goal reached #STATE in the first place);
+            # "RACE" is not a valid Intervals.icu category, and pushing the
+            # race-day card as a WORKOUT would put a second event on the
+            # race date. Reported, never silently dropped.
+            skipped.append({"reason": "race day: the race event is managed in Intervals.icu",
+                            "header": header})
+            continue
         methodology = header.get("Methodology")
         discipline = header.get("Discipline")
         date_str = header.get("Date")
         if not date_str:
             skipped.append({"reason": "missing [Date]", "header": header})
+            continue
+        iso = _iso_date(date_str)
+        if not iso:
+            skipped.append({"reason": f"unreadable [Date] '{date_str}' (expected DD-MM-YYYY)",
+                            "header": header})
             continue
         if not methodology or not discipline:
             skipped.append({"reason": "missing [Methodology] or [Discipline]", "header": header})
@@ -159,13 +185,13 @@ def push_block(
             continue
         activity_type, inferred = _activity_type(author.get("sport"), discipline)
         events.append({
-            "start_date_local": f"{date_str}T00:00:00",
-            "category": "WORKOUT" if category == "Training" else category.upper(),
+            "start_date_local": f"{iso}T00:00:00",
+            "category": "WORKOUT",
             "type": activity_type,
             "type_inferred": inferred,
             "name": header.get("Focus") or f"{author['name']} session",
             "description": code.strip(),
-            "external_id": f"infame-{athlete_id}-{date_str}-w{header.get('Week', '')}",
+            "external_id": f"infame-{athlete_id}-{iso}-w{header.get('Week', '')}",
         })
 
     if not events:

@@ -25,9 +25,12 @@ that makes it safe to exist.
 | `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess |
 | `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** |
 
-`push_block` is not wired into the Claude Project prompt, is not called
-automatically by anything in this repository, and its default (and only
-undemanded) mode does not touch the network at all. That is deliberate and
+Since prompt v7.3 (2026-09-26) the coach calls every tool itself,
+`push_block` included — but only through the prompt's upload gate: a
+dry-run first, then an explicit approval from the head coach, then the
+live call with `dry_run=False, confirm=True`. Nothing in this repository
+calls it automatically, and its default mode does not touch the network
+at all. That is deliberate and
 non-negotiable — see `IMPROVEMENT_BACKLOG.md` §6 ("do not let the engine
 start giving advice... an engine that prescribes rather than reports would
 undo the architecture") and this task's own scope limits. The Claude

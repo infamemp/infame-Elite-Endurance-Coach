@@ -7,8 +7,8 @@ terminal, a repository, or a config file is.
 
 This manual covers **operational use** — what you actually do, day to
 day. For internal architecture (why the system is built the way it is),
-see `ARCHITECTURE_v6.md`. For system setup, maintenance, and adding a new
-coaching methodology, see `WORKFLOW_CHECKLIST.md` — that document
+see `archive/ARCHITECTURE_v6.md`. For system setup, maintenance, and adding a new
+coaching methodology, see `archive/WORKFLOW_CHECKLIST.md` (historical, v6.2) — that document
 complements this one, it does not repeat it.
 
 > **Already know the system and just need a fast reminder?** Use

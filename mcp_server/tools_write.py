@@ -6,7 +6,7 @@ These three write exactly the files a head coach otherwise pastes by hand
 structural check on them before they land on disk. `coach.py` itself only
 ever *reads* these three files (`check_continuity()`, `read_race_notes()`);
 none of its own code validates what a human pasted into them
-(`WORKFLOW_ACTUAL.md` §4 names this as a real, pre-existing gap). The
+(`archive/WORKFLOW_ACTUAL.md` §4 names this as a real, pre-existing gap). The
 checks here are deliberately shallow — the envelope a file must have to be
 read back correctly by the code that already reads it — never a rule about
 what a `#SESSION`'s phase or block name should say. That judgement stays
@@ -19,7 +19,7 @@ import os
 import re
 from datetime import date, datetime
 
-from .common import OUT, safe_out_dir
+from .common import OUT, safe_out_dir, block_file_name
 from .guard import ToolError, guarded
 
 # Mirrors coach.py's read_race_notes() patterns exactly (those are inline in
@@ -133,9 +133,12 @@ def save_race_result(
 
 
 @guarded
-def save_block(athlete_id: str, text: str, athlete_name: str | None = None) -> dict:
-    """Write out/<athlete>/blocks/<today>_bloque.md, overwriting a file
-    already saved today — same convention as the original tool. This is
+def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
+               week: int | None = None) -> dict:
+    """Write out/<athlete>/blocks/<today>_bloque_w<week>.md (or
+    <today>_bloque.md when no week is given), overwriting a file of the same
+    name — so re-saving a corrected week replaces it, while a different
+    week saved the same day gets its own file. This is
     deliberately dumb: it does not parse or validate the block at all
     (that's validate_block's job, as a separate, explicit next step, the
     same two-step shape as the manual copy-paste-then-check workflow it
@@ -146,7 +149,7 @@ def save_block(athlete_id: str, text: str, athlete_name: str | None = None) -> d
     out_dir = safe_out_dir(athlete_id, athlete_name)
     blocks_dir = os.path.join(out_dir, "blocks")
     os.makedirs(blocks_dir, exist_ok=True)
-    fname = f"{date.today().isoformat()}_bloque.md"
+    fname = block_file_name(week)
     path = os.path.join(blocks_dir, fname)
     with open(path, "w", encoding="utf-8") as f:
         f.write(body.rstrip() + "\n")

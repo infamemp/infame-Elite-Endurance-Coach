@@ -39,7 +39,7 @@ authoritative. The model prescribes on top of it and never recalculates it.
   constraint, recomputing TSS from the same config the engine uses. A block that
   fails is not uploaded.
 - **`generated/`** — zone tables built from `config/`, never hand-edited.
-- **`mcp_server/`** — optional local MCP server exposing the engine as 8 tools
+- **`mcp_server/`** — the primary way to work: a local MCP server exposing the engine as 8 tools
   (`get_athlete_state`, `get_athlete_profile`, `list_roster`, `save_continuity`,
   `save_race_result`, `save_block`, `validate_block`, `push_block`) to Claude
   Desktop, so a conversation can pull state, save a block, validate it, and
@@ -47,7 +47,7 @@ authoritative. The model prescribes on top of it and never recalculates it.
   `dry_run=False` and `confirm=True` are passed explicitly, and refuses a
   BLOCKED block unless `override_validation=True` is also passed. See
   `manual/OPERATIONS_MANUAL.md` §4a.
-- **`tests/`** — 390 regression tests over synthetic athletes with frozen expected
+- **`tests/`** — 409 regression tests (plus 76 in `tests/test_mcp_server.py`) over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
 - **`Knowledge/`** — 13 book-derived knowledge bases (each methodology's YAML
@@ -61,21 +61,20 @@ authoritative. The model prescribes on top of it and never recalculates it.
 
 ### Daily use
 
+**Primary path — MCP server connected in Claude Desktop.** Open a chat in
+the Claude Project and name the athlete. The coach calls the tools by
+itself (prompt v7.3+): it loads `#STATE`, the profile and the saved
+`#SESSION`, and after each week it saves, validates and — once you
+approve the dry-run — uploads to Intervals.icu. See
+`manual/QUICK_GUIDE.md`.
+
+**Fallback — only if the server is down** (or in the browser Project):
+
 ```
 python coach.py prep <id>
-# drag out/<athlete_name>/ (state.md, profile.md, continuity.md if present)
-# into the Claude Project, design the block in conversation
+# attach out/<athlete_name>/ (state.md, profile.md, continuity.md if present)
 python coach.py check <file>
 ```
-
-**With the MCP server (`mcp_server/`) connected in Claude Desktop**, the
-drag-and-drop and the separate `check` call are no longer necessary: the
-coach calls `get_athlete_state`/`get_athlete_profile` directly, mid-
-conversation, and validates and uploads with `validate_block`/
-`push_block` — see `manual/OPERATIONS_MANUAL.md` §4a and
-`manual/QUICK_GUIDE.md` for the tool-by-tool flow. The commands above
-remain the fallback path for the browser Project or a machine where the
-server isn't configured.
 
 Onboarding a new athlete: `python coach.py new <id>`. Measuring what a block
 actually did: `python coach.py review <id> --since <date>` — compares
@@ -83,9 +82,9 @@ CTL/ATL/TSB, ACWR, durability, and (once enough history has accumulated)
 curve progression between two dates, folding in `race_notes.md` if present.
 
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
-workflow) and `WORKFLOW_CHECKLIST.md` (system setup, maintenance, adding a
-methodology). Architecture rationale in `ARCHITECTURE_v6.md`. Current state
-and open items in the newest `RESTORE_POINT_v6.*.md` (root or `archive/`,
+workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
+`WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
+and open items in `RESTORE_POINT_v7.3.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -154,6 +153,30 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.3 — MCP is the primary path (2026-09-26)**
+
+The server was rebuilt in v6.7, but the prompt never got its tool
+instructions back after the v6.6 removal, so the coach kept asking for
+dragged files. v7.3 closes that gap and fixes what the first real use
+exposed:
+
+- **Prompt:** new `<tools>` section. The coach opens every conversation
+  with `get_athlete_state`/`get_athlete_profile`, and saves, validates and
+  uploads each week itself. Uploads go through a gate: dry-run → the head
+  coach approves → live push. The manual path is kept only as a fallback.
+- **`push_block` date fix:** session headers carry `[Date]` as DD-MM-YYYY
+  and were sent as-is; Intervals.icu answered HTTP 500 on the first real
+  push (21-sep-2026). Dates are now converted to ISO. Race days are
+  skipped with a stated reason (the race event already lives in
+  Intervals.icu).
+- **`get_athlete_state` returns `continuity` and `race_notes`**, so no
+  file is pasted at the start of a conversation.
+- **`save_block(week=N)`** writes `<date>_bloque_w<N>.md`, so two weeks
+  saved the same day no longer overwrite each other; `validate_block` and
+  `push_block` default to the most recently saved week.
+- **Repo:** `snapshot_E.txt` removed (it listed athlete names and ids);
+  superseded root docs moved to `archive/`.
 
 **v6.7 — MCP server rebuilt**
 

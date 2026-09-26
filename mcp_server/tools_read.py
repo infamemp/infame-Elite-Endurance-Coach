@@ -18,7 +18,8 @@ from .guard import ToolError, guarded
 def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 180) -> dict:
     """Fetch (if the local cache is stale or force_refresh is set), resolve,
     and return #STATE — the exact content of state.md, plus its structured
-    state.json, plus whether this call hit the cache or refetched.
+    state.json, plus whether this call hit the cache or refetched, plus the
+    athlete's saved #SESSION (continuity.md) and race notes when they exist.
 
     A stale answer is never served silently: `cache_hit` and `resolved_at`
     are always present, so a caller (or the coach reading this response)
@@ -44,7 +45,20 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         "resolved_at": state_json.get("resolved_at"),
         "markdown": state_md,
         "state": state_json,
+        # #SESSION and race history travel with #STATE, so one call gives
+        # the coach everything a conversation starts from. None = no file
+        # yet (new macrocycle / no race logged), never an error.
+        "continuity": _optional_text(os.path.join(info["out_dir"], "continuity.md")),
+        "race_notes": _optional_text(os.path.join(info["out_dir"], "race_notes.md")),
     }
+
+
+def _optional_text(path: str) -> str | None:
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    return text if text.strip() else None
 
 
 @guarded

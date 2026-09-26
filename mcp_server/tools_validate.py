@@ -12,7 +12,7 @@ get it wrong. This was the original design's own reasoning
 Every flag `verify/validate_block.py` accepts on the command line is
 exposed here too — `--tss`, `--tolerance`, `--athlete`, `--quiet` were all
 real, working options that neither `coach.py check` nor any manual ever
-surfaced (see WORKFLOW_ACTUAL.md §5); there's no reason for this tool to
+surfaced (see archive/WORKFLOW_ACTUAL.md §5); there's no reason for this tool to
 repeat that gap.
 """
 
@@ -24,7 +24,7 @@ import subprocess
 import sys
 from datetime import date
 
-from .common import OUT, ROOT, ensure_import_paths, safe_out_dir
+from .common import OUT, ROOT, ensure_import_paths, safe_out_dir, latest_block_path
 from .guard import ToolError, guarded
 
 logger = logging.getLogger("mcp_server.tools_validate")
@@ -56,14 +56,7 @@ def _run_validation(
     if not file_path:
         if not athlete_id:
             raise ToolError("Pass either file_path or athlete_id.")
-        out_dir = safe_out_dir(athlete_id, athlete_name)
-        file_path = os.path.join(out_dir, "blocks", f"{date.today().isoformat()}_bloque.md")
-        if not os.path.exists(file_path):
-            raise ToolError(
-                f"No block saved today for '{athlete_id}' at "
-                f"{os.path.relpath(file_path, os.path.dirname(OUT))} — "
-                f"call save_block first, or pass file_path explicitly."
-            )
+        file_path = latest_block_path(athlete_id, athlete_name)
     else:
         # A relative file_path must never be resolved against the current
         # process's working directory: os.getcwd() at server runtime is
@@ -162,9 +155,9 @@ def validate_block(
     quiet: bool = False,
     athlete_name: str | None = None,
 ) -> dict:
-    """Validate a block. Pass file_path explicitly, or athlete_id alone to
-    validate today's file saved by save_block
-    (out/<athlete>/blocks/<today>_bloque.md).
+    """Validate a block. Pass file_path explicitly (save_block returns it), or
+    athlete_id alone to validate the most recently saved block in
+    out/<athlete>/blocks/.
 
     Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
     tool never repairs or interprets the result, only reports it.

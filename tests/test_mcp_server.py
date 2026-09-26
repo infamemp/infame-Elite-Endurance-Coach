@@ -596,6 +596,77 @@ def test_tools_push_refuses_blocked_block():
             requests.Session.post = original_post
 
 
+# ══════════════════════════════════════════════════════════════════
+# MCP-first workflow (v7.3) — what the prompt now relies on
+# ══════════════════════════════════════════════════════════════════
+# 1. get_athlete_state carries continuity.md, so one call opens a
+#    conversation (no file dragging).
+# 2. save_block(week=N) keeps each week in its own file; validate_block
+#    and push_block default to the most recently saved one.
+# 3. push_block sends ISO dates. The first real push (21-sep-2026) sent the
+#    header's DD-MM-YYYY as-is and Intervals.icu answered HTTP 500.
+
+def test_mcp_first_workflow():
+    import re as _re
+    import time as _time
+    from mcp_server.common import latest_block_path
+    from mcp_server.tools_push import _iso_date, push_block
+    from mcp_server.tools_read import get_athlete_state
+    from mcp_server.tools_validate import validate_block
+    from mcp_server.tools_write import save_block, save_continuity
+
+    # 1 — continuity travels with #STATE
+    _seed_athlete_data(fresh=True)
+    session = "#SESSION\nActive Phase: 4\nAthlete ID: " + AID + "\n#END"
+    save_continuity(AID, session, athlete_name="Test Fixture")
+    r = get_athlete_state(AID)
+    check("workflow: get_athlete_state returns the saved #SESSION as `continuity`",
+          "#SESSION" in (r.get("continuity") or ""), r.get("continuity"))
+    check("workflow: get_athlete_state has a `race_notes` key (None or text)",
+          "race_notes" in r)
+
+    # 2 — one file per week, newest is the default target
+    good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
+    with open(good, encoding="utf-8") as f:
+        good_text = f.read()
+    r1 = save_block(AID, good_text, athlete_name="Test Fixture", week=1)
+    _time.sleep(0.05)
+    r2 = save_block(AID, good_text, athlete_name="Test Fixture", week=2)
+    check("workflow: save_block(week=1) and (week=2) the same day are two files",
+          r1.get("ok") and r2.get("ok") and r1.get("path") != r2.get("path"),
+          (r1.get("path"), r2.get("path")))
+    check("workflow: week file is named <date>_bloque_w<N>.md",
+          str(r2.get("path", "")).endswith(f"{date.today().isoformat()}_bloque_w2.md"),
+          r2.get("path"))
+    latest = latest_block_path(AID, "Test Fixture")
+    check("workflow: latest_block_path picks the week just saved",
+          latest.endswith("_bloque_w2.md"), latest)
+    rv = validate_block(athlete_id=AID, athlete_name="Test Fixture")
+    check("workflow: validate_block(athlete_id) validates the latest week without a path",
+          rv.get("ok") is True and str(rv.get("file", "")).endswith("_bloque_w2.md"), rv)
+
+    # 3 — dates Intervals.icu accepts; race days not pushed
+    equal("workflow: _iso_date converts DD-MM-YYYY", _iso_date("29-09-2026"), "2026-09-29")
+    equal("workflow: _iso_date keeps YYYY-MM-DD", _iso_date("2026-09-29"), "2026-09-29")
+    equal("workflow: _iso_date rejects garbage", _iso_date("sometime"), None)
+    rp = push_block(AID, file_path=good)
+    check("workflow: every pushed start_date_local is ISO YYYY-MM-DDT00:00:00",
+          rp.get("events") and all(_re.fullmatch(r"\d{4}-\d{2}-\d{2}T00:00:00", e["start_date_local"])
+                                   for e in rp["events"]),
+          [e.get("start_date_local") for e in rp.get("events", [])])
+    check("workflow: every pushed event is a WORKOUT",
+          all(e["category"] == "WORKOUT" for e in rp.get("events", [])))
+    with tempfile.TemporaryDirectory() as tmp:
+        race = os.path.join(tmp, "race.md")
+        with open(race, "w", encoding="utf-8") as f:
+            f.write(good_text.replace("[Category]: Training", "[Category]: Race", 1))
+        rr = push_block(AID, file_path=race)
+        check("workflow: a Race day is skipped with a stated reason, never pushed",
+              any("race day" in str(sk.get("reason", "")) for sk in (rr.get("skipped") or []))
+              or (rr.get("ok") is False and "race day" in str(rr)),
+              rr)
+
+
 def main():
     print("mcp_server — regression tests\n")
     if not MCP_AVAILABLE:
@@ -607,7 +678,7 @@ def main():
         for fn in (test_cancel_patch, test_guard, test_common, test_tools_read,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
-                   test_tools_push_refuses_blocked_block):
+                   test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
             fn()
     finally:
         _cleanup()
