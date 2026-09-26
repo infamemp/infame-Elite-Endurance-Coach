@@ -89,6 +89,81 @@ running:
         together. When another author does, add it to residual_check.
       residual_check: [friel_running, daniels]
 
+  # ────────────────────────────────────────────────────────────────
+  # RACE ANCHORS (running) — for authors who define intensity by a race
+  # distance or a sustainable duration instead of a percentage of threshold
+  # (Rosario/Fitzgerald, Hansons, Run Less Run Faster, Hudson, Canova).
+  # A zone declares `race_anchor` and the range is read from here.
+  # Everything is on the canonical axis: % of threshold pace, 60-min pace = 100.
+  # ────────────────────────────────────────────────────────────────
+  race_anchors:
+    threshold_definition: >
+      100% = the pace sustainable for about 60 minutes (Daniels' T-pace; the
+      same anchor as Coggan's FTP and Carmichael's LT power). Threshold is
+      really a BAND, not a point: authors place it anywhere from a ~30 minute
+      effort (Friel's LTHR test, Rosario's critical velocity) to ~70 minutes
+      (MLSS). Palladino puts time-to-exhaustion at FTP/CP at roughly 40-50
+      minutes. An author whose own 100% sits elsewhere declares it with
+      `anchor.duration_min` in the author file (see the template); nothing is
+      shifted silently.
+
+    # PRIMARY SOURCE for distances: published ranges, not a formula.
+    # Steve Palladino, "Race Power as a Percentage of FTP/CP", Palladino Power
+    # Project, 20 July 2023, Table 2 (Palladino Power Project athletes, genders
+    # combined). Running power scales with speed on level ground, so the same
+    # percentages are used for pace (Palladino publishes identical % for both).
+    # The range for each distance is kept exactly as published.
+    distances:
+      800m:          {meters: 800,     min: 122, max: 125}
+      1600m:         {meters: 1600,    min: 116, max: 119}
+      3200m:         {meters: 3200,    min: 109, max: 112}
+      5K:            {meters: 5000,    min: 104, max: 108}
+      10K:           {meters: 10000,   min: 100, max: 104}
+      10mile:        {meters: 16093,   min: 99,  max: 100}
+      half_marathon: {meters: 21097.5, min: 95,  max: 98}
+      marathon:      {meters: 42195,   min: 91,  max: 94}
+    aliases:
+      1500m: 1600m        # 1500 m sits about one point above the 1600 m row
+      mile: 1600m
+      3K: 3200m
+      2mile: 3200m
+      5000m: 5K
+      10000m: 10K
+      half: half_marathon
+      hm: half_marathon
+    distance_cross_check: >
+      Andrew Coggan, cited in the same article (Figure 1, built from the
+      McMillan and Daniels tables for a 42-minute 10K runner): 1.5 km 115-117%,
+      5 km 104-105%, half marathon 94-95%, marathon 90-91% of the power at
+      10K effort. Compared with this crosswalk's model on the same scale: within
+      about one point at every distance.
+
+    # SECONDARY SOURCE, used for DURATIONS (the published table has distances
+    # only) and as a cross-check on the distance rows. Level-independent within
+    # 0.1 point across VDOT 35-65.
+    # Daniels & Gilbert, Oxygen Power (1979) / Daniels' Running Formula (VDOT):
+    #   fraction of VO2max sustainable for t minutes
+    #       f(t) = a + b*exp(-k1*t) + c*exp(-k2*t)
+    #   oxygen cost of running at v metres/minute
+    #       VO2(v) = p0 + p1*v + p2*v^2
+    # The equations themselves are not reproduced in this repository's
+    # knowledge base; they are the published model behind the VDOT tables.
+    # Verified: VDOT 50 gives a 5K in 19:56 and a marathon in 3:10:39 against
+    # the published 19:57 and 3:10:49.
+    duration_model:
+      name: Daniels-Gilbert (VDOT)
+      fraction_vo2max: {a: 0.8, b: 0.1894393, k1: 0.012778, c: 0.2989558, k2: 0.1932605}
+      vo2_of_speed: {p0: -4.60, p1: 0.182258, p2: 0.000104}
+      threshold_duration_min: 60
+      reference_vdots: [35, 45, 55, 65]
+      # Uncertainty of a duration anchor, in percentage points either side.
+      # Convention, set from the disagreement between the model and the
+      # published distance ranges (mean 0.7, max 1.5) rounded up, plus the
+      # article's warning that race percentages widen for efforts under ~40
+      # minutes (reserve work capacity) and over ~50 minutes (fatigue resistance).
+      half_width: 2.0
+      residual_tolerance: {mean: 1.0, max: 2.0}
+
 # ──────────────────────────────────────────────────────────────────
 # HRmax → LTHR
 # ──────────────────────────────────────────────────────────────────

@@ -424,6 +424,71 @@ def unit_tests():
     _, errs, _ = zm.resolve_author(bad)
     check("conflict: stated vs computed class fails the build", bool(errs))
 
+    # ── v7.2 race anchors (running) ────────────────────────────────
+    rr = zm.race_anchor_residuals()
+    tol = zm.load_crosswalk()["running"]["race_anchors"]["duration_model"]["residual_tolerance"]
+    diffs = [abs(r[3]) for r in rr]
+    check("race anchors: model reproduces Palladino's published ranges (mean)",
+          sum(diffs) / len(diffs) <= tol["mean"], f"{sum(diffs) / len(diffs):.2f}")
+    check("race anchors: model reproduces Palladino's published ranges (max)",
+          max(diffs) <= tol["max"], f"{max(diffs):.2f}")
+    equal("race anchors: 60 minutes is the threshold anchor",
+          round(zm.speed_pct_at_duration(60), 1), 100.0)
+    equal("race anchors: 30-minute pace is 103.8% of threshold",
+          round(zm.speed_pct_at_duration(30), 1), 103.8)
+    equal("race anchors: 2-hour pace is 95.7% of threshold",
+          round(zm.speed_pct_at_duration(120), 1), 95.7)
+    check("race anchors: duration result does not depend on the reference level",
+          abs(zm.speed_pct_at_duration(30, vdot=35) - zm.speed_pct_at_duration(30, vdot=65)) < 0.3)
+    dur = [zm.speed_pct_at_duration(t) for t in (6, 15, 30, 60, 90, 120, 180)]
+    equal("race anchors: sustainable speed falls as duration grows", dur, sorted(dur, reverse=True))
+    equal("race anchors: 1500m and mile use the 1600m row",
+          zm._anchor_point({"distance": "mile"}), zm._anchor_point({"distance": "1600m"}))
+    check("race anchors: unknown distance is rejected",
+          bool(zm.validate_race_anchor({"distance": "marathn"}, "running")))
+    check("race anchors: cycling has no race anchors",
+          bool(zm.validate_race_anchor({"duration_min": 30}, "cycling")))
+    r_lo, r_hi, _ = zm.race_anchor_range({"from": {"duration_min": 6}, "to": None})
+    check("race anchors: an open span has no upper bound", r_hi is None and r_lo > 110)
+    # Rosario: every class is computed from the anchors
+    def rz(key):
+        return next(z for z in zm.load_author("rosario")["zones"] if str(z["key"]) == key)
+    for key, want in [("Easy", "endurance"), ("MP", "sub_threshold"), ("SSP", "sub_threshold"),
+                      ("HMP", "sub_threshold"), ("LTP", "threshold"), ("10KP", "supra_threshold"),
+                      ("CV", "supra_threshold"), ("HI", "vo2max"), ("5KP", "vo2max"),
+                      ("MAS", "vo2max"), ("VHI", "anaerobic")]:
+        equal(f"rosario: {key} class", rz(key)["physiological_class"], want)
+    check("rosario: no zone is left without numbers",
+          all(rz(k)["ranges"].get("pace") for k in ("MP", "SSP", "HMP", "LTP", "10KP", "CV", "HI", "5KP", "MAS", "VHI")))
+    equal("rosario: MP is estimated, not native", rz("MP")["range_status"]["pace"], "estimated")
+    check("rosario: the native VT2 heart rate agrees with the 30-minute anchor",
+          not [w for w in zm.resolve_author(zm.load_author_raw("rosario"))[2] if "race anchor" in w])
+    check("rosario: MP is flagged borderline",
+          any(f.startswith("borderline") for f in rz("MP")["flags"]))
+    # Borderline is not a class change
+    check("borderline: Coggan Level 4 is not flagged (midpoint 98, four points wide)",
+          not any(f.startswith("borderline") for f in zc("coggan", "Level 4")["flags"]))
+    # Author-level threshold definition by duration (running)
+    fake = zm.load_author_raw("daniels")
+    fake["anchor"] = {"metric": "pace", "reference": "30-minute test", "duration_min": 30,
+                      "source": "test"}
+    fa, ferrs, _ = zm.resolve_author(fake)
+    equal("anchor by duration: factor is computed from the model",
+          fa["anchor"]["factor_from_threshold"], 1.038)
+    equal("anchor by duration: a native 75% reads as 77.9% of threshold",
+          next(z for z in fa["zones"] if z["key"] == "E")["canonical"]["min"], 77.9)
+    check("anchor by duration: moving the definition surfaces the class conflict",
+          any("daniels T" in e and "supra_threshold" in e for e in ferrs), ferrs)
+    bad = zm.load_author_raw("coggan")
+    bad["anchor"] = {"metric": "power", "reference": "x", "duration_min": 30, "source": "x"}
+    _, berrs, _ = zm.resolve_author(bad)
+    check("anchor by duration: refused for cycling (no duration model)", bool(berrs))
+    # Palladino: his published 10K range sits on the 60-minute scale (no factor needed)
+    pal10 = zm._anchor_point({"distance": "10K"})
+    mlo, mhi = zm.model_pct_for_distance(10000)
+    check("palladino: his 10K range and the 60-minute model overlap",
+          pal10[0] <= mhi and mlo <= pal10[1])
+
     # ── Delta bands ───────────────────────────────────────────────
     cb = th["longitudinal"]["delta_bands"]["cycling"]
     equal("bands: cycling stable floor widened to -2.5", cb["stable"], -2.5)

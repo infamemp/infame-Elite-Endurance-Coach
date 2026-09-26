@@ -157,9 +157,16 @@ def cross_field_errors(data, stem):
     if anc:
         if anc.get("metric") not in available:
             extra.append(f"anchor metric '{anc.get('metric')}' is not in available_metrics")
-        f = anc.get("factor_from_threshold")
+        if anc.get("factor_from_threshold") and anc.get("duration_min"):
+            extra.append("anchor declares both factor_from_threshold and duration_min — "
+                         "use one")
+        try:
+            f = zm.anchor_factor_value(anc)
+        except Exception as e:  # noqa: BLE001 — surfaced as a validation message
+            f = None
+            extra.append(f"anchor could not be evaluated: {e}")
         if not isinstance(f, (int, float)) or not 0.5 < f < 2.0:
-            extra.append(f"anchor factor_from_threshold {f!r} is outside a plausible range")
+            extra.append(f"anchor factor {f!r} is outside a plausible range")
         if f == 1.0:
             extra.append("anchor factor is 1.0 — the author anchors on threshold, so the "
                          "anchor block should be removed")
@@ -172,6 +179,10 @@ def cross_field_errors(data, stem):
         elif dl["engine_metric"] not in resolvable:
             extra.append(f"dual_layer engine_metric '{dl['engine_metric']}' is not a "
                          f"{data.get('sport')} metric")
+    for z in data.get("zones", []):
+        if z.get("race_anchor"):
+            for msg in zm.validate_race_anchor(z["race_anchor"], data.get("sport")):
+                extra.append(f"zone '{z.get('key')}': {msg}")
     sor = data.get("special_output_rule")
     if sor:
         if sor.get("native_metric") == sor.get("output_metric"):
@@ -231,6 +242,22 @@ def validate_all():
     print("(mean / max absolute difference, in percentage points):")
     for sport, aid, metric, n, mae, mx in zm.residuals():
         print(f"        {sport:8} {aid:14} {metric:6} n={n:<3} mean {mae:4.1f}   max {mx:4.1f}")
+
+    rr = zm.race_anchor_residuals()
+    tol = zm.load_crosswalk()["running"]["race_anchors"]["duration_model"]["residual_tolerance"]
+    diffs = [abs(r[3]) for r in rr]
+    mean_d, max_d = sum(diffs) / len(diffs), max(diffs)
+    print()
+    print("Race anchors (running): Daniels-Gilbert model vs Palladino's published ranges")
+    print("(% of threshold pace; model range across VDOT 35-65; centre difference in points):")
+    for k, pub, mod, dc in rr:
+        print(f"        {k:14} published {pub[0]:>5.0f}\u2013{pub[1]:<5.0f} model "
+              f"{mod[0]:>5.1f}\u2013{mod[1]:<5.1f} diff {dc:+4.1f}")
+    print(f"        mean |diff| {mean_d:.2f}   max |diff| {max_d:.2f}   "
+          f"(tolerance mean {tol['mean']}, max {tol['max']})")
+    if mean_d > tol["mean"] or max_d > tol["max"]:
+        print("        FAIL  the model no longer reproduces the published race anchors")
+        failures += 1
     return failures
 
 
@@ -303,6 +330,12 @@ def _zone_notes(z):
             parts.append("LT1 is individual: moderate or heavy depending on the athlete")
         elif f.startswith("open upper"):
             parts.append("Open-ended upward")
+    if z.get("anchor_text"):
+        parts.append(f"Anchor: {z['anchor_text']}")
+    for f in z.get("flags") or []:
+        if f.startswith("borderline"):
+            b = f.split("of the ", 1)[1].replace("_", "-")
+            parts.append(f"Borderline: within 1 point of the {b}")
     prov = z.get("class_provenance", "")
     if prov.startswith("stated by author"):
         parts.append("Class as stated by the author (numbers alone compute a different class)")
@@ -427,7 +460,8 @@ def render_author(author, thresholds):
 
 HEADER_NOTES = """**How to read these tables (v7.2):**
 - `Zone Key` and `Zone Name` preserve each author's own vocabulary.
-- Values without a mark are the author's own numbers (native). Values marked `~` are ESTIMATES computed through `config/crosswalk.yaml` from the author's native numbers — use them when the athlete's metric is not one the author publishes. `N/A` means the author publishes nothing there and no estimate is meaningful (e.g. heart rate for efforts under ~2 minutes).
+- Values without a mark are the author's own numbers (native). Values marked `~` are ESTIMATES computed through `config/crosswalk.yaml` — from the author's native numbers, or, for an author who defines a zone by a race distance or a sustainable duration, from that anchor (`Anchor:` in the Notes; distances from Palladino's published table, durations from the Daniels-Gilbert model, about +/- 2 points). Use them when the athlete's metric is not one the author publishes. `N/A` means no estimate is meaningful (e.g. heart rate for efforts under ~2 minutes).
+- Threshold (100%) is a band, not a point: authors place it anywhere from a ~30-minute effort to ~70 minutes, so every estimate carries about +/- 2-3 points of definitional uncertainty on top of the crosswalk error. `Borderline` in the Notes means the zone's midpoint is within 1 point of a class boundary.
 - `Domain` is the physiological intensity domain (Moderate · Heavy · Severe · Extreme). `A→B` means the zone's range crosses from one domain into the next.
 - `Class` determines TSS cost and is the only valid bridge between methodologies (never RPE). It is COMPUTED from the zone's position on the threshold scale, never assigned by hand; where the author explicitly states a different physiological target, the Notes say which one governs.
 - `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.

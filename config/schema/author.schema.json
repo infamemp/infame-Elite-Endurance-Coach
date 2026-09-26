@@ -289,6 +289,62 @@
                 "type": "string"
               }
             }
+          },
+          "race_anchor": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Running only. For a zone the author defines by a race distance or a sustainable duration instead of a percentage. Give ONE of `distance` (800m, 1600m/mile/1500m, 3200m/3K/2mile, 5K, 10K, 10mile, half_marathon, marathon), `duration_min`, or a span with `from` and `to` (`to: null` = open-ended). The range is read from config/crosswalk.yaml → running.race_anchors. If the zone also has native numbers, those govern and the anchor is only a consistency check.",
+            "properties": {
+              "distance": {
+                "type": "string"
+              },
+              "duration_min": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 600
+              },
+              "from": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Start of a span.",
+                "properties": {
+                  "distance": {
+                    "type": "string"
+                  },
+                  "duration_min": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 600
+                  }
+                }
+              },
+              "to": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "End of a span.",
+                    "properties": {
+                      "distance": {
+                        "type": "string"
+                      },
+                      "duration_min": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 600
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "type": "string",
+                "description": "Where the author defines the zone this way."
+              }
+            }
           }
         }
       }
@@ -310,7 +366,6 @@
       "required": [
         "metric",
         "reference",
-        "factor_from_threshold",
         "source"
       ],
       "additionalProperties": false,
@@ -331,7 +386,7 @@
         },
         "factor_from_threshold": {
           "type": "number",
-          "description": "Anchor value divided by threshold value. 1.10 means the anchor sits 10% above threshold, so the author's percentages must be multiplied by 1.10 to be read against threshold."
+          "description": "Anchor value divided by threshold value. 1.10 means the anchor sits 10% above threshold, so the author's percentages must be multiplied by 1.10 to be read against threshold. Omit when `duration_min` is given."
         },
         "source": {
           "type": "string",
@@ -349,8 +404,26 @@
           ],
           "default": "equivalent",
           "description": "Which column determines physiological_class. Defaults to the threshold equivalent, because the classification cutpoints are calibrated on threshold and TSS must be comparable across authors."
+        },
+        "duration_min": {
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "maximum": 600,
+          "description": "Running only (pace or power). Use INSTEAD of factor_from_threshold when the author defines their 100% as the pace sustainable for this many minutes (e.g. a 30-minute test, or 'threshold is my 10K pace'). The factor is computed from the duration model in config/crosswalk.yaml (60 minutes = 1.00). `source` must quote where the author states the definition."
         }
-      }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "factor_from_threshold"
+          ]
+        },
+        {
+          "required": [
+            "duration_min"
+          ]
+        }
+      ]
     },
     "hrmax_threshold_pct": {
       "type": "object",

@@ -2,7 +2,8 @@
 
 **How to read these tables (v7.2):**
 - `Zone Key` and `Zone Name` preserve each author's own vocabulary.
-- Values without a mark are the author's own numbers (native). Values marked `~` are ESTIMATES computed through `config/crosswalk.yaml` from the author's native numbers — use them when the athlete's metric is not one the author publishes. `N/A` means the author publishes nothing there and no estimate is meaningful (e.g. heart rate for efforts under ~2 minutes).
+- Values without a mark are the author's own numbers (native). Values marked `~` are ESTIMATES computed through `config/crosswalk.yaml` — from the author's native numbers, or, for an author who defines a zone by a race distance or a sustainable duration, from that anchor (`Anchor:` in the Notes; distances from Palladino's published table, durations from the Daniels-Gilbert model, about +/- 2 points). Use them when the athlete's metric is not one the author publishes. `N/A` means no estimate is meaningful (e.g. heart rate for efforts under ~2 minutes).
+- Threshold (100%) is a band, not a point: authors place it anywhere from a ~30-minute effort to ~70 minutes, so every estimate carries about +/- 2-3 points of definitional uncertainty on top of the crosswalk error. `Borderline` in the Notes means the zone's midpoint is within 1 point of a class boundary.
 - `Domain` is the physiological intensity domain (Moderate · Heavy · Severe · Extreme). `A→B` means the zone's range crosses from one domain into the next.
 - `Class` determines TSS cost and is the only valid bridge between methodologies (never RPE). It is COMPUTED from the zone's position on the threshold scale, never assigned by hand; where the author explicitly states a different physiological target, the Notes say which one governs.
 - `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.
@@ -62,7 +63,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | E | Easy | 75–85% | ~77–88% | ~75–85% | 65–79% | 1–3 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete |
 | M | Marathon | 85–95% | ~88–97% | ~85–95% | 80–89% | 3–4 | Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete |
-| T | Threshold | 100% | ~100% | ~100% | 88–92% | 4–5 | Heavy | Threshold |  |
+| T | Threshold | 100% | ~100% | ~100% | 88–92% | 4–5 | Heavy | Threshold | Borderline: within 1 point of the threshold/supra-threshold boundary |
 | I | Interval | 105–115% | ~> 103% | ~105–115% | N/A | 6–8 | Severe | VO2max |  |
 | R | Repetition | 115–125% | N/A | ~115–125% | N/A | 9–10 | Extreme | Anaerobic |  |
 
@@ -83,9 +84,9 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Zone 1 | Active Recovery | 40–78% | 50–85% | ~40–78% | 1 | Moderate | Recovery |  |
 | Zone 2 | Endurance | 78–88% | 85–89% | ~78–88% | 2–3 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete |
-| Zone 3 | Tempo | 88–94% | 90–94% | ~88–94% | 4–5 | Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete |
-| Zone 4 | Lactate Threshold | 95–101% | 95–99% | ~95–101% | 6–7 | Heavy | Threshold |  |
-| Zone 5a | Sub-Aerobic Threshold | 100–103% | 100–102% | ~100–103% | 8 | Heavy→Severe | Supra-threshold |  |
+| Zone 3 | Tempo | 88–94% | 90–94% | ~88–94% | 4–5 | Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| Zone 4 | Lactate Threshold | 95–101% | 95–99% | ~95–101% | 6–7 | Heavy | Threshold | Borderline: within 1 point of the sub-threshold/threshold boundary |
+| Zone 5a | Sub-Aerobic Threshold | 100–103% | 100–102% | ~100–103% | 8 | Heavy→Severe | Supra-threshold | Borderline: within 1 point of the threshold/supra-threshold boundary |
 | Zone 5b | Aerobic Capacity / VO2max | 104–111% | 103–106% | ~104–111% | 9 | Severe | VO2max |  |
 | Zone 5c | Anaerobic Capacity | > 111% | > 106% | ~> 111% | 10 | Extreme | Anaerobic | Open-ended upward; Class as stated by the author (numbers alone compute a different class) |
 
@@ -135,7 +136,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | LRJ | Long recovery jog | ~40–76% | ~50–78% | ~40–76% | 40–70% | 1–2 | Moderate | Recovery |  |
 | EER | Extensive endurance run | ~81–86% | ~83–89% | ~81–86% | 75–80% | 2–3 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete |
 | IER | Intensive endurance run | ~86–92% | ~89–94% | ~86–92% | 80–85% | 4–5 | Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete |
-| TER | Tempo endurance run | ~92–100% | ~94–100% | ~92–100% | 85–90% | 6–7 | Heavy | Threshold | Class as stated by the author (numbers alone compute a different class) |
+| TER | Tempo endurance run | ~92–100% | ~94–100% | ~92–100% | 85–90% | 6–7 | Heavy | Threshold | Borderline: within 1 point of the sub-threshold/threshold boundary; Class as stated by the author (numbers alone compute a different class) |
 | INT | Interval | ~> 100% | ~> 100% | ~> 100% | > 90% | 8–10 | Severe | VO2max | Open-ended upward; Class as stated by the author (numbers alone compute a different class) |
 | FAR | Fartlek | ~76–100% | ~78–100% | ~76–100% | 70–90% | 2–7 | Moderate→Heavy | Tempo | LT1 is individual: moderate or heavy depending on the athlete; Variable effort by design |
 
@@ -156,9 +157,9 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 | 1A | Post Interval Recovery | ~50–65% | ~58–69% | 50–65% | 1–2 | Moderate | Recovery |  |
 | 1B | EZ Warm-Up | ~65–75% | ~69–77% | 65–75% | 2 | Moderate | Recovery |  |
 | 1C | EZ Aerobic Running | ~75–80% | ~77–83% | 75–80% | 2–3 | Moderate | Endurance |  |
-| 2 | Endurance / Long Run | ~80–88% | ~83–91% | 80–88% | 3–4 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete |
-| 3A | Extensive Threshold Stimulus | ~88–95% | ~91–97% | 88–95% | 4–5 | Heavy | Sub-threshold |  |
-| 3B | Intensive Threshold Stimulus | ~95–101% | ~97–101% | 95–101% | 5–6 | Heavy | Threshold |  |
+| 2 | Endurance / Long Run | ~80–88% | ~83–91% | 80–88% | 3–4 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Borderline: within 1 point of the endurance/tempo boundary |
+| 3A | Extensive Threshold Stimulus | ~88–95% | ~91–97% | 88–95% | 4–5 | Heavy | Sub-threshold | Borderline: within 1 point of the tempo/sub-threshold boundary |
+| 3B | Intensive Threshold Stimulus | ~95–101% | ~97–101% | 95–101% | 5–6 | Heavy | Threshold | Borderline: within 1 point of the sub-threshold/threshold boundary |
 | 4 | Supra Threshold | ~101–106% | ~101–104% | 101–106% | 7–8 | Severe | Supra-threshold |  |
 | 5 | Maximal Aerobic Power | ~106–116% | ~> 104% | 106–116% | 8–9 | Severe→Extreme | VO2max |  |
 | 6 | Anaerobic Power | ~116–150% | N/A | 116–150% | 9–10 | Extreme | Anaerobic |  |
@@ -168,29 +169,29 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 
 ## Methodology: Rosario / Fitzgerald Running Intensities
 * **Sport:** Road running (5K to marathon and ultramarathon)
-* **Zone Identifier Style:** Named intensity, anchored to sustainable duration rather than zone number
+* **Zone Identifier Style:** Named intensity, anchored to sustainable duration or race distance rather than zone number
 * **Default Metric:** % LTHR
 * **Native Metrics (author's own numbers):** % HRmax
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Maximum Heart Rate (HRmax), Ventilatory Threshold reference points (VT1, VT2)
 * **Dual-Layer Required:** No
 * **Special Output Rule:** Native metric is % HRmax, but Intervals.icu syntax MUST use the estimated % LTHR per the Olbrich Exception (native % HRmax is never emitted in syntax). Never output % HRmax in syntax.
-* **Threshold on the author's HRmax scale:** 92% HRmax = 100% LTHR. Source: Run Like a Pro (2022), Ch. 4: VT2 = 91-93% HRmax, "aligns closely with critical velocity (CV); running to exhaustion at CV usually lasts 20-30 min" (QR-3). Midpoint of the stated range.
-* **Note:** This author defines intensity almost entirely by SUSTAINABLE DURATION (the fastest pace held for 6 min, 30 min, 1h, 2h, a race distance), not by a percentage table. Only two points carry a native number: VT1 (77-81% HRmax, the moderate/heavy boundary, QR-2) and VT2 (91-93% HRmax, the heavy/severe boundary, QR-3). Every other zone's class below is assigned from its stated duration against the sustainable-duration bands in config/tss_classes.yaml, not from a number the author gives — this is the coach's classification, not the author's own numeric claim, and it is marked as such in each zone's stated_class source.
-* **Note:** Because most zones carry no native number, most rows below show N/A in every metric column: there is nothing to estimate from. This is a known limitation, not an error (see IMPROVEMENT_BACKLOG.md) — a future engine enhancement can read the athlete's own pace-duration curve from Intervals.icu (already fetched by fetch_athlete_data.py) to give each of these duration-anchored zones a real, athlete-specific number.
-* **Note:** Population reference from the same source (QR-4/QR-5): ~80% of training time below VT1 (below ~82% HRmax) and ~20% at moderate+high combined, applied on weekly/monthly/yearly timescales — this is a training distribution, not a zone, and is not represented as a row here.
+* **Note:** This author defines intensity almost entirely by a SUSTAINABLE DURATION or a RACE DISTANCE (the fastest pace held for 6 min, 30 min, 1 h or 2 h; goal marathon, half-marathon, 10K or 5K pace), not by a percentage table. Only two points carry a native number: VT1 (77-81% HRmax, the moderate/heavy boundary, QR-2) and VT2 (91-93% HRmax, the heavy/severe boundary, QR-3). Every other zone declares a `race_anchor`; its range comes from config/crosswalk.yaml (distances: Palladino's published Table 2; durations: the Daniels-Gilbert model, +/- 2 points) and its class is computed from that range, not assigned. All of those values are estimates and carry `~`.
+* **Note:** Threshold on this author's HRmax scale: no value is declared, so the crosswalk default applies (90% HRmax = 100% LTHR, from Daniels T = 88-92% and Olbrich threshold = 85-90%). With it, the author's VT2 (91-93% HRmax) computes to about 101-105% of threshold pace, which agrees with the 30-minute critical-velocity anchor (103.8%); the zone table shows both are consistent (CV row).
+* **Note:** The author places time to exhaustion at critical velocity at 20-30 minutes (QR-3), shorter than the ~40-50 minutes Palladino gives for FTP/CP. Both are inside the 30-70 minute band in which authors place threshold; see `threshold_definition` in config/crosswalk.yaml. Rosario's CV therefore reads a little above threshold (Supra-threshold) where a 60-minute definition would read it at threshold.
+* **Note:** Population reference from the same source (QR-4/QR-5): ~80% of training time below VT1 (below ~82% HRmax) and ~20% at moderate+high combined, applied on weekly/monthly/yearly timescales — a training distribution, not a zone, so it is not a row here.
 * **Note:** T-1/T-2/T-3 give three field tests to locate VT1/VT2 without a lab: a 6-minute all-out test (pace x0.65 = VT1), an HRmax test, and the Talk Test.
 
 | Zone Key | Zone Name | % Threshold Pace | % LTHR | % FTP (run power) | % HRmax | RPE (1-10) | Domain | Class | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Easy | Easy | ~40–85% | ~50–88% | ~40–85% | 40–81% | < 4 | Moderate | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Class as stated by the author (numbers alone compute a different class); Upper bound is the top of the author's own VT1 range (77-81% HRmax, "fitter runners are nearer the top"). |
-| MP | Marathon Pace (MP) | N/A | N/A | N/A | N/A | ~3–4 | Heavy | Tempo | Class from the author's stated physiological target |
-| SSP | Steady-State Pace (SSP) | N/A | N/A | N/A | N/A | ~4–5 | Heavy | Sub-threshold | Class from the author's stated physiological target |
-| HMP | Half-Marathon Pace (HMP) | N/A | N/A | N/A | N/A | ~4–5 | Heavy | Sub-threshold | Class from the author's stated physiological target |
-| LTP | Lactate-Threshold Pace (LTP) | N/A | N/A | N/A | N/A | ~6–7 | Heavy | Threshold | Class from the author's stated physiological target |
-| 10KP | 10K Pace (10KP) | N/A | N/A | N/A | N/A | ~7–8 | Severe | Supra-threshold | Class from the author's stated physiological target |
-| CV | Critical Velocity (CV) | ~98–102% | ~99–101% | ~98–102% | 91–93% | ~6–7 | Heavy→Severe | Threshold |  |
-| HI | High Intensity (HI) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
-| 5KP | 5K Pace (5KP) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
-| MAS | Maximum Aerobic Speed (MAS) | N/A | N/A | N/A | N/A | ~8–9 | Severe | VO2max | Class from the author's stated physiological target |
-| VHI | Very-High Intensity (VHI) | N/A | N/A | N/A | N/A | ~9–10 | Extreme | Anaerobic | Class from the author's stated physiological target |
+| Easy | Easy | ~40–87% | ~50–90% | ~40–87% | 40–81% | 1–4 | Moderate→Heavy | Endurance | LT1 is individual: moderate or heavy depending on the athlete; Class as stated by the author (numbers alone compute a different class); Upper bound is the top of the author's own VT1 range (77-81% HRmax, "fitter runners are nearer the top"). VT1 is rated RPE 4 (QR-2). |
+| MP | Marathon Pace (MP) | ~91–94% | ~94–96% | ~91–94% | N/A | ~4–5 | Heavy | Sub-threshold | Anchor: marathon race pace; Borderline: within 1 point of the tempo/sub-threshold boundary |
+| SSP | Steady-State Pace (SSP) | ~94–98% | ~96–99% | ~94–98% | N/A | ~4–5 | Heavy | Sub-threshold | Anchor: 2 h sustainable pace |
+| HMP | Half-Marathon Pace (HMP) | ~95–98% | ~97–99% | ~95–98% | N/A | ~4–5 | Heavy | Sub-threshold | Anchor: half marathon race pace; Borderline: within 1 point of the sub-threshold/threshold boundary |
+| LTP | Lactate-Threshold Pace (LTP) | ~98–102% | ~99–101% | ~98–102% | N/A | ~6–7 | Heavy→Severe | Threshold | Anchor: 1 h sustainable pace; Borderline: within 1 point of the threshold/supra-threshold boundary |
+| 10KP | 10K Pace (10KP) | ~100–104% | ~100–103% | ~100–104% | N/A | ~7–8 | Heavy→Severe | Supra-threshold | Anchor: 10K race pace; Borderline: within 1 point of the threshold/supra-threshold boundary |
+| CV | Critical Velocity (CV) | ~102–105% | ~101–103% | ~102–105% | 91–93% | ~7–8 | Severe | Supra-threshold | Anchor: 30 min sustainable pace; The author states CV aligns closely with VT2 (91-93% HRmax) and that running to exhaustion at CV usually lasts 20-30 minutes (QR-3). |
+| HI | High Intensity (HI) | ~104–116% | ~> 103% | ~104–116% | N/A | ~8–9 | Severe→Extreme | VO2max | Anchor: between 30 min sustainable pace and 6 min sustainable pace |
+| 5KP | 5K Pace (5KP) | ~104–108% | ~103–105% | ~104–108% | N/A | ~8–9 | Severe | VO2max | Anchor: 5K race pace; Borderline: within 1 point of the supra-threshold/vo2max boundary |
+| MAS | Maximum Aerobic Speed (MAS) | ~114–118% | N/A | ~114–118% | N/A | ~8–9 | Severe→Extreme | VO2max | Anchor: 6 min sustainable pace; Class as stated by the author (numbers alone compute a different class) |
+| VHI | Very-High Intensity (VHI) | ~> 116% | N/A | ~> 116% | N/A | ~9–10 | Extreme | Anaerobic | Open-ended upward; Anchor: from 6 min sustainable pace upward |
