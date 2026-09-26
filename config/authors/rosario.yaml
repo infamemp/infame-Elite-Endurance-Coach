@@ -1,0 +1,204 @@
+# Rosario / Fitzgerald Running Intensities
+# Conforms to config/schema/author.schema.json (v7.2 — native values only)
+# Source: Matt Fitzgerald & Ben Rosario, "Run Like a Pro (Even If You're Slow)"
+# (2022), Ch. 4 ("Training Plans Overview"), extracted via the book-processing
+# pipeline (run-like-a-pro-matt-fitzgerald_kb.md, sections QR-1 to QR-5, T-1 to T-3).
+
+id: rosario
+name: Rosario / Fitzgerald Running Intensities
+sport: running
+sport_note: Road running (5K to marathon and ultramarathon)
+
+zone_identifier_style: Named intensity, anchored to sustainable duration rather than zone number
+
+default_metric: lthr
+available_metrics: [hrmax]
+primary_metrics:
+  - Maximum Heart Rate (HRmax)
+  - Ventilatory Threshold reference points (VT1, VT2)
+intensity_anchors: ["% HRmax"]
+
+metric_status:
+  hrmax: native
+
+special_output_rule:
+  native_metric: hrmax
+  output_metric: lthr
+  rationale: per the Olbrich Exception (native % HRmax is never emitted in syntax)
+
+# Where VT2 sits on the author's own HRmax scale. Rosario states VT2 aligns
+# closely with Critical Velocity (CV) and that "running to exhaustion at CV
+# usually lasts 20-30 min" — CV is the author's own operational proxy for the
+# LT2/MLSS boundary itself, not an effort clearly above it.
+hrmax_threshold_pct:
+  value: 92
+  source: >-
+    Run Like a Pro (2022), Ch. 4: VT2 = 91-93% HRmax, "aligns closely with
+    critical velocity (CV); running to exhaustion at CV usually lasts 20-30
+    min" (QR-3). Midpoint of the stated range.
+
+notes:
+  - >-
+    This author defines intensity almost entirely by SUSTAINABLE DURATION (the
+    fastest pace held for 6 min, 30 min, 1h, 2h, a race distance), not by a
+    percentage table. Only two points carry a native number: VT1 (77-81%
+    HRmax, the moderate/heavy boundary, QR-2) and VT2 (91-93% HRmax, the
+    heavy/severe boundary, QR-3). Every other zone's class below is assigned
+    from its stated duration against the sustainable-duration bands in
+    config/tss_classes.yaml, not from a number the author gives — this is the
+    coach's classification, not the author's own numeric claim, and it is
+    marked as such in each zone's stated_class source.
+  - >-
+    Because most zones carry no native number, most rows below show N/A in
+    every metric column: there is nothing to estimate from. This is a known
+    limitation, not an error (see IMPROVEMENT_BACKLOG.md) — a future engine
+    enhancement can read the athlete's own pace-duration curve from
+    Intervals.icu (already fetched by fetch_athlete_data.py) to give each of
+    these duration-anchored zones a real, athlete-specific number.
+  - >-
+    Population reference from the same source (QR-4/QR-5): ~80% of training
+    time below VT1 (below ~82% HRmax) and ~20% at moderate+high combined,
+    applied on weekly/monthly/yearly timescales — this is a training
+    distribution, not a zone, and is not represented as a row here.
+  - >-
+    T-1/T-2/T-3 give three field tests to locate VT1/VT2 without a lab: a
+    6-minute all-out test (pace x0.65 = VT1), an HRmax test, and the Talk Test.
+
+zones:
+  - key: Easy
+    name: Easy
+    stated_class:
+      class: endurance
+      source: >-
+        Run Like a Pro, QR-1: "at or below VT1 pace/HR/power" — by definition
+        the top of the moderate domain.
+    resolution:
+      use: stated
+      reason: >-
+        % HRmax has no prescription floor in config/decision_thresholds.yaml
+        (only power, LTHR and pace do), so the zone's open lower bound falls
+        back to 0, which drags the computed midpoint down into Recovery. The
+        author names this a single continuous "Easy" effort up to VT1 — the
+        book's ordinary aerobic-base run, not an active-recovery jog — so the
+        stated class governs. Recovery is not a separate zone in this author's
+        model.
+    ranges:
+      hrmax: {min: null, max: 81}
+    rpe: {max: 4}
+    note: >-
+      Upper bound is the top of the author's own VT1 range (77-81% HRmax,
+      "fitter runners are nearer the top").
+
+  - key: MP
+    name: Marathon Pace (MP)
+    stated_class:
+      class: tempo
+      source: >-
+        Run Like a Pro, QR-1: "current or goal marathon race pace." No native
+        number; classified here by sustained duration (a marathon effort,
+        commonly 2-4+ hours) against config/tss_classes.yaml's Tempo band
+        (sustainable 2-3 hours) — the coach's classification, not the
+        author's own numeric claim.
+    ranges: {}
+    rpe: {}
+
+  - key: SSP
+    name: Steady-State Pace (SSP)
+    stated_class:
+      class: sub_threshold
+      source: >-
+        Run Like a Pro, QR-1: "fastest pace sustainable for 2 hours."
+        Classified by duration against the Sub-threshold band (60-120 min) —
+        the coach's classification.
+    ranges: {}
+    rpe: {}
+
+  - key: HMP
+    name: Half-Marathon Pace (HMP)
+    stated_class:
+      class: sub_threshold
+      source: >-
+        Run Like a Pro, QR-1: "current or goal HM race pace." Classified by
+        typical duration (roughly 1-2 hours for most runners) against the
+        Sub-threshold band — the coach's classification. Faster (well-trained)
+        runners approach Threshold instead; this default assumes a recreational
+        finishing time.
+    ranges: {}
+    rpe: {}
+
+  - key: LTP
+    name: Lactate-Threshold Pace (LTP)
+    stated_class:
+      class: threshold
+      source: >-
+        Run Like a Pro, QR-1: "fastest pace sustainable for 1 hour" — the
+        author's own definition of threshold pace, matching the universal
+        anchor (100% of threshold) used across every methodology in this
+        repository.
+    ranges: {}
+    rpe: {}
+
+  - key: 10KP
+    name: 10K Pace (10KP)
+    stated_class:
+      class: supra_threshold
+      source: >-
+        Run Like a Pro, QR-1: "current or goal 10K race pace" (typically
+        30-45 min). Classified by duration against the Supra-threshold band
+        (10-30 min) — the coach's classification.
+    ranges: {}
+    rpe: {}
+
+  - key: CV
+    name: Critical Velocity (CV)
+    stated_class:
+      class: threshold
+      source: >-
+        Run Like a Pro, QR-1/QR-3: "fastest pace sustainable for 30 minutes,"
+        stated to align closely with VT2 — the author's own operational proxy
+        for the LT2/MLSS boundary (see hrmax_threshold_pct above).
+    ranges:
+      hrmax: {min: 91, max: 93}
+    rpe: {}
+
+  - key: HI
+    name: High Intensity (HI)
+    stated_class:
+      class: vo2max
+      source: >-
+        Run Like a Pro, QR-1: "range between CV and MAS." Classified as the
+        transition toward VO2max — the coach's classification.
+    ranges: {}
+    rpe: {}
+
+  - key: 5KP
+    name: 5K Pace (5KP)
+    stated_class:
+      class: vo2max
+      source: >-
+        Run Like a Pro, QR-1: "current or goal 5K race pace" (typically
+        15-25 min). Classified by duration against the VO2max band
+        (3-8 min core, extending to short races) — the coach's classification.
+    ranges: {}
+    rpe: {}
+
+  - key: MAS
+    name: Maximum Aerobic Speed (MAS)
+    stated_class:
+      class: vo2max
+      source: >-
+        Run Like a Pro, QR-1: "fastest pace sustainable for 6 minutes" — by
+        definition the VO2max effort duration.
+    ranges: {}
+    rpe: {}
+
+  - key: VHI
+    name: Very-High Intensity (VHI)
+    stated_class:
+      class: anaerobic
+      source: >-
+        Run Like a Pro, QR-1: "range between MAS and a full sprint."
+        Classified as anaerobic/extreme-domain work — the coach's
+        classification.
+    ranges: {}
+    rpe: {}
