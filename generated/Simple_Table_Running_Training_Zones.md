@@ -55,6 +55,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % Threshold Pace, % HRmax
 * **Estimated Metrics (`~`, computed through the crosswalk):** % LTHR, % FTP (run power)
 * **Primary Metrics:** Lactate Threshold (LT) Pace (T-pace, from VDOT), Maximum Heart Rate (HRmax) — secondary, conditions-dependent
+* **Knowledge Base (Project file):** `Jack_Daniels_Running_Formula.md` (`Knowledge/Principles/Jack_Daniels_Running_Formula.md`)
 * **Dual-Layer Required:** No
 * **Threshold on the author's HRmax scale:** 90% HRmax = 100% LTHR. Source: Daniels' Running Formula — master zone table: T = 85-88% VO2max, 88-92% HRmax (well-trained).
 * **Note:** Pace is the operational primary signal; heart rate is secondary and conditions-dependent (Daniels: follow HR when the purpose is intensity, ignore it when the purpose is a specific speed). % HRmax is documentation only and is never emitted — the syntax uses the estimated % LTHR.
@@ -76,6 +77,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % Threshold Pace, % LTHR
 * **Estimated Metrics (`~`, computed through the crosswalk):** % FTP (run power)
 * **Primary Metrics:** Lactate Threshold (LT) Pace, Lactate Threshold Heart Rate (LTHR)
+* **Knowledge Base (Project file):** `Joe_Friel_cyclists_training_bible_knowledge_base.md` (`Knowledge/Joe_Friel_cyclists_training_bible_knowledge_base.md`)
 * **Dual-Layer Required:** No
 * **Note:** Verified against Friel's published run zones (TrainingPeaks, "Joe Friel's Quick Guide to Setting Zones"). His pace zones are given as % of threshold pace TIME (e.g. Zone 2 = 114-129%); the values here are the same zones as % of threshold SPEED, the form Intervals.icu uses (Zone 2 = 78-88%).
 * **Note:** This is the only author in the repository that publishes running pace and heart rate natively in the same table; the running pace-to-LTHR crosswalk is built from it.
@@ -99,6 +101,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Goal Half-Marathon Pace (HMP)
+* **Knowledge Base (Project file):** `Hansons_Half_Marathon_Method.md` (`Knowledge/Principles/Hansons_Half_Marathon_Method.md`)
 * **Dual-Layer Required:** No
 * **Note:** Every zone is defined RELATIVE TO THE RUNNER'S GOAL HALF-MARATHON PACE, not to threshold and not as a percentage: Easy = HMP + 1:30 to 2:30 per mile, Long run = HMP + 1:10 to 2:30, Tempo = HMP, Strength = HMP - 0:10 per mile (about 10K-15K pace), Speed = 5K to 10K goal pace (ZONE-002). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
 * **Note:** Offset zones (Easy, Long run, Strength) are read across runners of VDOT 35-65, because a fixed number of seconds per mile is a different fraction of pace for a slow runner and a fast one; their ranges are wide by design. The author's own check agrees: Strength (HMP - 10 s) lands where he says it should, between 10K and 15K pace.
@@ -124,6 +127,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Goal Marathon Pace (GMP)
+* **Knowledge Base (Project file):** `Hansons_Marathon_Method.md` (`Knowledge/Principles/Hansons_Marathon_Method.md`)
 * **Dual-Layer Required:** No
 * **Note:** Every zone is defined RELATIVE TO THE RUNNER'S GOAL MARATHON PACE (GMP), not to threshold and not as a percentage: Easy = GMP + 1:00 to 2:00 per mile, Tempo = GMP, Strength = GMP - 0:10 per mile, Speed = 5K or 10K goal pace (Q-1). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml (distances from Palladino's published table; pace offsets and durations from the Daniels-Gilbert model).
 * **Note:** Offset zones (Easy, Strength) are read across runners of VDOT 35-65 (from a 4:16 to a 2:32 marathoner), because a fixed number of seconds per mile is a different fraction of pace for a slow runner and a fast one. That is why their ranges are wide; the athlete's own goal pace gives the exact value.
@@ -148,6 +152,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Race paces (marathon to 1,500 m), Three threshold paces (2.5-hour, 90-minute and 1-hour maximum pace)
+* **Knowledge Base (Project file):** `Hudson_Run_Faster_From_5K_to_Marathon.md` (`Knowledge/Principles/Hudson_Run_Faster_From_5K_to_Marathon.md`)
 * **Dual-Layer Required:** No
 * **Note:** Table 2.1 defines the pace levels by RACE DISTANCE (marathon, half-marathon, 10K, 5K, 3K, 1,500 m) and the threshold system by MAXIMUM SUSTAINABLE DURATION (Q-2): Threshold 1 = the fastest pace held for 2.5 hours, Threshold 2 = 90 minutes, Threshold 3 = 1 hour. The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
 * **Note:** "Threshold" here is the author's own usage, flagged in the source glossary as differing from the common one: three paces, NOT solely lactate threshold. He puts lactate-threshold pace between 10K and half-marathon pace for most runners and calls it "nothing magical" (METH-10).
@@ -179,6 +184,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** none — RPE and the physiological target of each zone
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Perceived Exertion, Physiological Adaptation Target
+* **Knowledge Base (Project file):** `Jason_Koop_Training_essentials_ultrarunning.md` (`Knowledge/Principles/Jason_Koop_Training_essentials_ultrarunning.md`)
 * **Dual-Layer Required:** Yes
 * **Dual-Layer Engine:** % LTHR Range — feeds Intervals.icu load calculation
 * **Dual-Layer Steering:** RPE per workout code — athlete reads on device
@@ -202,6 +208,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % HRmax
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Maximum Heart Rate (HRmax)
+* **Knowledge Base (Project file):** `Wolfgang_Olbrich_Ultramarathon_Training.md` (`Knowledge/Principles/Wolfgang_Olbrich_Ultramarathon_Training.md`)
 * **Dual-Layer Required:** No
 * **Special Output Rule:** Native metric is % HRmax, but Intervals.icu syntax MUST use the estimated % LTHR per Olbrich Exception. Never output % HRmax in syntax.
 * **Threshold on the author's HRmax scale:** 90% HRmax = 100% LTHR. Source: Ultramarathon Training (2012): tempo endurance run 85-90% HRmax for "threshold development" (Ch. 17.2); intervals "usually above the anaerobic threshold (>= 90% of max)" (Ch. 6.2.5).
@@ -229,6 +236,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % FTP/CP
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR
 * **Primary Metrics:** Functional Threshold Power (FTP) / Critical Power (CP)
+* **Knowledge Base (Project file):** `Steve_Palladino_Running_with_Power.md` (`Knowledge/Steve_Palladino_Running_with_Power.md`)
 * **Dual-Layer Required:** No
 * **Note:** Palladino states the intensity domain of his own zones: heavy >80% to ~100% (zones 2, 3A, 3B), severe >100% to ~116% (4, 5), extreme >116% (6, 7). His zone 2 (80-88%) is heavy by that statement while it computes as Endurance here; the table flags it as touching the LT1 band, where the domain depends on the athlete.
 
@@ -254,6 +262,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** % HRmax
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Maximum Heart Rate (HRmax), Ventilatory Threshold reference points (VT1, VT2)
+* **Knowledge Base (Project file):** `Rosario_Run_Like_a_Pro.md` (`Knowledge/Principles/Rosario_Run_Like_a_Pro.md`)
 * **Dual-Layer Required:** No
 * **Special Output Rule:** Native metric is % HRmax, but Intervals.icu syntax MUST use the estimated % LTHR per the Olbrich Exception (native % HRmax is never emitted in syntax). Never output % HRmax in syntax.
 * **Note:** This author defines intensity almost entirely by a SUSTAINABLE DURATION or a RACE DISTANCE (the fastest pace held for 6 min, 30 min, 1 h or 2 h; goal marathon, half-marathon, 10K or 5K pace), not by a percentage table. Only two points carry a native number: VT1 (77-81% HRmax, the moderate/heavy boundary, QR-2) and VT2 (91-93% HRmax, the heavy/severe boundary, QR-3). Every other zone declares a `race_anchor`; its range comes from config/crosswalk.yaml (distances: Palladino's published Table 2; durations: the Daniels-Gilbert model, +/- 2 points) and its class is computed from that range, not assigned. All of those values are estimates and carry `~`.
@@ -285,6 +294,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Native Metrics (author's own numbers):** none — zones are defined by a race pace or a sustainable duration (see `Anchor:` in the Notes)
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Current 5K race pace (the reference for every pace in the book)
+* **Knowledge Base (Project file):** `Run_Less_Run_Faster.md` (`Knowledge/Principles/Run_Less_Run_Faster.md`)
 * **Dual-Layer Required:** No
 * **Note:** Every pace in the program is derived from the runner's CURRENT 5K time (Table 6.6 gives repeat targets by 5K time from 16:00 to 40:00; Tables 6.7 and 6.8 give tempo, marathon and half-marathon paces the same way). The book publishes no percentage, heart-rate or power scale, so every number in the metric columns is an estimate (`~`) read through the race anchors in config/crosswalk.yaml.
 * **Note:** Key Run #1 (track repeats, 400-2000 m): "5K race pace or slightly faster" (G-02). Table 6.6 is more precise: across all 91 printed targets the repeats run 7 to 39 seconds per mile faster than 5K pace, faster the shorter the repeat (400 m about 37 s, 2000 m about 9 s).

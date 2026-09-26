@@ -54,6 +54,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % CTS Field Test
 * **Native Metrics (author's own numbers):** % CTS Field Test, % LTHR
 * **Primary Metrics:** CTS Field Test Power, CTS Field Test Heart Rate (LTHR)
+* **Knowledge Base (Project file):** `Chris_Carmichael_Time_Crunched_Cyclist.md` (`Knowledge/Principles/Chris_Carmichael_Time_Crunched_Cyclist.md`)
 * **Dual-Layer Required:** No
 * **Note:** The anchor applies to POWER only. The field test heart rate anchor is the average HR of an 8-minute maximal effort, which already sits at LTHR — heart rate saturates near maximum where power does not. The % LTHR column is the author's, used verbatim, with no conversion.
 * **Note:** Prescribe from the native column when the athlete has performed the CTS Field Test (protocol in the Carmichael knowledge base). Prescribe from the "% FTP (equivalent)" column when the athlete has only an FTP from a 20 or 60 minute test. Both routes reach the same absolute intensity.
@@ -78,6 +79,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % FTP
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
+* **Knowledge Base (Project file):** `Allen - Coggan_Training_and_Racing_With_a_Powermeter.md` (`Knowledge/Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md`)
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 
@@ -99,6 +101,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % FTP
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
+* **Knowledge Base (Project file):** `Joe_Friel_cyclists_training_bible_knowledge_base.md` (`Knowledge/Joe_Friel_cyclists_training_bible_knowledge_base.md`)
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 

@@ -451,6 +451,32 @@ def profile_warnings(declared):
     return W
 
 
+def knowledge_lines(declared):
+    """The Knowledge file the coach must read for each declared methodology,
+    taken from `knowledge_file` in that author's own yaml. Returns [] when the
+    athlete declares no methodology."""
+    meth = (declared or {}).get("preferences", {}) or {}
+    meth = meth.get("methodology")
+    if not isinstance(meth, dict) or yaml is None:
+        return []
+    L = []
+    for disc, author in meth.items():
+        if not author:
+            continue
+        path = os.path.join(ROOT, "config", "authors", f"{author}.yaml")
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            kf = (yaml.safe_load(f) or {}).get("knowledge_file")
+        if kf:
+            L.append(f"- `{disc}` → `{author}` → Project file "
+                     f"`{os.path.basename(kf)}` (`Knowledge/{kf}`)")
+    if not L:
+        return []
+    return ["**Knowledge files to read for the declared methodologies** "
+            "(they must be in the Project):"] + L
+
+
 def render_declared(aid, config_dir=None):
     """Returns (lines, status). status is one of: included, missing,
     unreadable — for the console line prep shows."""
@@ -517,6 +543,10 @@ def render_declared(aid, config_dir=None):
         avail = availability_lines(declared)
         if avail:
             L += [f"{ln}  " for ln in avail[:-1]] + avail[-1:]
+            L.append("")
+        kn = knowledge_lines(declared)
+        if kn:
+            L += [f"{ln}  " for ln in kn[:-1]] + kn[-1:]
             L.append("")
 
     body = [ln for ln in raw.splitlines() if not ln.lstrip().startswith("#")]
