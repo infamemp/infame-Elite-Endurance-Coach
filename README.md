@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.5.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.6.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,23 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.6 — the architecture library reaches the coach (2026-09-26)**
+
+The 16 session shapes distilled from ~1,700 MyWhoosh / Whatsonzwift workouts
+and the running catalogs lived only in `config/architectures/*.yaml`, which
+never reached the Project: the coach saw their names in `#STATE`, never what
+each is for or how it progresses. And the engine only read the shape inside
+one rep, so 6 of the 16 (pyramid, progressive_intervals, duration_ladder,
+progression_run, climb_simulation, cadence_contrast) were never detected and
+were reported "unused" forever.
+
+- `build` now also writes `generated/Session_Architectures.md` (a Project file).
+- The classifier reads shapes across reps; all 16 are detectable, and a test
+  fails if the engine and the library ever disagree again.
+- Hill repeats (`climb_simulation`) now apply to running and trail.
+- Prompt: Pass 1 opens the library and names a slug per session; trail
+  defaults to Koop or Olbrich.
 
 **v7.5 — the coach stops asking for what it can read (2026-09-26)**
 

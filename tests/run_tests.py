@@ -1070,6 +1070,57 @@ def architecture_tests():
     equal("frequency: all 14 known architectures are covered",
           set(counts), set(architecture.ALL_ARCHITECTURES))
 
+    # ── v7.6: set-level shapes (visible only across reps) and library wiring ──
+    for label, text, etype, want in [
+        ("pyramid of rep durations", "Main Set\n- 3m 105%\n- 3m 50%\n- 5m 105%\n- 3m 50%\n- 3m 105%", "Ride", "pyramid"),
+        ("same duration, rising target", "Main Set\n- 4m 95%\n- 3m 50%\n- 4m 100%\n- 3m 50%\n- 4m 105%", "Ride", "progressive_intervals"),
+        ("same target, shorter each rep (Daniels 15/10/5)", "Main Set\n- 15m 95% Pace\n- 3m 60% Pace\n- 10m 95% Pace\n- 3m 60% Pace\n- 5m 95% Pace", "Run", "duration_ladder"),
+        ("shorter and faster together (Canova)", "Main Set\n- 15m 90% Pace\n- 3m 60% Pace\n- 10m 95% Pace\n- 3m 60% Pace\n- 5m 100% Pace", "Run", "duration_ladder"),
+        ("rung blocks 2x12 then 2x5", "Main Set\n2x\n- 12m 90% Pace\n- 2m 55% Pace\n\n2x\n- 5m 90% Pace\n- 2m 55% Pace", "Run", "duration_ladder"),
+        ("continuous run, harder each segment", "Main Set\n- 20m 80% Pace\n- 15m 88% Pace\n- 10m 95% Pace", "Run", "progression_run"),
+        ("same on the bike reads as a stepped build", "Main Set\n- 20m 80%\n- 15m 88%\n- 10m 95%", "Ride", "stepped_build"),
+        ("hill repeats (uphill cue)", "Main Set\n6x\n- 90s 105% LTHR uphill\n- 2m 55% LTHR", "Run", "climb_simulation"),
+        ("hill repeats in Spanish (subida)", "Main Set\n6x\n- 90s 105% LTHR subida\n- 2m 55% LTHR", "Run", "climb_simulation"),
+        ("same target, cadence 60 vs 100", "Main Set\n- 8m 85% 60rpm\n- 2m 50%\n- 8m 85% 100rpm", "Ride", "cadence_contrast"),
+    ]:
+        r = classify(text, etype)
+        equal(f"architecture: {label} -> {want}", r["architecture"], want)
+    r = classify("Main Set 5x\n- 4m 100-105%\n- 4m 50-55%")
+    equal("architecture: set-level pass leaves identical reps as classic_intervals",
+          r["architecture"], "classic_intervals")
+
+    import glob as _glob
+    lib = {os.path.basename(f)[:-5] for f in _glob.glob(os.path.join(ROOT, "config", "architectures", "[!_]*.yaml"))}
+    equal("architecture: engine knows exactly the library's architectures",
+          sorted(architecture.ALL_ARCHITECTURES), sorted(lib))
+    reachable = set(architecture._DIRECT_FAMILY.values()) | {
+        "classic_intervals", "sustained_effort", "pyramid", "progressive_intervals",
+        "duration_ladder", "progression_run", "climb_simulation", "cadence_contrast", "stepped_build"}
+    check("architecture: every library shape can be produced by the classifier",
+          lib <= reachable, sorted(lib - reachable))
+    gen = open(os.path.join(ROOT, "generated", "Session_Architectures.md"), encoding="utf-8").read()
+    missing = [a for a in sorted(lib) if f"## `{a}`" not in gen]
+    check("generated: Session_Architectures.md has a section for every library file", not missing, missing)
+    import yaml as _y
+    for a in sorted(lib):
+        d = _y.safe_load(open(os.path.join(ROOT, "config", "architectures", a + ".yaml"), encoding="utf-8"))
+        if " ".join(str(d["intent"]).split())[:60] not in gen:
+            check(f"generated: Session_Architectures.md is current for {a} (run build)", False)
+            break
+    else:
+        check("generated: Session_Architectures.md is current with the YAML (run build)", True)
+    _pr = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
+    check("prompt: lists Session_Architectures.md as a Project file", "`Session_Architectures.md` (the shape library" in _pr)
+    check("prompt: Pass 1 opens the library and names a slug per session",
+          "Open `Session_Architectures.md` before filling the table" in _pr)
+    check("prompt: architecture count matches the library",
+          f"{len(lib)} pre-vetted session shapes" in _pr, len(lib))
+    check("prompt: trail defaults to trail/ultra methodologies", "choose `koop` or `olbrich`" in _pr)
+    run_hills = _y.safe_load(open(os.path.join(ROOT, "config", "architectures", "climb_simulation.yaml"), encoding="utf-8"))
+    check("library: hill repeats are available for running",
+          {"road_run", "trail_run", "treadmill"} <= set(run_hills["disciplines"]))
+
+
 def golden_tests(update=False):
     if not os.path.isdir(FIXTURES):
         FAILED.append(("golden: fixtures missing",

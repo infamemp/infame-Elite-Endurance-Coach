@@ -570,6 +570,65 @@ def render_syntax_block(thresholds):
     return "\n".join(L)
 
 
+ARCH_DIR = os.path.join(ROOT, "config", "architectures")
+ARCH_FILE = "Session_Architectures.md"
+
+
+def build_architectures():
+    """Render config/architectures/*.yaml + _combinations.yaml into one
+    Project file. The coach is told to design from this library; before v7.6
+    the YAML files never reached the Project, so it only ever saw the names
+    in #STATE's tally, never what each shape is for or how it progresses."""
+    files = sorted(f for f in os.listdir(ARCH_DIR) if f.endswith(".yaml") and not f.startswith("_"))
+    archs = []
+    for fn in files:
+        with open(os.path.join(ARCH_DIR, fn), encoding="utf-8") as f:
+            archs.append(yaml.safe_load(f))
+    with open(os.path.join(ARCH_DIR, "_combinations.yaml"), encoding="utf-8") as f:
+        combos = yaml.safe_load(f)
+
+    def flat(v):
+        return " ".join(str(v).split()) if v is not None else ""
+
+    L = ["# Session Architectures — shape library", "",
+         f"> GENERATED FILE — DO NOT EDIT. Source: `config/architectures/*.yaml`. "
+         f"Built {_dt.date.today().isoformat()} by `python build_zone_tables.py build`.", "",
+         "Shapes a Main Set can take, distilled from ~1,700 MyWhoosh / Whatsonzwift "
+         "cycling workouts and from the running catalogs (Daniels, Hudson & Fitzgerald, "
+         "Hansons, Run Less Run Faster, Moehl, Canova). **No numbers live here**: every "
+         "duration, intensity and RPE comes from the active author's zone table and the "
+         "athlete's #STATE. `#STATE → RECENT ARCHITECTURES` names which of these the "
+         "athlete has used in the last 8 weeks and which not at all.", "",
+         "**Progression levers** (the only four): `reps`, `bout_duration`, "
+         "`recovery_duration`, `intensity`. A week-to-week change names one or two.", "",
+         "| Architecture | Classes | Disciplines | Levers | Role |",
+         "| :--- | :--- | :--- | :--- | :--- |"]
+    for a in archs:
+        L.append(f"| `{a['name']}` — {a['display_name']} | {', '.join(a['applicable_classes'])} | "
+                 f"{', '.join(a['disciplines'])} | {', '.join(a['progression_levers'])} | "
+                 f"{', '.join(a['combinable'])} |")
+    L += ["", "---", ""]
+    for a in archs:
+        ss = a["set_shape"]
+        L += [f"## `{a['name']}` — {a['display_name']}", "",
+              f"**Purpose.** {flat(a['intent'])}", "",
+              f"**Rep shape:** {a['rep_shape']} · **Set shape:** "
+              f"{', '.join(ss) if isinstance(ss, list) else ss}", ""]
+        if a.get("notes"):
+            L += [f"**Coach notes.** {flat(a['notes'])}", ""]
+        L += ["**Shape (relative notation only):**"]
+        L += [f"- {flat(x)}" for x in a.get("example_shapes", [])] + [""]
+    L += ["---", "", "## Combining architectures in one Main Set", "",
+          flat(combos.get("notes", "")), ""]
+    for c in combos.get("patterns", []):
+        L.append(f"- **{c['name']}** — `{flat(c['shape'])}` (e.g. {flat(c['example'])}). "
+                 f"{flat(c['purpose'])}")
+    path = os.path.join(OUTPUT_DIR, ARCH_FILE)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(L).rstrip() + "\n")
+    return path, len(archs)
+
+
 def build():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     thresholds = load_thresholds()
@@ -606,8 +665,10 @@ def build():
             f.write(text)
         written.append((path, len(group)))
 
+    arch_path, n_arch = build_architectures()
     for path, n in written:
         print(f"Wrote {os.path.relpath(path, ROOT)}  ({n} methodologies)")
+    print(f"Wrote {os.path.relpath(arch_path, ROOT)}  ({n_arch} architectures)")
     if not written:
         print("Nothing to build — no author files found.")
     return 0

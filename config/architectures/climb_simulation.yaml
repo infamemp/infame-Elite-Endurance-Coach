@@ -13,15 +13,19 @@ rep_shape: climb_simulation
 set_shape: identical
 
 applicable_classes: [threshold, supra_threshold, vo2max, anaerobic]
-disciplines: [trainer, road_bike, mtb]
+disciplines: [trainer, road_bike, mtb, road_run, trail_run, treadmill]
 
 progression_levers: [reps, bout_duration, intensity]
 
 notes: >
-  Low frequency in this corpus likely reflects that most "climb" workouts on
-  these platforms are tagged and structured as over_unders or
-  stepped_build instead — worth revisiting once running/trail sources are
-  added, where a climb architecture is more central.
+  Low frequency in the cycling corpus likely reflects that most "climb"
+  workouts on those platforms are tagged as over_unders or stepped_build.
+  In running it is central: hill repeats appear in Hudson & Fitzgerald,
+  Palladino, Rosario/Fitzgerald and Olbrich. For running the "climb" is the
+  terrain itself (or the treadmill incline), not a ramp in the target: N x
+  (uphill rep / jog or walk back down). Say "uphill" / "subida" / "incline"
+  in the step cue — the engine can only recognise this shape from that word,
+  because the target alone looks like any other interval.
 
 combinable: [standalone, finisher]
 

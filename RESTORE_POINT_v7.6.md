@@ -1,4 +1,4 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.5 (file name kept from v7.3)
+# RESTORE POINT — Infame Elite Endurance Coach v7.6
 
 **Date frozen:** 2026-09-26
 **Previous:** `archive/RESTORE_POINT_v7.0.md` (older ones in `archive/`)
@@ -17,9 +17,9 @@
 
 ## What the Project must contain
 
-- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.5).
+- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.6).
 - **Knowledge files:** `generated/Simple_Table_Cycling_Training_Zones.md`,
-  `generated/Simple_Table_Running_Training_Zones.md`, every
+  `generated/Simple_Table_Running_Training_Zones.md`, `generated/Session_Architectures.md`, every
   `Knowledge/Principles/*.md`, `Knowledge/Joe_Friel_cyclists_training_bible_knowledge_base.md`,
   `Knowledge/Steve_Palladino_Running_with_Power.md`,
   `Syntax/Intervals Workout Builder Syntax.md`,

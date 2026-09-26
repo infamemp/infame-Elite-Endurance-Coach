@@ -55,6 +55,7 @@ they matter):
     extra rule.
 """
 
+import re
 import validate_block  # noqa: E402 -- sibling module; caller puts verify/ on sys.path
 
 parse_block = validate_block.parse_block
@@ -94,14 +95,27 @@ def _sport_from_type(event_type):
 # guess, not a reading of what was written.
 # ══════════════════════════════════════════════════════════════════
 
+_RPM_RE = re.compile(r"(\d{2,3})\s*rpm\b", re.I)
+# Words that mark a step as uphill work, in the languages the coach writes.
+# climb_simulation cannot be read from the target alone (a 6-minute hill rep
+# and a 6-minute flat rep look identical as percentages), so the step's own
+# text is the only evidence -- documented as a heuristic, not a measurement.
+_HILL_RE = re.compile(r"\b(hill|uphill|climb|incline|gradient|grade|subida|cuesta|"
+                      r"pendiente|repecho|ascenso|inclinaci[oó]n)\b", re.I)
+
+
 def _leaf(step):
     """One parse_block() step -> the small shape this module reasons about."""
+    raw = step.get("raw", "") or ""
     if step.get("freeride"):
-        return {"k": "free", "d": step["secs"] or 0, "suffix": ""}
+        return {"k": "free", "d": step["secs"] or 0, "suffix": "", "rpm": None, "hill": False}
     lo, hi = step["pct"]
+    m = _RPM_RE.search(raw)
     return {"k": "ramp" if step["ramp"] else "steady",
             "d": step["secs"] or 0, "lo": lo, "hi": hi,
-            "suffix": step.get("suffix", "")}
+            "suffix": step.get("suffix", ""),
+            "rpm": int(m.group(1)) if m else None,
+            "hill": bool(_HILL_RE.search(raw))}
 
 
 def _build_units(main_steps):
@@ -110,8 +124,12 @@ def _build_units(main_steps):
         s = main_steps[i]
         n = s["mult"]
         if n > 1:
-            j = i
-            while j < len(main_steps) and main_steps[j]["mult"] == n:
+            j = i + 1
+            # Two repeat blocks written back to back with the same count
+            # ("2x 12m / 2x 5m") are separated by a blank line: a jump in
+            # line numbers ends the block, so they stay two units.
+            while (j < len(main_steps) and main_steps[j]["mult"] == n
+                   and main_steps[j].get("line", 0) - main_steps[j - 1].get("line", 0) <= 1):
                 j += 1
             units.append({"k": "repeat", "n": n,
                            "steps": [_leaf(x) for x in main_steps[i:j]]})
@@ -240,6 +258,107 @@ def _family(rep_pattern, set_pattern):
     return None  # "test/free", "free-form"
 
 
+# ══════════════════════════════════════════════════════════════════
+# SHAPE ACROSS UNITS -- the set-level architectures
+# ══════════════════════════════════════════════════════════════════
+# _rep_pattern() reads the shape INSIDE one rep. Six architectures are only
+# visible by comparing reps with each other (or by cues the target cannot
+# carry): pyramid, progressive_intervals, duration_ladder, progression_run,
+# climb_simulation, cadence_contrast. Before v7.6 nothing looked across
+# units, so those six were never detected and #STATE reported them "unused"
+# forever -- the coach was told to prefer shapes it had in fact just used.
+
+_WORK_MIN = 76      # a step at or above this % is work (same line _rep_pattern uses)
+_REC_MAX = 60       # at or below this % a step is recovery
+
+
+def _work_bouts(units):
+    """[(duration_s, avg_pct, leaf)] for each work bout in written order, and
+    whether every pair of consecutive bouts is separated by recovery.
+    Returns (None, None) when a unit is not a plain step or an on/off repeat
+    -- compound repeats are left to the per-rep reading."""
+    bouts, gaps, since_last = [], [], None
+    for u in units:
+        if u["k"] == "repeat":
+            st = u["steps"]
+            work = [x for x in st if x["k"] in ("steady", "ramp") and _avg(x) >= _WORK_MIN]
+            rest = [x for x in st if x not in work]
+            if len(work) != 1 or any(x["k"] in ("steady", "ramp") and _avg(x) > _REC_MAX for x in rest):
+                return None, None
+            for _ in range(u["n"]):
+                if since_last is not None:
+                    gaps.append(True)
+                bouts.append((work[0]["d"], _avg(work[0]), work[0]))
+                since_last = True
+            continue
+        if u["k"] == "steady" and _avg(u) >= _WORK_MIN:
+            if since_last is not None:
+                gaps.append(since_last)
+            bouts.append((u["d"], _avg(u), u))
+            since_last = False
+        elif u["k"] == "ramp" and max(u["lo"], u["hi"]) >= _WORK_MIN:
+            return None, None
+        else:
+            if since_last is not None:
+                since_last = True
+    return bouts, gaps
+
+
+def _peak_inside(values, tol):
+    """True when values rise to an interior maximum and then fall (a pyramid)."""
+    if len(values) < 3:
+        return False
+    top = values.index(max(values))
+    if top in (0, len(values) - 1):
+        return False
+    up, down = values[:top + 1], values[top:]
+    return (_mono(up, tol) == "up" and _mono(down, tol) == "down")
+
+
+def _set_architecture(units, sport):
+    """The architecture visible only across units, or None."""
+    leaves = []
+    for u in units:
+        leaves += u["steps"] if u["k"] == "repeat" else [u]
+    work = [x for x in leaves if x["k"] in ("steady", "ramp") and max(x["lo"], x["hi"]) >= _WORK_MIN]
+    if not work:
+        return None
+    # Cue-based shapes first: they hold whatever the targets do.
+    if sum(1 for x in work if x.get("hill")) * 2 > len(work):
+        return "climb_simulation"
+    rpms = {x["rpm"] for x in work if x.get("rpm")}
+    if len(rpms) >= 2 and max(rpms) - min(rpms) >= 15:
+        avgs = [_avg(x) for x in work]
+        if max(avgs) - min(avgs) <= 10:
+            return "cadence_contrast"
+
+    bouts, gaps = _work_bouts(units)
+    if not bouts or len(bouts) < 2:
+        return None
+    durs = [b[0] for b in bouts]
+    ints = [round(b[1]) for b in bouts]
+    contiguous = not any(gaps)
+
+    if contiguous:
+        if _mono(ints, 2) == "up" and all(d >= 300 for d in durs):
+            return "progression_run" if sport == "running" else "stepped_build"
+        return None
+    if not all(gaps):
+        return None
+    d_shape, i_shape = _mono(durs, 15), _mono(ints, 2)
+    if d_shape == "constant" and i_shape == "up":
+        return "progressive_intervals"
+    if d_shape in ("up", "down") and i_shape == "constant":
+        return "duration_ladder"
+    if (d_shape in ("up", "down") and i_shape in ("up", "down") and d_shape != i_shape
+            and max(ints) - min(ints) <= 15):
+        # Canova / Hudson variant: shorter rep, faster target (or the reverse).
+        return "duration_ladder"
+    if _peak_inside(durs, 15) or _peak_inside(ints, 2):
+        return "pyramid"
+    return None
+
+
 def _load_of(u):
     """Approximate training load of one unit -- for picking which unit in a
     combined Main Set is the primary one, never for TSS (the engine's own
@@ -348,6 +467,27 @@ def classify_session(description, event_type=None, thresholds=None):
     infos = [_unit_info(u) for u in units]
     loads = [_load_of(u) for u in units]
 
+    # Set-level shapes only apply when every working unit is a plain steady
+    # effort: a sprint block followed by intervals, or a ramp followed by
+    # intervals, is a combination of two named shapes, not a ladder.
+    working = [info for info, load in zip(infos, loads) if load > 0]
+    set_arch = None
+    if working and all(rp in ("steady", "endurance") for rp, _sp, _n, _w in working):
+        set_arch = _set_architecture(units, _sport_from_type(event_type))
+    if set_arch and max(loads, default=0) > 0:
+        work_leaves = [x for u in units for x in (u["steps"] if u["k"] == "repeat" else [u])
+                       if x["k"] in ("steady", "ramp")]
+        work = max(work_leaves, key=_avg)
+        cls = None
+        if thresholds:
+            sport = _sport_from_type(event_type)
+            if sport:
+                metric = SUFFIX_TO_METRIC.get(work.get("suffix", ""), "power")
+                cls = _class_from_cutpoints(_avg(work), metric, sport,
+                                            thresholds.get("classification_cutpoints") or {})
+        return _result(True, None, architecture=set_arch, cls=cls,
+                       combo=False, sequence=[set_arch])
+
     fams = [_family(rp, sp) for rp, sp, _n, _work in infos]
     # A zero-load unit (an easy filler step sitting in the Main Set between
     # real work) is not itself a trained architecture -- it does not count
@@ -378,7 +518,7 @@ def classify_session(description, event_type=None, thresholds=None):
             cls = _class_from_cutpoints(_avg(work), metric, sport, cutpoints)
 
     # The session's biggest single unit can itself be a real, deliberate
-    # design that simply is not one of the 14 named shapes (a compound
+    # design that simply is not one of the named shapes (a compound
     # block mixing several cadence and intensity changes, for instance).
     # That is a legitimate answer, distinct from "nothing to classify" --
     # ok stays True, but architecture is honestly None rather than a
@@ -396,7 +536,7 @@ def classify_session(description, event_type=None, thresholds=None):
 # the same two-line way it already wires those.
 # ══════════════════════════════════════════════════════════════════
 
-# The 14 architecture slugs in config/architectures/*.yaml, kept here as
+# The 16 architecture slugs in config/architectures/*.yaml, kept here as
 # plain data so the frequency tally below can report a zero count for one
 # that never appeared -- this module does not read those YAML files (see
 # module docstring), so this list is kept in sync by convention, the same
@@ -405,7 +545,7 @@ ALL_ARCHITECTURES = [
     "classic_intervals", "sustained_effort", "endurance_cadence", "single_ramp",
     "surges_on_base", "sprints", "stepped_build", "hard_start_fading",
     "over_unders", "descending_ramp", "progressive_intervals", "cadence_contrast",
-    "climb_simulation", "pyramid",
+    "climb_simulation", "pyramid", "duration_ladder", "progression_run",
 ]
 
 
@@ -490,5 +630,5 @@ def render(summary):
         lines.append(f"| {a} | {counts[a]} |")
     lines.append("")
     lines.append("**Not used in this window:** " +
-                 (", ".join(unused) if unused else "none — all 14 appeared."))
+                 (", ".join(unused) if unused else f"none — all {len(ALL_ARCHITECTURES)} appeared."))
     return "\n".join(lines)
