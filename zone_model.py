@@ -36,6 +36,18 @@ Resolution rules (deterministic — the same input always gives the same output)
      A zone with no native numbers gets its class band as its range.
   5. Domain. The domain of the class. The zone is additionally flagged when its
      range crosses into another domain, or touches the LT1 band.
+  5b. Race anchors (running). A zone may declare `race_anchor` — a race
+     distance ("marathon"), a sustainable duration (`duration_min: 120`) or a
+     span between two of them — instead of a number. The range is read from
+     config/crosswalk.yaml → running.race_anchors: distances from Palladino's
+     published table, durations from the Daniels-Gilbert model. When a zone has
+     both native numbers and an anchor, the native numbers govern and the
+     anchor is used as a consistency check (warning above 3 points apart).
+  5c. Threshold definition. An author whose own 100% is not the 60-minute
+     pace declares `anchor.duration_min`; the factor is computed from the model
+     and applied like any other anchor. Nothing is shifted silently.
+  5d. Borderline. A zone whose midpoint is within 1 point of a class boundary
+     is flagged in its Notes; the class stays as computed.
   6. RPE. The author's native RPE. When the author publishes none, the class's
      standard CR-10 band, flagged "estimated". A native RPE that does not
      overlap the class band widened by one point is reported (warning only —
@@ -43,6 +55,7 @@ Resolution rules (deterministic — the same input always gives the same output)
 """
 
 import copy
+import math
 import os
 
 try:
@@ -60,6 +73,11 @@ DOMAIN_ORDER = ["moderate", "heavy", "severe", "extreme"]
 
 # Order in which a zone's native metric is trusted for the canonical axis.
 PRIMARY_ORDER = ["power", "pace", "lthr", "hrmax"]
+
+# A zone whose midpoint is this close to a class boundary is flagged borderline.
+# 1 point (not 2): the threshold class is only 4 points wide, so at 2 nearly
+# every threshold zone would be flagged and the flag would mean nothing.
+BORDERLINE_PTS = 1.0
 
 _cache = {}
 
@@ -117,11 +135,156 @@ def hrmax_threshold_pct(author):
     return float(load_crosswalk()["hrmax_to_lthr"]["default_threshold_pct_of_hrmax"])
 
 
+def anchor_factor_value(anc):
+    """The factor of an `anchor` block: the sourced `factor_from_threshold`, or,
+    for an author who defines threshold by a sustainable duration, the factor
+    the duration model computes. None if the block declares neither."""
+    if not anc:
+        return None
+    if anc.get("factor_from_threshold"):
+        return float(anc["factor_from_threshold"])
+    if anc.get("duration_min"):
+        return round(speed_pct_at_duration(float(anc["duration_min"])) / 100.0, 3)
+    return None
+
+
 def anchor_factor(author, metric):
     anc = author.get("anchor")
     if anc and anc.get("metric") == metric:
-        return float(anc["factor_from_threshold"])
+        f = anchor_factor_value(anc)
+        return float(f) if f else 1.0
     return 1.0
+
+
+# ──────────────────────────────────────────────────────────────────
+# Race anchors (running): distance and duration → % of threshold pace
+# ──────────────────────────────────────────────────────────────────
+
+def _ra():
+    return load_crosswalk()["running"]["race_anchors"]
+
+
+def _dm():
+    return _ra()["duration_model"]
+
+
+def _frac_vo2(t):
+    m = _dm()["fraction_vo2max"]
+    return (m["a"] + m["b"] * math.exp(-m["k1"] * t) + m["c"] * math.exp(-m["k2"] * t))
+
+
+def _vo2(v):
+    m = _dm()["vo2_of_speed"]
+    return m["p0"] + m["p1"] * v + m["p2"] * v * v
+
+
+def _speed(vo):
+    m = _dm()["vo2_of_speed"]
+    a, b, c = m["p2"], m["p1"], m["p0"] - vo
+    return (-b + math.sqrt(b * b - 4 * a * c)) / (2 * a)
+
+
+def _speed_at(vdot, t):
+    return _speed(_frac_vo2(t) * vdot)
+
+
+def speed_pct_at_duration(t_min, vdot=None):
+    """Speed sustainable for `t_min` minutes as a % of the 60-minute speed.
+    Level-independent within ~0.1 point, so a reference VDOT is enough."""
+    dm = _dm()
+    vdot = vdot or dm["reference_vdots"][1]
+    return 100.0 * _speed_at(vdot, t_min) / _speed_at(vdot, dm["threshold_duration_min"])
+
+
+def _race_minutes(vdot, meters):
+    lo, hi = 1.0, 900.0
+    for _ in range(80):
+        t = (lo + hi) / 2.0
+        if _vo2(meters / t) / _frac_vo2(t) > vdot:
+            lo = t
+        else:
+            hi = t
+    return t
+
+
+def model_pct_for_distance(meters):
+    """(min, max) across the reference VDOTs, as % of the 60-minute speed."""
+    dm = _dm()
+    xs = [100.0 * (meters / _race_minutes(v, meters)) /
+          _speed_at(v, dm["threshold_duration_min"]) for v in dm["reference_vdots"]]
+    return min(xs), max(xs)
+
+
+def _distance_key(name):
+    ra = _ra()
+    n = str(name)
+    n = ra["aliases"].get(n, n)
+    return n if n in ra["distances"] else None
+
+
+def _anchor_point(spec):
+    """One end of a span: (lo, hi) of a single distance or duration anchor."""
+    if not isinstance(spec, dict):
+        raise ValueError(f"race anchor point must be a mapping, got {spec!r}")
+    if "distance" in spec:
+        k = _distance_key(spec["distance"])
+        if not k:
+            raise ValueError(f"unknown race distance '{spec['distance']}'")
+        d = _ra()["distances"][k]
+        return float(d["min"]), float(d["max"]), f"{k.replace('_', ' ')} race pace"
+    if "duration_min" in spec:
+        c = speed_pct_at_duration(float(spec["duration_min"]))
+        h = float(_dm()["half_width"])
+        return c - h, c + h, f"{_num_min(spec['duration_min'])} sustainable pace"
+    raise ValueError("race anchor needs `distance` or `duration_min`")
+
+
+def _num_min(v):
+    v = float(v)
+    if v >= 60 and v % 30 == 0:
+        h = v / 60
+        return f"{h:g} h"
+    return f"{v:g} min"
+
+
+def race_anchor_range(ra):
+    """(t_lo, t_hi, description) on the canonical axis. t_hi None = open."""
+    if "from" in ra or "to" in ra:
+        a = _anchor_point(ra["from"])
+        centre_a = (a[0] + a[1]) / 2.0
+        if ra.get("to") is None:
+            return centre_a, None, f"from {a[2]} upward"
+        b = _anchor_point(ra["to"])
+        centre_b = (b[0] + b[1]) / 2.0
+        lo, hi = sorted((centre_a, centre_b))
+        return lo, hi, f"between {a[2]} and {b[2]}"
+    lo, hi, desc = _anchor_point(ra)
+    return lo, hi, desc
+
+
+def validate_race_anchor(ra, sport):
+    errs = []
+    if sport != "running":
+        errs.append("race_anchor is running-only")
+        return errs
+    try:
+        race_anchor_range(ra)
+    except (ValueError, KeyError, TypeError) as e:
+        errs.append(str(e))
+    if not ({"distance", "duration_min", "from"} & set(ra)):
+        errs.append("race_anchor needs `distance`, `duration_min` or `from`")
+    return errs
+
+
+def race_anchor_residuals():
+    """The model against the published distance ranges: rows of
+    (distance, published (min,max), model (min,max), centre difference)."""
+    out = []
+    for k, d in _ra()["distances"].items():
+        mlo, mhi = model_pct_for_distance(d["meters"])
+        dc = (mlo + mhi) / 2.0 - (d["min"] + d["max"]) / 2.0
+        out.append((k, (d["min"], d["max"]), (mlo, mhi), dc))
+    return out
 
 
 def to_canonical(value, metric, sport, author=None):
@@ -277,6 +440,10 @@ def canonical_range(zone, author):
         if t_lo is None:
             continue
         return t_lo, t_hi, m
+    ra = zone.get("race_anchor")
+    if ra:
+        t_lo, t_hi, _ = race_anchor_range(ra)
+        return t_lo, t_hi, "race_anchor"
     return None, None, None
 
 
@@ -330,12 +497,40 @@ def resolve_author(raw):
     a["resolved_metrics"] = resolved_metrics
     a["native_metrics"] = natives
 
+    anc = a.get("anchor")
+    if anc and not anc.get("factor_from_threshold") and anc.get("duration_min"):
+        if sport != "running" or anc.get("metric") not in ("pace", "power"):
+            errors.append(f"{a['id']}: anchor.duration_min is only defined for running "
+                          f"pace or power (no duration model exists for {sport}/"
+                          f"{anc.get('metric')})")
+        else:
+            anc["factor_from_threshold"] = anchor_factor_value(anc)
+            anc["factor_computed_from"] = (f"{_num_min(anc['duration_min'])} sustainable "
+                                           f"pace, {_dm()['name']} model")
+
     for z in a["zones"]:
         key = f"{a['id']} {z['key']}"
         t_lo, t_hi, used = canonical_range(z, a)
         stated = (z.get("stated_class") or {}).get("class")
         resolution = z.get("resolution") or {}
         flags = []
+
+        ra = z.get("race_anchor")
+        anchor_text = None
+        if ra:
+            ra_errs = validate_race_anchor(ra, sport)
+            if ra_errs:
+                errors.append(f"{key}: race_anchor: " + "; ".join(ra_errs))
+                continue
+            r_lo, r_hi, anchor_text = race_anchor_range(ra)
+            if used != "race_anchor" and t_lo is not None:
+                # native numbers govern; the anchor is a consistency check
+                n_mid = t_lo if t_hi is None else (t_lo + t_hi) / 2.0
+                r_mid = r_lo if r_hi is None else (r_lo + r_hi) / 2.0
+                if abs(n_mid - r_mid) > 3.0:
+                    warns.append(f"{key}: native numbers put the zone at {n_mid:.1f}% of "
+                                 f"threshold but its race anchor ({anchor_text}) says "
+                                 f"{r_mid:.1f}% — {abs(n_mid - r_mid):.1f} points apart")
 
         if t_lo is None:
             if not stated:
@@ -359,7 +554,9 @@ def resolve_author(raw):
         else:
             mid = t_lo if t_hi is None else (t_lo + t_hi) / 2.0
             computed = class_of(mid, sport)
-            cls, provenance = computed, f"computed from {used}"
+            cls = computed
+            provenance = (f"computed from {anchor_text}" if used == "race_anchor"
+                          else f"computed from {used}")
             if stated and stated != computed:
                 use = resolution.get("use")
                 if use not in ("stated", "computed") or not resolution.get("reason"):
@@ -389,7 +586,7 @@ def resolve_author(raw):
                 z["rpe_status"] = "native"
             else:
                 z["rpe"], z["rpe_status"] = class_rpe(cls), "estimated"
-            z.update(physiological_class=cls, domain=dom,
+            z.update(physiological_class=cls, domain=dom, anchor_text=anchor_text,
                      class_provenance=provenance, canonical=None, flags=[])
             continue
 
@@ -405,6 +602,24 @@ def resolve_author(raw):
         if t_lo < lt1["max"] and hi_for_lt1 > lt1["min"] and \
                 CLASS_RANK[cls] <= CLASS_RANK["tempo"]:
             flags.append("touches the LT1 band — moderate or heavy depending on the athlete")
+
+        # Borderline: midpoint within 1 point of a class boundary. The class
+        # stays as computed; the flag says how thin the margin is.
+        # Measured against the class the NUMBERS compute (an author-stated class
+        # that overrides it is not what the margin is about), and skipped for an
+        # open-ended zone, whose "midpoint" is its own lower edge.
+        if t_hi is not None:
+            mid_c = (t_lo + t_hi) / 2.0
+            bcls = class_of(mid_c, sport)
+            band = class_bands(sport)[bcls]
+            i = CLASS_ORDER.index(bcls)
+            if band.get("min") and mid_c - band["min"] <= BORDERLINE_PTS and i > 0:
+                flags.append(f"borderline: within {BORDERLINE_PTS:g} point of the "
+                             f"{CLASS_ORDER[i - 1]}/{bcls} boundary")
+            if band.get("max") is not None and band["max"] - mid_c <= BORDERLINE_PTS \
+                    and i < len(CLASS_ORDER) - 1:
+                flags.append(f"borderline: within {BORDERLINE_PTS:g} point of the "
+                             f"{bcls}/{CLASS_ORDER[i + 1]} boundary")
 
         # Ranges and per-metric status
         status = {}
@@ -442,6 +657,7 @@ def resolve_author(raw):
         z["physiological_class"] = cls
         z["domain"] = dom
         z["class_provenance"] = provenance
+        z["anchor_text"] = anchor_text
         z["canonical"] = {"min": round(t_lo, 1),
                           "max": round(t_hi, 1) if t_hi is not None else None}
         z["flags"] = flags

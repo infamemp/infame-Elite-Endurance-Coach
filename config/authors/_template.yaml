@@ -66,14 +66,29 @@ metric_status:
 #   source: Book title, chapter/table where the author states it.
 
 # ── Optional: non-threshold anchor ────────────────────────────────
-# Use ONLY when the author's percentages are of something other than threshold
-# (worked example: Carmichael's CTS Field Test, 10% above threshold).
+# Use ONLY when the author's 100% is not the ~60-minute pace/power the system
+# uses as threshold. Threshold is really a band (a 30-minute test up to ~70
+# minutes), so an author whose own 100% sits elsewhere must say so; nothing is
+# shifted silently. Two ways to declare it:
+#
+# (a) A factor the book itself states (worked example: Carmichael's CTS Field
+#     Test, 10% above threshold):
 # anchor:
 #   metric: power
 #   reference: What the author's 100% is, in words
 #   factor_from_threshold: 1.10
 #   source: Where the book states the factor. Never an estimate.
 #   equivalent_column_label: "% FTP (equivalent)"
+#
+# (b) RUNNING ONLY — the author defines 100% by a sustainable duration (a
+#     30-minute test, "threshold is my 10K pace" = the runner's 10K time).
+#     The factor is computed from the duration model in config/crosswalk.yaml:
+# anchor:
+#   metric: pace
+#   reference: Pace sustainable for 30 minutes (the author's threshold test)
+#   duration_min: 30
+#   source: Quote where the author states the definition.
+#   equivalent_column_label: "% Threshold Pace (equivalent)"
 
 # ── Optional: dual-layer ──────────────────────────────────────────
 # Use ONLY when the athlete-facing cue metric differs from the engine-facing load metric.
@@ -105,11 +120,27 @@ notes:
 #   {min: 150, max: null}  → > 150%
 #   omit the metric entirely → estimated at build time (or N/A)
 #
+# race_anchor — RUNNING ONLY. For a zone the author defines by a race distance or
+#   a sustainable duration instead of a percentage ("goal marathon pace", "the
+#   pace you can hold for 2 hours", "5K pace plus 30 seconds"). Leave `ranges`
+#   empty and declare ONE of:
+#     race_anchor: {distance: marathon, source: "..."}      # 800m, 1600m (= mile,
+#                                                            # 1500m), 3200m (= 3K,
+#                                                            # 2mile), 5K, 10K,
+#                                                            # 10mile, half_marathon,
+#                                                            # marathon
+#     race_anchor: {duration_min: 120, source: "..."}
+#     race_anchor: {from: {duration_min: 30}, to: {duration_min: 6}, source: "..."}
+#     race_anchor: {from: {duration_min: 6}, to: null, source: "..."}  # open-ended
+#   The range and the class are then computed and every metric is estimated (~).
+#   If the zone ALSO has native numbers, those govern and the anchor is only a
+#   consistency check (`validate` warns above 3 points of disagreement).
+#
 # stated_class — ONLY when the author explicitly names the physiological target.
 #   recovery | endurance | tempo | sub_threshold | threshold | supra_threshold
 #   | vo2max | anaerobic | neuromuscular
 #   Do not derive it from a workout name ("Tempo" as a session name is not a
-#   physiological claim). Required when the zone has no numbers at all.
+#   physiological claim). Required when the zone has no numbers and no race_anchor.
 zones:
   - key: Zone 1
     name: Recovery

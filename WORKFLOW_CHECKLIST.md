@@ -244,8 +244,9 @@ copy config\authors\_template.yaml config\authors\<author_id>.yaml
 
 **F2.** Fill it in with the author's NATIVE values only — the numbers the book
 publishes, its RPE, and (where the author states it) the physiological target of
-each zone as `stated_class` with its source. Do NOT type estimates for metrics
-the author does not publish, and do NOT assign a class: both are computed by
+each zone as `stated_class` with its source. For an author who defines zones by a race distance or a sustainable duration,
+declare a `race_anchor` on the zone instead of a number. Do NOT type estimates for
+metrics the author does not publish, and do NOT assign a class: both are computed by
 `zone_model.py` through `config/crosswalk.yaml` and `config/tss_classes.yaml`.
 The file is commented field by field.
 
