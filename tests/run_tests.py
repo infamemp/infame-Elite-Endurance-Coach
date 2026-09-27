@@ -563,6 +563,35 @@ def unit_tests():
     ]:
         check(name, needle in _pr, needle)
 
+    # ── Wiring: everything the prompt relies on exists AND is connected ──
+    # Root cause of most of the head coach's re-work: a piece was built and
+    # unit-tested but never connected (tools dropped from the prompt, a library
+    # that never reached the Project). These checks fail when the prompt names
+    # something the repo, the MCP server or the Project manifest does not have.
+    import re as _re
+    _srv = open(os.path.join(ROOT, "mcp_server", "server.py"), encoding="utf-8").read()
+    _tools_srv = set(_re.findall(r"app\.tool\(\)\((\w+)\)", _srv))
+    _tsec = _pr[_pr.index("<tools>"):_pr.index("</tools>")]
+    _tools_pr = set(_re.findall(r"^\| `(\w+)(?:\(|`)", _tsec, _re.M))
+    equal("wiring: the prompt's tool table lists exactly the MCP server's tools",
+          sorted(_tools_pr), sorted(_tools_srv))
+    _row = [l for l in _pr.splitlines() if l.startswith("| Knowledge |")][0]
+    _named = [f for f in _re.findall(r"`([^`]+\.(?:md|yaml))`", _row) if f != "profile.md"]
+    _rp = open(os.path.join(ROOT, "RESTORE_POINT_v7.8.md"), encoding="utf-8").read() \
+        if os.path.exists(os.path.join(ROOT, "RESTORE_POINT_v7.8.md")) else \
+        open(sorted(glob.glob(os.path.join(ROOT, "RESTORE_POINT_v*.md")))[-1], encoding="utf-8").read()
+    _manifest = _rp[_rp.index("## What the Project must contain"):_rp.index("## Machines")]
+    _search = ["generated", "Syntax", os.path.join("config", "athletes"), "Knowledge",
+               os.path.join("Knowledge", "Principles")]
+    for f in _named:
+        base = os.path.basename(f)
+        found = any(os.path.exists(os.path.join(ROOT, d, base)) for d in _search) or \
+            os.path.exists(os.path.join(ROOT, f))
+        check(f"wiring: prompt names `{f}` and it exists in the repo", found)
+        check(f"wiring: `{f}` is on the Project manifest (RESTORE_POINT)", base in _manifest, base)
+    check("wiring: the prompt version matches the restore point",
+          _pr.splitlines()[0].split("·")[-1].strip() in _rp, _pr.splitlines()[0])
+
     # Every author declares its KB file; every KB on disk is claimed (Mujika is a topic KB)
     claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
     check("authors: every author declares an existing knowledge_file (or `none`)",
