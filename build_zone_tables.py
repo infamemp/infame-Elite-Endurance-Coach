@@ -629,6 +629,49 @@ def build_architectures():
     return path, len(archs)
 
 
+LANG_SRC = os.path.join(ROOT, "config", "language", "es_mx.yaml")
+LANG_FILE = "Language_Guide_es-MX.md"
+
+
+def build_language_guide():
+    """Render config/language/es_mx.yaml into the Project file the coach reads
+    before writing any athlete-facing text ([Focus], [Execution], [Nutrition],
+    cues). The validator reads the same YAML for its warnings."""
+    with open(LANG_SRC, encoding="utf-8") as f:
+        d = yaml.safe_load(f)
+    L = ["# Language Guide — Mexican Spanish (athlete-facing text)", "",
+         f"> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. "
+         f"Built {_dt.date.today().isoformat()} by `python build_zone_tables.py build`.", "",
+         "Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code "
+         "block when the athlete's language is Spanish. Register: professional, direct, "
+         "*tú*; natural cycling and running vocabulary; no calques from English. "
+         "`verify/validate_block.py` warns on the patterns in **Never write**.", "",
+         "## Terms", "", "| Class | Write |", "| :--- | :--- |"]
+    for k, v in d["glossary"]["classes"].items():
+        L.append(f"| `{k}` | {v} |")
+    L += ["", "| English | Spanish |", "| :--- | :--- |"]
+    for t in d["glossary"]["terms"]:
+        L.append(f"| {t['en']} | {t['es']} |")
+    L += ["", "## How each field is written", ""]
+    for k in ("focus", "execution", "nutrition"):
+        L.append(f"- **`[{k.capitalize()}]`** — {' '.join(str(d['structure'][k]).split())}")
+    L += ["", "## Cue bank", "",
+          "Examples of tone and length. Rotate: within one block, no cue is used in more "
+          "than two sessions. Adapt them to the step; do not paste them.", ""]
+    for k, v in d["cues"].items():
+        L += [f"**{k.replace('_', ' ')}**"] + [f'- "{x}"' for x in v] + [""]
+    L += ["## Failure-condition sentences (`[Execution]`, part 3)", "", "Vary them; `{n}` is an RPE taken from the code block.", ""]
+    L += [f"- {x}" for x in d["fallbacks"]]
+    L += ["", "## Never write", "", "| Pattern | Write instead |", "| :--- | :--- |"]
+    for b in d["banned"]:
+        pat = b["pattern"].replace("|", "\\|")
+        L.append(f"| `{pat}` | {b['fix']} |")
+    path = os.path.join(OUTPUT_DIR, LANG_FILE)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(L).rstrip() + "\n")
+    return path
+
+
 def build():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     thresholds = load_thresholds()
@@ -666,9 +709,11 @@ def build():
         written.append((path, len(group)))
 
     arch_path, n_arch = build_architectures()
+    lang_path = build_language_guide()
     for path, n in written:
         print(f"Wrote {os.path.relpath(path, ROOT)}  ({n} methodologies)")
     print(f"Wrote {os.path.relpath(arch_path, ROOT)}  ({n_arch} architectures)")
+    print(f"Wrote {os.path.relpath(lang_path, ROOT)}")
     if not written:
         print("Nothing to build — no author files found.")
     return 0

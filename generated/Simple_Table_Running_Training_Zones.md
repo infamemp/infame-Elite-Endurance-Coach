@@ -9,7 +9,7 @@
 - `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.
 - Notation: ranges use `X–Y%` (en dash), open lower bound `< X%`, open upper bound `> X%`, undefined value `N/A`. Zones with an open lower bound are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE — DO NOT EDIT.** Built 2026-09-26 by `build_zone_tables.py`.
+**GENERATED FILE — DO NOT EDIT.** Built 2026-09-27 by `build_zone_tables.py`.
 If this date is older than your last change to `config/`, this file is stale —
 run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy

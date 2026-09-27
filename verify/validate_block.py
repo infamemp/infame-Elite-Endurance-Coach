@@ -64,6 +64,51 @@ FOREIGN_SECTIONS = {"calentamiento", "principal", "enfriamiento", "enfriar",
 # CONFIG LOADING
 # ══════════════════════════════════════════════════════════════════
 
+_LANG_RULES = None
+_ES_STOP = re.compile(r"\b(de|la|el|y|con|en|que|los|las|una|un|por|para|tu|si)\b", re.I)
+
+
+def _language_rules():
+    """config/language/es_mx.yaml's banned patterns, compiled once. Missing or
+    unreadable -> no language warnings (they are advisory, never a gate)."""
+    global _LANG_RULES
+    if _LANG_RULES is None:
+        try:
+            with open(os.path.join(CONFIG, "language", "es_mx.yaml"), encoding="utf-8") as f:
+                raw = (yaml.safe_load(f) or {}).get("banned", [])
+            _LANG_RULES = [(re.compile(b["pattern"]), b.get("where", "prose"), b["fix"]) for b in raw]
+        except Exception:  # noqa: BLE001
+            _LANG_RULES = []
+    return _LANG_RULES
+
+
+def language_warnings(header, code, cue_counts):
+    """Advisory findings on the athlete-facing text of one session. Only for
+    Spanish text (three or more Spanish stop-words in the prose), so an English
+    block is never checked against Spanish patterns. `cue_counts` is shared
+    across the sessions of one run to catch a cue pasted into every session."""
+    prose = " ".join(str(header.get(k, "")) for k in ("Focus", "Execution", "Nutrition"))
+    cues = re.findall(r'"([^"\n]+)"', code or "")
+    out = []
+    if len(_ES_STOP.findall(prose)) >= 3:
+        for rx, where, fix in _language_rules():
+            if where in ("prose", "both"):
+                m = rx.search(prose)
+                if m:
+                    out.append(("CHK-LANG", "-", f"'{m.group(0)}' — {fix}"))
+            if where in ("cues", "both"):
+                for c in cues:
+                    m = rx.search(c)
+                    if m:
+                        out.append(("CHK-LANG", "-", f"cue \"{c}\": '{m.group(0)}' — {fix}"))
+                        break
+    for c in set(cues):
+        cue_counts[c] = cue_counts.get(c, 0) + 1
+        if cue_counts[c] == 3:
+            out.append(("CHK-LANG-REPEAT", "-", f'cue "{c}" is now in 3 sessions — vary the wording'))
+    return out
+
+
 def load_thresholds_only():
     path = os.path.join(CONFIG, "decision_thresholds.yaml")
     if not os.path.exists(path):
@@ -903,6 +948,7 @@ def fill_tss(path, text, computed_by_session, duration_by_session=None):
                 trailing_ws = old_val[len(old_val.rstrip()):]
                 return f"{m.group(1)}{dur_value}{trailing_ws}"
             chunk = dur_field.sub(dur_sub, chunk, count=1)
+            chunk = re.sub(r"(\[Duration\][^|\n\[]*?)\s*\|", r"\1 |", chunk, count=1)
             dur_written += 1
 
         pieces.append(chunk)
@@ -956,6 +1002,7 @@ def main():
     # Tempo-and-above, where repetition without progression is objectively
     # checkable, is verified here.
     mono_last = {}
+    lang_cue_counts = {}
     for n, (header, code) in enumerate(sessions, 1):
         category = header.get("Category", "Training")
         # A Rest or Travel day carries no exercise block by design -- it has
@@ -1043,6 +1090,7 @@ def main():
         # session was the right call is a coaching judgement, not something
         # this validator has the context to verify.
         if header.get("Category", "Training") == "Training":
+            warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps), lang_cue_counts)
             mprof = session_monotony_profile(steps, author, th)
             if (mprof and CLASS_RANK[mprof["class"]] >= CLASS_RANK["tempo"]
                     and not outdoor_bike_mtb_exempt(discipline, mprof["class"])):

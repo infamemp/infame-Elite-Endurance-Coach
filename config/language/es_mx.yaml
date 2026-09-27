@@ -1,0 +1,110 @@
+# Language guide — Mexican Spanish (athlete-facing text)
+#
+# The coach reads generated/Language_Guide_es-MX.md (built from this file) and
+# verify/validate_block.py warns (never blocks) on the patterns below. Source of
+# truth: edit THIS file, run `python build_zone_tables.py build`, never the
+# generated Markdown.
+#
+# Scope: [Focus], [Execution], [Nutrition] and the cue text in the code block.
+# Register: professional, direct, tú. Natural cycling and running vocabulary.
+# No calques from English ("realiza tu calentamiento", "se vuelve mayor").
+
+glossary:
+  classes:            # class name -> the words used in [Focus] and [Execution]
+    recovery: recuperación
+    endurance: resistencia aeróbica
+    tempo: tempo
+    sub_threshold: sub-umbral
+    threshold: umbral
+    supra_threshold: supra-umbral
+    vo2max: VO2máx
+    anaerobic: anaeróbico
+    neuromuscular: neuromuscular
+  terms:
+    - {en: warm-up, es: calentamiento}
+    - {en: cool-down, es: enfriamiento}
+    - {en: interval / rep, es: repetición}
+    - {en: set, es: serie}
+    - {en: strides, es: aceleraciones}
+    - {en: even pace, es: paso parejo (running) / potencia pareja (bike)}
+    - {en: recovery jog, es: trote de recuperación}
+    - {en: spin (bike), es: girar / pedalear}
+    - {en: ERG mode, es: modo ERG}
+    - {en: cadence, es: cadencia}
+    - {en: seated / standing, es: sentado / de pie}
+    - {en: minutes / seconds in prose, es: "min / s — never 'm' (it reads as metres)"}
+    - {en: heart rate, es: frecuencia cardiaca}
+    - {en: fuelling, es: alimentación}
+
+structure:
+  focus: "A few words: the physiological target, in Spanish, then the author's zone id in parentheses (e.g. resistencia aeróbica (Daniels E))."
+  execution: >-
+    Three short sentences, at most 60 words, and do not re-list the structure:
+    the athlete sees the steps below. (1) what the session trains, by class and
+    author zone, in words; (2) how it should feel and be executed; (3) what to do
+    if it is not going as prescribed. Mention a number only when the athlete needs
+    it to act (a threshold to hold, a limit not to cross).
+  nutrition: >-
+    Before / during / after, only what applies, each with a quantity or a time.
+    Vary the wording between sessions; never paste the same sentence into every one.
+
+# Cue bank — device-screen text. Rotate: within one block, no cue may be used in
+# more than two sessions. Adapt freely; these are examples of tone and length.
+cues:
+  warmup:
+    - "Empieza con paso corto y suelta los hombros"
+    - "Deja que la respiración se acomode antes de subir el ritmo"
+    - "Sube poco a poco, todavía sin exigirte"
+    - "Aquí solo se calienta: cadencia cómoda y postura relajada"
+    - "Suelta las piernas; el esfuerzo llega después"
+    - "Aumenta gradualmente hasta el ritmo de la serie"
+  recovery:
+    - "Baja el ritmo y respira hondo"
+    - "Recupera a tu ritmo, sin prisa"
+    - "Afloja las piernas y baja las pulsaciones"
+    - "Trota o camina hasta sentirte listo para la siguiente"
+    - "Suelta los brazos y toma aire"
+    - "Pedalea ligero hasta la siguiente repetición"
+  cooldown:
+    - "Baja poco a poco hasta terminar la sesión"
+    - "Cierra con ritmo corto y respiración tranquila"
+    - "Termina soltando las piernas"
+    - "Vuelve a la calma, sin apuro"
+    - "Últimos minutos ligeros; la sesión ya está hecha"
+    - "Baja las pulsaciones antes de detenerte"
+  effort_endurance:
+    - "Paso parejo y respiración cómoda"
+    - "Mantén la conversación posible"
+    - "Constante de principio a fin, sin apretar"
+    - "Cuida la postura cuando aparezca el cansancio"
+  effort_tempo_threshold:
+    - "Ritmo firme y controlado; no lo aceleres"
+    - "Mismo esfuerzo que en la repetición anterior"
+    - "Sostenible hasta el último minuto"
+    - "Respira profundo y mantén la cadencia"
+  effort_high:
+    - "Fuerte y relajado; no aprietes los hombros"
+    - "Arranca controlado y termina lo más parejo posible"
+    - "Todo el esfuerzo va en mantener la técnica"
+    - "Cadencia alta, zancada suelta"
+
+# Failure-condition sentences ([Execution], part 3). Vary them.
+fallbacks:
+  - "Si el esfuerzo supera RPE {n}, baja el ritmo y conserva la duración."
+  - "Si no puedes sostener el ritmo hasta el final del bloque, reduce un poco y termina la serie."
+  - "Si la frecuencia cardiaca se dispara antes de la mitad, camina o baja la intensidad y retoma."
+  - "Si las piernas se sienten pesadas desde el primer bloque, acorta la sesión y termina en la zona de recuperación."
+  - "Si el último bloque exige más que RPE {n}, termínalo un escalón abajo."
+
+# Patterns the validator warns about (never blocks). `where` = prose fields
+# (Focus / Execution / Nutrition), cues, or both.
+banned:
+  - {pattern: 'se vuelve mayor', where: prose, fix: "Escribe 'si el esfuerzo pasa de RPE 3-4' o 'si el esfuerzo sube'."}
+  - {pattern: 'por encima de RPE', where: prose, fix: "Escribe 'si el esfuerzo supera RPE X'."}
+  - {pattern: '(?i)\bvan \d', where: prose, fix: "Escribe 'Incluye 10 min de calentamiento' o 'Empieza con...'."}
+  - {pattern: '(?i)\bpaso pareja\b', where: both, fix: "Concordancia: 'paso parejo'."}
+  - {pattern: '\b(Endurance|Threshold|Sub-threshold|Supra-threshold|Recovery|Anaerobic)\b', where: prose, fix: "Usa el término en español: resistencia aeróbica, umbral, sub-umbral, supra-umbral, recuperación, anaeróbico."}
+  - {pattern: '(?i)\bstrides?\b', where: both, fix: "Usa 'aceleraciones'."}
+  - {pattern: '\b\d+x de \d', where: prose, fix: "Escribe '6 repeticiones de 20 s', no '6x de 20s'."}
+  - {pattern: '\b\d+m(\d+s)?\b', where: prose, fix: "En texto corrido usa 'min' y 's': '10 min', no '10m' (se lee como metros)."}
+  - {pattern: '(?i)\brealiza tu\b|\bprocede a\b|\basegúrate de\b', where: prose, fix: "Frase calcada del inglés: usa el imperativo directo ('calienta', 'termina', 'bebe')."}

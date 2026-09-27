@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.8.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.9.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,20 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.9 — nutrition reaches Intervals.icu; Spanish text is controlled (2026-09-27)**
+
+- `push_block` sent only the code block, so `[Execution]` and `[Nutrition]` never
+  left the session card. The Intervals.icu description is now the Execution and
+  Nutrition notes (in the athlete's language, from the declared profile), a blank
+  line, then the steps. `include_notes=false` restores the old behaviour.
+- `config/language/es_mx.yaml` (glossary, cue bank, failure-condition sentences,
+  patterns to avoid) builds `generated/Language_Guide_es-MX.md`, a Project file.
+  The validator warns (never blocks) with `CHK-LANG` on calques, English class
+  names, `10m` in prose, anglicisms and gender slips, and with `CHK-LANG-REPEAT`
+  when one cue is pasted into three sessions.
+- `[Execution]` is three short sentences and no longer re-lists the structure.
+- `fill_tss` keeps a space before `|` after `[Duration]`.
 
 **v7.8 — provisional thresholds, done properly (2026-09-26)**
 

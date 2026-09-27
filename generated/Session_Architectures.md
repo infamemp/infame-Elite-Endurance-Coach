@@ -1,6 +1,6 @@
 # Session Architectures — shape library
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/architectures/*.yaml`. Built 2026-09-26 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/architectures/*.yaml`. Built 2026-09-27 by `python build_zone_tables.py build`.
 
 Shapes a Main Set can take, distilled from ~1,700 MyWhoosh / Whatsonzwift cycling workouts and from the running catalogs (Daniels, Hudson & Fitzgerald, Hansons, Run Less Run Faster, Moehl, Canova). **No numbers live here**: every duration, intensity and RPE comes from the active author's zone table and the athlete's #STATE. `#STATE → RECENT ARCHITECTURES` names which of these the athlete has used in the last 8 weeks and which not at all.
 

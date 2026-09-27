@@ -36,6 +36,7 @@ so it gets more resistance than every other tool here, not less:
 from __future__ import annotations
 
 import os
+import re
 from datetime import date
 
 from .common import ROOT, ensure_import_paths, safe_out_dir, latest_block_path
@@ -85,6 +86,54 @@ def _iso_date(date_str: str) -> str | None:
             continue
     return None
 
+_NOTE_LABELS = {
+    "es": ("Ejecución", "Nutrición e hidratación"),
+    "en": ("Execution", "Nutrition & hydration"),
+}
+_EMPTY_NOTE = {"", "pending", "-", "—", "n/a", "none", "ninguno", "ninguna"}
+
+
+def _athlete_language(athlete_id: str) -> str:
+    """The athlete's `language` from the declared profile (es | en); Spanish
+    when the profile cannot be read, since the head coach's athletes are
+    Mexican. Reads the same file `profile.md` is built from."""
+    try:
+        import yaml
+        path = os.path.join(ROOT, "config", "athletes", f"{athlete_id}.yaml")
+        with open(path, encoding="utf-8") as f:
+            lang = str((yaml.safe_load(f) or {}).get("language") or "es").lower()
+    except Exception:  # noqa: BLE001 — missing or unreadable profile: default
+        return "es"
+    return "en" if lang.startswith("en") else "es"
+
+
+def _note_line(text: str) -> str:
+    """One plain paragraph the workout builder cannot mistake for syntax:
+    never starts with '-', never ends in a repeat marker like `6x`."""
+    t = " ".join(str(text or "").split())
+    t = t.lstrip("-–—• ").strip()
+    if re.search(r"\d+\s*[xX]$", t):
+        t += "."
+    return t
+
+
+def _description(header: dict, code: str, language: str, include_notes: bool) -> str:
+    """What the athlete sees in Intervals.icu: the Execution and Nutrition
+    notes from the session card, a blank line, then the workout steps. Until
+    v7.9 only the steps were sent, so the nutrition and hydration guidance
+    (and the how-to-execute text) never left the card."""
+    steps = code.strip()
+    if not include_notes:
+        return steps
+    ex_label, nu_label = _NOTE_LABELS.get(language, _NOTE_LABELS["es"])
+    lines = []
+    for label, key in ((ex_label, "Execution"), (nu_label, "Nutrition")):
+        val = _note_line(header.get(key, ""))
+        if val.lower() not in _EMPTY_NOTE:
+            lines.append(f"{label}: {val}")
+    return ("\n".join(lines) + "\n\n" + steps) if lines else steps
+
+
 def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
     """(type, is_inferred). is_inferred marks the one mapping above that
     isn't backed by a confirming fixture, so a dry-run payload can say so
@@ -104,6 +153,7 @@ def push_block(
     confirm: bool = False,
     athlete_name: str | None = None,
     override_validation: bool = False,
+    include_notes: bool = True,
 ) -> dict:
     """Build the Intervals.icu bulk-events payload for a saved block and,
     only when explicitly told twice (dry_run=False AND confirm=True), POST
@@ -147,6 +197,7 @@ def push_block(
     text, _fixes = vb.normalize_block(raw_text)
     sessions = vb.split_sessions(text)
 
+    language = _athlete_language(athlete_id)
     events, skipped = [], []
     for header, code in sessions:
         if not header:
@@ -190,7 +241,7 @@ def push_block(
             "type": activity_type,
             "type_inferred": inferred,
             "name": header.get("Focus") or f"{author['name']} session",
-            "description": code.strip(),
+            "description": _description(header, code, language, include_notes),
             "external_id": f"infame-{athlete_id}-{iso}-w{header.get('Week', '')}",
         })
 
