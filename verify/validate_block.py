@@ -82,30 +82,26 @@ def _language_rules():
     return _LANG_RULES
 
 
-def language_warnings(header, code, cue_counts):
+def language_warnings(header, code):
     """Advisory findings on the athlete-facing text of one session. Only for
     Spanish text (three or more Spanish stop-words in the prose), so an English
-    block is never checked against Spanish patterns. `cue_counts` is shared
-    across the sessions of one run to catch a cue pasted into every session."""
+    block is never checked against Spanish patterns. Never blocks."""
     prose = " ".join(str(header.get(k, "")) for k in ("Focus", "Execution", "Nutrition"))
     cues = re.findall(r'"([^"\n]+)"', code or "")
     out = []
-    if len(_ES_STOP.findall(prose)) >= 3:
-        for rx, where, fix in _language_rules():
-            if where in ("prose", "both"):
-                m = rx.search(prose)
+    if len(_ES_STOP.findall(prose)) < 3:
+        return out
+    for rx, where, fix in _language_rules():
+        if where in ("prose", "both"):
+            m = rx.search(prose)
+            if m:
+                out.append(("CHK-LANG", "-", f"'{m.group(0)}' — {fix}"))
+        if where in ("cues", "both"):
+            for c in cues:
+                m = rx.search(c)
                 if m:
-                    out.append(("CHK-LANG", "-", f"'{m.group(0)}' — {fix}"))
-            if where in ("cues", "both"):
-                for c in cues:
-                    m = rx.search(c)
-                    if m:
-                        out.append(("CHK-LANG", "-", f"cue \"{c}\": '{m.group(0)}' — {fix}"))
-                        break
-    for c in set(cues):
-        cue_counts[c] = cue_counts.get(c, 0) + 1
-        if cue_counts[c] == 3:
-            out.append(("CHK-LANG-REPEAT", "-", f'cue "{c}" is now in 3 sessions — vary the wording'))
+                    out.append(("CHK-LANG", "-", f"cue \"{c}\": '{m.group(0)}' — {fix}"))
+                    break
     return out
 
 
@@ -829,6 +825,10 @@ def check_header(header):
     for req in ("Week", "Date", "Category", "Focus"):
         if req not in header:
             warns.append(("CHK-HDR", "-", f"Header field [{req}] missing"))
+    # [Zone] is the coach-only line (class + the author's own zone). The athlete
+    # never sees author codes, so the head coach needs them somewhere: here.
+    if cat in ("", "Training", "Race") and "Zone" not in header:
+        warns.append(("CHK-HDR", "-", "Header field [Zone] missing — the coach-only class and author zone"))
     return errors, warns
 
 
@@ -1002,7 +1002,6 @@ def main():
     # Tempo-and-above, where repetition without progression is objectively
     # checkable, is verified here.
     mono_last = {}
-    lang_cue_counts = {}
     for n, (header, code) in enumerate(sessions, 1):
         category = header.get("Category", "Training")
         # A Rest or Travel day carries no exercise block by design -- it has
@@ -1090,7 +1089,7 @@ def main():
         # session was the right call is a coaching judgement, not something
         # this validator has the context to verify.
         if header.get("Category", "Training") == "Training":
-            warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps), lang_cue_counts)
+            warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps))
             mprof = session_monotony_profile(steps, author, th)
             if (mprof and CLASS_RANK[mprof["class"]] >= CLASS_RANK["tempo"]
                     and not outdoor_bike_mtb_exempt(discipline, mprof["class"])):

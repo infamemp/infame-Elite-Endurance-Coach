@@ -2,9 +2,9 @@
 
 > GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. Built 2026-09-27 by `python build_zone_tables.py build`.
 
-Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code block when the athlete's language is Spanish. Register: professional, direct, *tú*; natural cycling and running vocabulary; no calques from English. `verify/validate_block.py` warns on the patterns in **Never write**.
+Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code block when the athlete's language is Spanish. The vocabulary and phrases are the head coach's own. Tempo, strides, VO2max and neuromuscular are universal and stay as written. Register: professional, direct, *tú*. `verify/validate_block.py` warns on the patterns in **Never write**.
 
-## Terms
+## Class names
 
 | Class | Write |
 | :--- | :--- |
@@ -14,99 +14,94 @@ Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code 
 | `sub_threshold` | sub-umbral |
 | `threshold` | umbral |
 | `supra_threshold` | supra-umbral |
-| `vo2max` | VO2máx |
+| `vo2max` | VO2max |
 | `anaerobic` | anaeróbico |
 | `neuromuscular` | neuromuscular |
 
-| English | Spanish |
+## Terms and rules of use
+
+| When | Write |
 | :--- | :--- |
-| warm-up | calentamiento |
-| cool-down | enfriamiento |
-| interval / rep | repetición |
-| set | serie |
-| strides | aceleraciones |
-| even pace | paso parejo (running) / potencia pareja (bike) |
-| recovery jog | trote de recuperación |
-| spin (bike) | girar / pedalear |
-| ERG mode | modo ERG |
-| cadence | cadencia |
-| seated / standing | sentado / de pie |
-| minutes / seconds in prose | min / s — never 'm' (it reads as metres) |
-| heart rate | frecuencia cardiaca |
-| fuelling | alimentación |
+| endurance class on the sport's long day | fondo aeróbico (never 'trote de fondo aeróbico': on a run it is simply 'fondo aeróbico') |
+| endurance class on any other run | trote aeróbico |
+| endurance class on any other bike or mixed session | resistencia aeróbica |
+| muscular endurance work (e.g. tempo on climbs) | resistencia muscular |
+| strides | strides (e.g. '6 strides de 20 s') |
+| stride form | zancada fluida (never 'zancada suelta') |
+| minutes and seconds in [Focus], [Execution], [Nutrition] | '10 min', '30 s' — never '10m' or '30s' (that is Intervals.icu syntax and reads as metres). Inside the code block the syntax stays '10m', '30s' |
+| author zone codes (Friel Zona 3, Daniels E, Koop ER...) | never in athlete text: they go in the coach-only [Zone] field |
 
 ## How each field is written
 
-- **`[Focus]`** — A few words: the physiological target, in Spanish, then the author's zone id in parentheses (e.g. resistencia aeróbica (Daniels E)).
-- **`[Execution]`** — Three short sentences, at most 60 words, and do not re-list the structure: the athlete sees the steps below. (1) what the session trains, by class and author zone, in words; (2) how it should feel and be executed; (3) what to do if it is not going as prescribed. Mention a number only when the athlete needs it to act (a threshold to hold, a limit not to cross).
-- **`[Nutrition]`** — Before / during / after, only what applies, each with a quantity or a time. Vary the wording between sessions; never paste the same sentence into every one.
+- **`[Focus]`** — A few words in the athlete's terms: what the session trains, using the class names above ("Fondo aeróbico con subidas de resistencia muscular (Tempo)"). It is the workout's name in Intervals.icu, so no author codes and no scheduling logic.
+- **`[Zone]`** — Coach-only field, never sent to Intervals.icu: the class and the author's own zone, as the head coach reads them ("Tempo · Friel Zona 3"; several parts separated by " · " or " + ").
+- **`[Execution]`** — Three short sentences, at most 60 words, and do not re-list the structure: the athlete sees the steps below. (1) what the session trains, by class, in words; (2) how it should feel and be executed; (3) what to do if it is not going as prescribed. Mention a number only when the athlete needs it to act.
+- **`[Nutrition]`** — Before / during / after, only what applies, each with a quantity or a time. When fuelling happens during the session, the timing also goes in the cue of that step.
 
-## Cue bank
+## The head coach's phrases
 
-Examples of tone and length. Rotate: within one block, no cue is used in more than two sessions. Adapt them to the step; do not paste them.
+Use them as the base and adapt to the step. A phrase may repeat across sessions: consistent wording for the same kind of step is the house style.
 
 **warmup**
-- "Empieza con paso corto y suelta los hombros"
-- "Deja que la respiración se acomode antes de subir el ritmo"
-- "Sube poco a poco, todavía sin exigirte"
-- "Aquí solo se calienta: cadencia cómoda y postura relajada"
-- "Suelta las piernas; el esfuerzo llega después"
-- "Aumenta gradualmente hasta el ritmo de la serie"
+- "Trote suave de calentamiento"
+- "Trote de calentamiento"
+- "Calentamiento progresivo"
+- "Trote progresivo"
+- "Pedaleo suave"
+- "Pedaleo cómodo"
+- "Pedaleo con cadencia cómoda autorregulada"
 
 **recovery**
-- "Baja el ritmo y respira hondo"
-- "Recupera a tu ritmo, sin prisa"
-- "Afloja las piernas y baja las pulsaciones"
-- "Trota o camina hasta sentirte listo para la siguiente"
-- "Suelta los brazos y toma aire"
-- "Pedalea ligero hasta la siguiente repetición"
+- "Recupera"
+- "Afloje"
+- "Trote de recuperación"
+- "Recupera en las bajadas o planos"
 
-**cooldown**
-- "Baja poco a poco hasta terminar la sesión"
-- "Cierra con ritmo corto y respiración tranquila"
-- "Termina soltando las piernas"
-- "Vuelve a la calma, sin apuro"
-- "Últimos minutos ligeros; la sesión ya está hecha"
-- "Baja las pulsaciones antes de detenerte"
+**hold the effort**
+- "Ritmo constante"
+- "Ritmo controlado"
+- "Cadencia controlada"
+- "Buena postura"
+- "Manteniendo la forma"
+- "Mantén la cadencia durante el intervalo"
+- "Respeta la cadencia"
+- "Respeta la intensidad"
+- "Respeta el ritmo"
+- "Mismo ritmo que el primer bloque"
+- "Misma intensidad"
 
-**effort endurance**
-- "Paso parejo y respiración cómoda"
-- "Mantén la conversación posible"
-- "Constante de principio a fin, sin apretar"
-- "Cuida la postura cuando aparezca el cansancio"
+**raise or lower**
+- "Aumenta la intensidad"
+- "Aumentando"
+- "Sube la potencia sin exagerar"
+- "Reduce la intensidad"
 
-**effort tempo threshold**
-- "Ritmo firme y controlado; no lo aceleres"
-- "Mismo esfuerzo que en la repetición anterior"
-- "Sostenible hasta el último minuto"
-- "Respira profundo y mantén la cadencia"
-
-**effort high**
-- "Fuerte y relajado; no aprietes los hombros"
-- "Arranca controlado y termina lo más parejo posible"
-- "Todo el esfuerzo va en mantener la técnica"
-- "Cadencia alta, zancada suelta"
+**approximate**
+- "Aproximadamente"
+- "aprox."
 
 ## Failure-condition sentences (`[Execution]`, part 3)
 
-Vary them; `{n}` is an RPE taken from the code block.
+`{n}` is an RPE taken from the code block.
 
-- Si el esfuerzo supera RPE {n}, baja el ritmo y conserva la duración.
-- Si no puedes sostener el ritmo hasta el final del bloque, reduce un poco y termina la serie.
-- Si la frecuencia cardiaca se dispara antes de la mitad, camina o baja la intensidad y retoma.
-- Si las piernas se sienten pesadas desde el primer bloque, acorta la sesión y termina en la zona de recuperación.
-- Si el último bloque exige más que RPE {n}, termínalo un escalón abajo.
+- Si el esfuerzo pasa de RPE {n}, reduce la intensidad y conserva la duración.
+- Si no logras sostener el ritmo hasta el final del bloque, reduce la intensidad y termina la serie.
+- Si la frecuencia cardiaca se dispara pronto, recupera y retoma con menor intensidad.
+- Si las piernas se sienten pesadas desde el primer bloque, acorta la sesión y termina en resistencia aeróbica.
+- Si el último bloque exige más de lo indicado, mantén el mismo ritmo del primero o termínalo con menor intensidad.
 
 ## Never write
 
 | Pattern | Write instead |
 | :--- | :--- |
-| `se vuelve mayor` | Escribe 'si el esfuerzo pasa de RPE 3-4' o 'si el esfuerzo sube'. |
-| `por encima de RPE` | Escribe 'si el esfuerzo supera RPE X'. |
+| `se vuelve mayor` | Escribe 'si el esfuerzo pasa de RPE X' o 'si el esfuerzo sube'. |
+| `por encima de RPE` | Escribe 'si el esfuerzo pasa de RPE X'. |
 | `(?i)\bvan \d` | Escribe 'Incluye 10 min de calentamiento' o 'Empieza con...'. |
 | `(?i)\bpaso pareja\b` | Concordancia: 'paso parejo'. |
-| `\b(Endurance\|Threshold\|Sub-threshold\|Supra-threshold\|Recovery\|Anaerobic)\b` | Usa el término en español: resistencia aeróbica, umbral, sub-umbral, supra-umbral, recuperación, anaeróbico. |
-| `(?i)\bstrides?\b` | Usa 'aceleraciones'. |
-| `\b\d+x de \d` | Escribe '6 repeticiones de 20 s', no '6x de 20s'. |
-| `\b\d+m(\d+s)?\b` | En texto corrido usa 'min' y 's': '10 min', no '10m' (se lee como metros). |
+| `(?i)zancada suelta` | Escribe 'zancada fluida'. |
+| `\b(Endurance\|Threshold\|Sub-threshold\|Supra-threshold\|Recovery\|Anaerobic)\b` | En español: resistencia aeróbica (fondo aeróbico en día largo), umbral, sub-umbral, supra-umbral, recuperación, anaeróbico. |
+| `(?i)trote de fondo aeróbico` | Escribe 'fondo aeróbico' (día largo) o 'trote aeróbico' (día normal). |
+| `\b(\d+m(\d+s)?\|\d+s)\b` | En los campos de texto escribe '10 min' y '30 s'; '10m' y '30s' son sintaxis de Intervals.icu y solo van en el bloque de código. |
+| `\b\d+x de \d` | Escribe '6 strides de 20 s' o '6 repeticiones de 20 s', no '6x de 20s'. |
+| `\b(Friel\|Daniels\|Coggan\|Carmichael\|Palladino\|Koop\|Olbrich\|Hansons?\|Hudson\|Rosario)\b` | El atleta no usa los códigos de autor: van en el campo [Zone], solo para el coach. |
 | `(?i)\brealiza tu\b\|\bprocede a\b\|\basegúrate de\b` | Frase calcada del inglés: usa el imperativo directo ('calienta', 'termina', 'bebe'). |

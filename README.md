@@ -84,7 +84,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.9.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.10.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +153,17 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.10 — the language guide uses the head coach's own vocabulary (2026-09-27)**
+
+v7.9 imposed word choices nobody had asked for. Now: Tempo, strides, VO2max and
+neuromuscular stay as written; the class is *resistencia aeróbica* (*fondo
+aeróbico* on the long day, *trote aeróbico* on any other run), *umbral*,
+*sub-umbral*; the cue bank is the head coach's own phrases and may repeat; prose
+fields use `10 min` / `30 s` while the code block keeps `10m` / `30s`;
+*zancada fluida*. Author codes (Friel Zona 3, Daniels E) never reach the athlete:
+they live in a new coach-only header line, `[Zone]`, which `push_block` does not
+upload. The validator only warns (`CHK-LANG`), and the repeated-cue check is gone.
 
 **v7.9 — nutrition reaches Intervals.icu; Spanish text is controlled (2026-09-27)**
 

@@ -643,24 +643,26 @@ def build_language_guide():
          f"> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. "
          f"Built {_dt.date.today().isoformat()} by `python build_zone_tables.py build`.", "",
          "Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code "
-         "block when the athlete's language is Spanish. Register: professional, direct, "
-         "*tú*; natural cycling and running vocabulary; no calques from English. "
-         "`verify/validate_block.py` warns on the patterns in **Never write**.", "",
-         "## Terms", "", "| Class | Write |", "| :--- | :--- |"]
+         "block when the athlete's language is Spanish. The vocabulary and phrases are the "
+         "head coach's own. Tempo, strides, VO2max and neuromuscular are universal and stay "
+         "as written. Register: professional, direct, *tú*. `verify/validate_block.py` warns "
+         "on the patterns in **Never write**.", "",
+         "## Class names", "", "| Class | Write |", "| :--- | :--- |"]
     for k, v in d["glossary"]["classes"].items():
         L.append(f"| `{k}` | {v} |")
-    L += ["", "| English | Spanish |", "| :--- | :--- |"]
+    L += ["", "## Terms and rules of use", "", "| When | Write |", "| :--- | :--- |"]
     for t in d["glossary"]["terms"]:
-        L.append(f"| {t['en']} | {t['es']} |")
+        L.append(f"| {t['when']} | {t['write']} |")
     L += ["", "## How each field is written", ""]
-    for k in ("focus", "execution", "nutrition"):
+    for k in ("focus", "zone", "execution", "nutrition"):
         L.append(f"- **`[{k.capitalize()}]`** — {' '.join(str(d['structure'][k]).split())}")
-    L += ["", "## Cue bank", "",
-          "Examples of tone and length. Rotate: within one block, no cue is used in more "
-          "than two sessions. Adapt them to the step; do not paste them.", ""]
+    L += ["", "## The head coach's phrases", "",
+          "Use them as the base and adapt to the step. A phrase may repeat across "
+          "sessions: consistent wording for the same kind of step is the house style.", ""]
     for k, v in d["cues"].items():
         L += [f"**{k.replace('_', ' ')}**"] + [f'- "{x}"' for x in v] + [""]
-    L += ["## Failure-condition sentences (`[Execution]`, part 3)", "", "Vary them; `{n}` is an RPE taken from the code block.", ""]
+    L += ["## Failure-condition sentences (`[Execution]`, part 3)", "",
+          "`{n}` is an RPE taken from the code block.", ""]
     L += [f"- {x}" for x in d["fallbacks"]]
     L += ["", "## Never write", "", "| Pattern | Write instead |", "| :--- | :--- |"]
     for b in d["banned"]:

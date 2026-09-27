@@ -563,39 +563,41 @@ def unit_tests():
     ]:
         check(name, needle in _pr, needle)
 
-    # ── v7.9: nutrition reaches Intervals.icu; Spanish text is controlled ──
+    # ── v7.9/7.10: nutrition reaches Intervals.icu; Spanish text is controlled ──
     import yaml as _yl, re as _re2
     _lang = _yl.safe_load(open(os.path.join(ROOT, "config", "language", "es_mx.yaml"), encoding="utf-8"))
     _rules = [(_re2.compile(b["pattern"]), b["fix"]) for b in _lang["banned"]]
     _own = [c for v in _lang["cues"].values() for c in v] + list(_lang["fallbacks"])
     _hits = [c for c in _own for rx, _f in _rules if rx.search(c)]
-    check("language: the guide's own cue bank breaks none of its own rules", not _hits, _hits)
+    check("language: the head coach's own phrases break none of the rules", not _hits, _hits)
     _gl = open(os.path.join(ROOT, "generated", "Language_Guide_es-MX.md"), encoding="utf-8").read()
     check("generated: Language_Guide_es-MX.md is current with the YAML (run build)",
-          all(c in _gl for c in _lang["cues"]["warmup"]) and str(len(_lang["banned"])) != "")
+          all(c in _gl for v in _lang["cues"].values() for c in v))
     check("prompt: Spanish text follows Language_Guide_es-MX.md", "read `Language_Guide_es-MX.md` and follow it" in _pr)
     check("prompt: Execution does not re-list the structure", "it does not re-list the structure" in _pr)
     check("prompt: Nutrition is uploaded with Execution", "It is uploaded to Intervals.icu together with `[Execution]`" in _pr)
-    _sample = ("[Week] 01 | [Date] 28-09-2026\n[Athlete ID]: x\n[Category]: Training\n[Methodology]: daniels\n"
-               "[Discipline]: road_run\n[Focus]: Resistencia aeróbica (Endurance, Daniels E)\n"
-               "[Duration] 00:30:00 | [Estimated TSS] 20\n[Execution]: Van 10m de calentamiento y si el paso se vuelve mayor, baja con los strides.\n"
-               "[Nutrition]: Toma agua antes de salir y bebe a sorbos.\n\n```text\nWarmup\n\n- 10m 75-80% Pace [RPE 1-3] \"Paso pareja\"\n```\n")
+    check("prompt: [Zone] is coach-only and author codes stay out of athlete text",
+          "is for the head coach only and is never uploaded" in _pr and "[Zone]: <class> · <author zone>" in _pr)
     import validate_block as _vb2
-    _lw = _vb2.language_warnings({"Focus": "Resistencia aeróbica (Endurance, Daniels E) de la sesión y con calma",
-                                  "Execution": "Van 10m de calentamiento y si el paso se vuelve mayor, baja con los strides.",
+    _lw = _vb2.language_warnings({"Focus": "Resistencia aeróbica (Endurance, Friel Zona 3) de la sesión y con calma",
+                                  "Execution": "Van 10m de calentamiento y si el paso se vuelve mayor, 6x de 20s con zancada suelta y trote de fondo aeróbico.",
                                   "Nutrition": "Toma agua antes de salir y bebe a sorbos."},
-                                 '- 10m 75-80% Pace [RPE 1-3] "Paso pareja"', {})
+                                 '- 10m 75-80% Pace [RPE 1-3] "Paso pareja"')
     _got = " ".join(m for _c, _l, m in _lw)
-    for needle in ("se vuelve mayor", "Van 1", "Endurance", "strides", "10m", "Paso pareja"):
-        check(f"validator: Spanish check flags '{needle}'", needle in _got, _got[:200])
+    for needle in ("se vuelve mayor", "Van 1", "Endurance", "Friel", "10m", "20s", "Paso pareja", "zancada suelta", "trote de fondo aeróbico", "6x de 2"):
+        check(f"validator: Spanish check flags '{needle}'", needle in _got, _got[:160])
+    _ok = _vb2.language_warnings({"Focus": "Fondo aeróbico con subidas de resistencia muscular (Tempo)",
+                                  "Execution": "Tres bloques de tempo sentado en subida, con 6 strides de 20 s y zancada fluida. Si no sostienes el ritmo, reduce la intensidad y termina en fondo aeróbico.",
+                                  "Nutrition": "Toma 500 ml de agua antes de salir y 60 g de carbohidrato por hora."},
+                                 '- 15m 78-85% 75-90rpm [RPE 5-6] "Cadencia controlada"')
+    check("validator: the head coach's own vocabulary raises no warning", _ok == [], _ok)
     check("validator: an English block gets no Spanish warnings",
           _vb2.language_warnings({"Focus": "Endurance", "Execution": "Run 10m at an easy effort and stay relaxed.",
-                                  "Nutrition": "Drink water."}, "", {}) == [])
-    _c = {}
-    for _i in range(3):
-        _r = _vb2.language_warnings({}, '- 5m 50% [RPE 1] "Misma frase"', _c)
-    check("validator: a cue in a third session is reported as repeated",
-          any(c == "CHK-LANG-REPEAT" for c, _l, _m in _r))
+                                  "Nutrition": "Drink water."}, "") == [])
+    _h = _vb2.check_header({"Week": "01", "Date": "28-09-2026", "Category": "Training", "Focus": "x"})[1]
+    check("validator: a Training session without [Zone] gets an advisory", any("[Zone]" in m for _c, _l, m in _h))
+    _h = _vb2.check_header({"Week": "01", "Date": "28-09-2026", "Category": "Rest", "Focus": "x"})[1]
+    check("validator: a Rest day does not need [Zone]", not any("[Zone]" in m for _c, _l, m in _h))
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")
@@ -617,8 +619,8 @@ def unit_tests():
           sorted(_tools_pr), sorted(_tools_srv))
     _row = [l for l in _pr.splitlines() if l.startswith("| Knowledge |")][0]
     _named = [f for f in _re.findall(r"`([^`]+\.(?:md|yaml))`", _row) if f != "profile.md"]
-    _rp = open(os.path.join(ROOT, "RESTORE_POINT_v7.9.md"), encoding="utf-8").read() \
-        if os.path.exists(os.path.join(ROOT, "RESTORE_POINT_v7.9.md")) else \
+    _rp = open(os.path.join(ROOT, "RESTORE_POINT_v7.10.md"), encoding="utf-8").read() \
+        if os.path.exists(os.path.join(ROOT, "RESTORE_POINT_v7.10.md")) else \
         open(sorted(glob.glob(os.path.join(ROOT, "RESTORE_POINT_v*.md")))[-1], encoding="utf-8").read()
     _manifest = _rp[_rp.index("## What the Project must contain"):_rp.index("## Machines")]
     _search = ["generated", "Syntax", os.path.join("config", "athletes"), "Knowledge",

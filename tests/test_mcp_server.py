@@ -681,14 +681,18 @@ def test_mcp_first_workflow():
         _p = os.path.join(_d, "n.md")
         with open(_p, "w", encoding="utf-8") as f:
             f.write("[Week] 01 | [Date] 28-09-2026\n[Athlete ID]: x\n[Category]: Training\n[Methodology]: daniels\n"
-                    "[Discipline]: road_run\n[Focus]: Base\n[Duration] 00:10:00 | [Estimated TSS] 5\n"
+                    "[Discipline]: road_run\n[Focus]: Base\n[Zone]: Tempo · Friel Zona 3\n[Duration] 00:10:00 | [Estimated TSS] 5\n"
                     "[Execution]: - Corre parejo en 6x\n[Nutrition]: Toma 500 ml de agua antes de salir.\n\n"
                     "```text\nMain Set\n\n- 10m 75-80% Pace [RPE 1-3]\n```\n")
-        _d0 = push_block(AID, file_path=_p)["events"][0]["description"]
+        _ev0 = push_block(AID, file_path=_p)["events"][0]
+        _d0 = _ev0["description"]
+        _dz = _d0 + " " + _ev0["name"]
     from mcp_server.tools_push import _NOTE_LABELS, _athlete_language
     _ex, _nu = _NOTE_LABELS[_athlete_language(AID)]
     check("workflow: Execution and Nutrition both reach the description, before the steps",
           f"{_nu}: Toma 500 ml de agua" in _d0 and _d0.index(_nu) < _d0.index("Main Set"), _d0)
+    check("workflow: the coach-only [Zone] never reaches Intervals.icu",
+          "Tempo · Friel" not in _dz and "Zone" not in _dz, _dz)
     check("workflow: a note line never starts with '-' or ends in a repeat marker",
           f"{_ex}: Corre parejo en 6x." in _d0, _d0)
     with tempfile.TemporaryDirectory() as tmp:
