@@ -1,4 +1,4 @@
-"""server.py — the 11 tools, wired to a stdio MCP server
+"""server.py — the 14 tools, wired to a stdio MCP server
 ==========================================================
 Not what Claude Desktop should actually be configured to launch — see
 `run_server.py` for that. This module only builds the tool surface and
@@ -19,6 +19,7 @@ import logging
 import sys
 
 from . import cancel_patch
+from .tools_coach import post_activity_comment, remove_block, update_threshold
 from .tools_push import push_block
 from .tools_read import (get_athlete_state, get_athlete_profile, get_execution,
                          list_roster, roster_overview)
@@ -37,7 +38,7 @@ def _configure_logging() -> None:
 
 
 def build_app():
-    """Construct the FastMCP app and register all 11 tools. Deferred inside
+    """Construct the FastMCP app and register all 14 tools. Deferred inside
     a function (rather than at import time) so importing this module for
     introspection or testing never requires the `mcp` package to already be
     on the path — only actually building or running the server does."""
@@ -52,8 +53,9 @@ def build_app():
             "exception to 'these tools do what the CLI already does': it "
             "defaults to dry_run and will not send anything to "
             "Intervals.icu unless both dry_run=False and confirm=True are "
-            "passed explicitly. Uploading is a deliberate, manual action, "
-            "same as it has always been."
+            "passed explicitly. post_activity_comment, update_threshold and "
+            "remove_block work the same way. Changing an athlete's Intervals.icu "
+            "data is a deliberate action, always approved first."
         ),
     )
 
@@ -79,6 +81,13 @@ def build_app():
     # push_block — see tools_push.py's own module docstring for why this
     # one is treated differently from the other seven.
     app.tool()(push_block)
+
+    # post_activity_comment / update_threshold / remove_block — the other
+    # tools that change the athlete's real Intervals.icu data. Same gate as
+    # push_block: dry run by default, dry_run=False AND confirm=True to act.
+    app.tool()(post_activity_comment)
+    app.tool()(update_threshold)
+    app.tool()(remove_block)
 
     return app
 

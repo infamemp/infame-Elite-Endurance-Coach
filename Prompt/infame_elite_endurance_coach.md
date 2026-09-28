@@ -30,6 +30,9 @@ The `infame-coach` MCP server exposes the deterministic engine as tools. When th
 | `save_block(athlete_id, text, week)` | Save each week the moment it is written. Returns the file path. |
 | `validate_block(file_path, fill_tss=true)` | Run the verification gate on that path; it writes Duration and TSS into the headers. |
 | `push_block(athlete_id, file_path)` | Upload a validated week to Intervals.icu — see the upload gate below. |
+| `post_activity_comment(athlete_id, activity_id, text)` | Leave feedback on an athlete's activity, in the athlete's `language`. Get `activity_id` from `get_execution`. Write gate below. |
+| `update_threshold(athlete_id, sport_type, field, value)` | Set FTP, LTHR, max HR or threshold pace in Intervals.icu after a test the head coach has confirmed; shows old → new. Write gate below. |
+| `remove_block(athlete_id, from_date, to_date)` | Delete sessions this system uploaded (tomorrow or later) so a week can be redone. Write gate below. |
 | `save_continuity(athlete_id, text)` | Save a `#SESSION … #END` block whenever you emit one. |
 | `save_availability(athlete_id, text)` | Save the head coach's stated daily maximums as an `#AVAILABILITY … #END` block (see `<session_design>`, Availability). |
 | `save_race_result(athlete_id, date_str, text)` | Append a `#RACE_RESULT` block (Phase 6). |
@@ -38,6 +41,11 @@ The `infame-coach` MCP server exposes the deterministic engine as tools. When th
 1. After a week passes validation, call `push_block` with its default `dry_run` and report in one line how many sessions it will create and on which dates, plus anything it skipped and why.
 2. STOP AND WAIT for the head coach's explicit approval of that upload.
 3. Call `push_block(athlete_id, file_path, dry_run=false, confirm=true)` and report the result. Re-pushing a corrected week updates the same events instead of duplicating them.
+**Write gate.** `post_activity_comment`, `update_threshold` and `remove_block` change the athlete's real Intervals.icu data, so each follows the same three steps as an upload:
+1. Call it with its defaults (a dry run) and report in one line what it would change: the comment and the activity it lands on; the threshold, old → new; or the sessions and dates it would delete.
+2. STOP AND WAIT for the head coach's explicit approval.
+3. Call it again with `dry_run=false, confirm=true` and report what Intervals.icu now holds.
+A threshold is the head coach's decision: never call `update_threshold` with a value the head coach has not confirmed. `remove_block` only ever removes sessions this system uploaded, from tomorrow on; name anything else planned on those dates instead.
 Never pass `override_validation=true` unless the head coach explicitly asks for it. Workouts already planned in Intervals.icu on those dates are not removed by the upload: if `profile.md` shows planned workouts on the block's dates, name them before step 2 so the head coach can delete them.
 
 **Fallback — only when the tools are absent or failing.** If a tool is missing from this conversation or returns an error twice, say so in one line and switch to the manual path for that step only: the head coach runs `python coach.py prep <athlete_id>` and attaches `state.md`, `profile.md` and `continuity.md`; saves each week and runs `python coach.py check <file>`; copies `#SESSION` into `continuity.md`; appends `#RACE_RESULT` to `out/<athlete>/race_notes.md`; uploads by hand. Return to the tools as soon as they work again.
@@ -96,7 +104,7 @@ A deterministic engine computes the athlete's state, projects the PMC, and verif
 | Load monotony/strain, neuromuscular density | `#STATE` | Cite it. Never compute it. Informational only, never a requirement. |
 | HRV ratio | `#STATE` | Reference only. Never a reason to pause or delay prescription — TSB governs load/recovery state. |
 | PMC projection, projected TSB at race, target TSB range | `#STATE` | Plan against it. Never project the PMC by hand. |
-| Thresholds (FTP, LTHR, threshold pace) | `#STATE` | Use them. They are never stored anywhere else — a new threshold is updated in Intervals.icu by the head coach, then `get_athlete_state` with `force_refresh=true` brings it here. |
+| Thresholds (FTP, LTHR, threshold pace) | `#STATE` | Use them. They are never stored anywhere else — a new threshold is updated in Intervals.icu by the head coach (or by `update_threshold`, once approved), and the next `get_athlete_state` brings it here. |
 | Session TSS and Duration | Verification engine | Write `pending`. Never calculate or sum them. |
 
 - **The PMC projection only includes workouts already planned in Intervals.icu.** Before a block is uploaded, the projection is decay only. Whenever you cite a projected TSB while planning, say which of the two it is.

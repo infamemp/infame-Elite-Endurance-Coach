@@ -316,6 +316,186 @@ def test_tools_roster_and_execution():
     equal("get_execution: an unknown, uncached athlete fails cleanly", r.get("ok"), False)
 
 
+class _Resp:
+    def __init__(self, data=None, status=200):
+        self._d, self.status_code, self.text = data, status, json.dumps(data)
+
+    def json(self):
+        return self._d
+
+
+class _FakeSession:
+    """Stands in for the Intervals.icu HTTP session: every call is recorded,
+    nothing touches the network. `routes` maps (METHOD, path) to a callable
+    (kwargs -> _Resp) or to a fixed payload."""
+
+    def __init__(self, routes, base):
+        self.routes, self.base, self.calls = routes, base, []
+
+    def _do(self, method, url, **kw):
+        path = url.replace(self.base, "")
+        self.calls.append((method, path, kw))
+        h = self.routes.get((method, path))
+        if h is None:
+            return _Resp({"error": f"no route {method} {path}"}, 404)
+        return h(kw) if callable(h) else _Resp(h)
+
+    def get(self, url, **kw): return self._do("GET", url, **kw)
+    def post(self, url, **kw): return self._do("POST", url, **kw)
+    def put(self, url, **kw): return self._do("PUT", url, **kw)
+
+    def writes(self):
+        return [c for c in self.calls if c[0] in ("POST", "PUT")]
+
+
+def _with_fake(routes):
+    import fetch_athlete_data as fad
+    fake = _FakeSession(routes, fad.BASE_URL)
+    real = fad.make_session
+    fad.make_session = lambda: fake
+    return fake, lambda: setattr(fad, "make_session", real)
+
+
+def test_tools_coach():
+    from datetime import timedelta
+    from mcp_server.tools_coach import post_activity_comment, remove_block, update_threshold
+    from mcp_server import common
+
+    # ── post_activity_comment ──
+    act = {"icu_athlete_id": AID, "name": "Aerobico", "start_date_local": "2026-09-25T07:00:00",
+           "type": "Ride"}
+    fake, restore = _with_fake({("GET", "/activity/i55"): act,
+                                ("POST", "/activity/i55/messages"): {"id": 1}})
+    try:
+        r = post_activity_comment(AID, "i55", "Buen trabajo hoy.")
+        equal("comment: default is a dry run", (r.get("dry_run"), r.get("sent")), (True, False))
+        equal("comment: dry run shows which activity it would land on",
+              r["activity"]["name"], "Aerobico")
+        equal("comment: dry run wrote nothing", fake.writes(), [])
+        post_activity_comment(AID, "i55", "x", dry_run=False, confirm=False)
+        post_activity_comment(AID, "i55", "x", dry_run=True, confirm=True)
+        equal("comment: one open gate is not enough", fake.writes(), [])
+        r = post_activity_comment(AID, "i55", "Buen trabajo hoy.", dry_run=False, confirm=True)
+        equal("comment: both gates open posts once, with the text as given",
+              [(c[0], c[1], c[2].get("json")) for c in fake.writes()],
+              [("POST", "/activity/i55/messages", {"content": "Buen trabajo hoy."})])
+        equal("comment: live call reports it was sent", r.get("sent"), True)
+        equal("comment: an empty comment is refused",
+              post_activity_comment(AID, "i55", "   ").get("ok"), False)
+        equal("comment: an over-long comment is refused",
+              post_activity_comment(AID, "i55", "x" * 2001).get("ok"), False)
+        equal("comment: a malformed activity id is refused",
+              post_activity_comment(AID, "i55/../x", "hola").get("ok"), False)
+    finally:
+        restore()
+    fake, restore = _with_fake({("GET", "/activity/i77"): dict(act, icu_athlete_id="OTHER"),
+                                ("POST", "/activity/i77/messages"): {"id": 2}})
+    try:
+        r = post_activity_comment(AID, "i77", "hola", dry_run=False, confirm=True)
+        equal("comment: an activity of another athlete is refused, even with both gates open",
+              (r.get("ok"), fake.writes()), (False, []))
+    finally:
+        restore()
+
+    # ── update_threshold ──
+    _seed_athlete_data(fresh=True)
+    state = {"id": 9, "types": ["Ride"], "ftp": 250, "lthr": 165, "max_hr": 188,
+             "threshold_pace": 3.5, "pace_units": "MINS_KM"}
+
+    def _put(kw):
+        state.update(kw["json"])
+        return _Resp(dict(state))
+
+    routes = {("GET", "/athlete/" + AID + "/sport-settings/Ride"): lambda kw: _Resp(dict(state)),
+              ("PUT", "/athlete/" + AID + "/sport-settings/9"): _put}
+    fake, restore = _with_fake(routes)
+    try:
+        r = update_threshold(AID, "Ride", "ftp", 260)
+        equal("threshold: dry run shows old -> new", (r["old"], r["new"], r["sent"]), (250, 260, False))
+        equal("threshold: dry run wrote nothing", fake.writes(), [])
+        r = update_threshold(AID, "Ride", "ftp", 260, dry_run=False, confirm=True)
+        w = fake.writes()
+        equal("threshold: live call sends only the one field",
+              [(c[0], c[1], c[2]["json"]) for c in w],
+              [("PUT", "/athlete/" + AID + "/sport-settings/9", {"ftp": 260})])
+        equal("threshold: FTP change does not recalculate HR zones",
+              w[0][2]["params"]["recalcHrZones"], "false")
+        equal("threshold: the change is re-read and verified", (r["verified"], r["now_in_intervals"]), (True, 260))
+        check("threshold: the local cache is marked stale so #STATE re-fetches",
+              r["cache_marked_stale"] is True and not common.is_cache_fresh(AID))
+        n = len(fake.writes())
+        r = update_threshold(AID, "Ride", "ftp", 260, dry_run=False, confirm=True)
+        equal("threshold: setting the value it already has changes nothing",
+              (r["changed"], len(fake.writes())), (False, n))
+        update_threshold(AID, "Ride", "lthr", 170, dry_run=False, confirm=True)
+        equal("threshold: LTHR change recalculates HR zones",
+              fake.writes()[-1][2]["params"]["recalcHrZones"], "true")
+        r = update_threshold(AID, "Ride", "threshold_pace", "4:30")
+        check("threshold: M:SS in min/km becomes m/s (4:30/km = 3.7037 m/s)",
+              abs(r["new"] - 3.7037) < 1e-3 and r["old_display"] == "4:46 /km", r)
+        equal("threshold: an implausible value is refused",
+              update_threshold(AID, "Ride", "ftp", 2600).get("ok"), False)
+        equal("threshold: a field that is not allowed is refused",
+              update_threshold(AID, "Ride", "w_prime", 20000).get("ok"), False)
+        equal("threshold: a non-numeric value is refused",
+              update_threshold(AID, "Ride", "ftp", "mucho").get("ok"), False)
+        state["pace_units"] = "SECS_100M"
+        equal("threshold: M:SS in a pace unit that is not min/km or min/mile is refused",
+              update_threshold(AID, "Ride", "threshold_pace", "1:40").get("ok"), False)
+    finally:
+        restore()
+
+    # ── remove_block ──
+    day = lambda n: (date.today() + timedelta(days=n)).isoformat() + "T00:00:00"
+    cal = [
+        {"id": 1, "category": "WORKOUT", "start_date_local": day(1), "name": "A",
+         "external_id": f"infame-{AID}-x-w1"},
+        {"id": 2, "category": "WORKOUT", "start_date_local": day(3), "name": "B",
+         "external_id": f"infame-{AID}-y-w1"},
+        {"id": 3, "category": "WORKOUT", "start_date_local": day(2), "name": "athlete's own",
+         "external_id": None},
+        {"id": 4, "category": "WORKOUT", "start_date_local": day(2), "name": "other athlete's",
+         "external_id": "infame-OTHER-z-w1"},
+        {"id": 5, "category": "RACE_A", "start_date_local": day(9), "name": "race",
+         "external_id": f"infame-{AID}-r-w1"},
+        {"id": 6, "category": "WORKOUT", "start_date_local": day(0), "name": "today",
+         "external_id": f"infame-{AID}-t-w1"},
+    ]
+    live = list(cal)
+
+    def _bulk_delete(kw):
+        gone = {d["id"] for d in kw["json"]}
+        live[:] = [e for e in live if e["id"] not in gone]
+        return _Resp({"eventsDeleted": len(gone)})
+
+    ev_path = "/athlete/" + AID + "/events"
+    fake, restore = _with_fake({("GET", ev_path): lambda kw: _Resp(list(live)),
+                                ("PUT", ev_path + "/bulk-delete"): _bulk_delete})
+    try:
+        r = remove_block(AID)
+        equal("remove: dry run lists only this system's WORKOUT sessions from tomorrow",
+              [x["id"] for x in r["to_remove"]], [1, 2])
+        equal("remove: everything else is left alone and counted", r["left_alone"], 4)
+        equal("remove: dry run deleted nothing", fake.writes(), [])
+        equal("remove: today is refused as a start date",
+              remove_block(AID, from_date=date.today().isoformat()).get("ok"), False)
+        remove_block(AID, dry_run=False, confirm=False)
+        equal("remove: one open gate is not enough", fake.writes(), [])
+        r = remove_block(AID, dry_run=False, confirm=True)
+        equal("remove: live call deletes exactly the two uploaded sessions, by id",
+              [c[2]["json"] for c in fake.writes()], [[{"id": 1}, {"id": 2}]])
+        equal("remove: the calendar is re-read and the delete verified",
+              (r["verified"], r["still_on_calendar"]), (True, []))
+        equal("remove: the athlete's own, another athlete's, race and today survive",
+              sorted(e["id"] for e in live), [3, 4, 5, 6])
+        n = len(fake.writes())
+        r = remove_block(AID, dry_run=False, confirm=True)
+        equal("remove: nothing left to remove -> no delete call",
+              (r["count"], len(fake.writes())), (0, n))
+    finally:
+        restore()
+
+
 # ══════════════════════════════════════════════════════════════════
 # tools_write — save_continuity / save_race_result / save_block
 # ══════════════════════════════════════════════════════════════════
@@ -805,7 +985,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):

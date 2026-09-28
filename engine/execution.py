@@ -110,6 +110,7 @@ def analyze(data, days=28, as_of=None):
             "name": e.get("name"),
             "category": e.get("category"),
             "event_id": e.get("id"),
+            "activity_id": paired[0].get("id") if paired else None,
             "status": status,
             "planned_load": _num(e.get("planned_load")),
             "planned_min": _minutes(e.get("planned_time")),
@@ -128,6 +129,7 @@ def analyze(data, days=28, as_of=None):
 
     extras = [{
         "date": a["date"], "name": a.get("name"), "type": a.get("type"),
+        "activity_id": a.get("id"),
         "load": _num(a.get("training_load")),
         "minutes": _minutes(a.get("moving_time")),
     } for a in sorted(acts, key=lambda x: x["date"])
@@ -217,13 +219,14 @@ def render(result):
                  f"{_v(t['mean_rpe'])} ({t['sessions_with_rpe']} sessions rated) · "
                  f"mean feel {_v(t['mean_feel'])} ({t['sessions_with_feel']} rated)")
         L.append("")
-        L.append("| Date | Session | Status | Load plan→done | Min plan→done | Compl. | RPE | Feel |")
-        L.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
+        L.append("| Date | Session | Status | Load plan→done | Min plan→done | Compl. | RPE | Feel | Activity id |")
+        L.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
         for r in result["sessions"]:
             L.append(f"| {r['date']} | {r['name'] or '—'} | {r['status']} | "
                      f"{_v(r['planned_load'])}→{_v(r['actual_load'])} | "
                      f"{_v(r['planned_min'])}→{_v(r['actual_min'])} | "
-                     f"{_v(r['compliance'], '%')} | {_v(r['rpe'])} | {_v(r['feel'])} |")
+                     f"{_v(r['compliance'], '%')} | {_v(r['rpe'])} | {_v(r['feel'])} | "
+                     f"{r['activity_id'] or '—'} |")
     if result["extra_activities"]:
         L.append("")
         L.append(f"Activities not paired to any plan: {t['extra_activities']} "
