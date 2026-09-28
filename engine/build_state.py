@@ -41,6 +41,7 @@ import longitudinal  # noqa: E402
 import power_profile  # noqa: E402
 import architecture  # noqa: E402
 import heads_up  # noqa: E402
+import load_metrics  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -233,10 +234,14 @@ def durability_signal(data):
 # STATE RESOLUTION
 # ══════════════════════════════════════════════════════════════════
 
-def resolve_state(pmc, hrv, acwr, durability, thresholds):
+def resolve_state(pmc, hrv, acwr, durability, thresholds, monotony=None):
     """TSB governs. HRV is secondary and applies only where TSB is absent.
     ACWR acts as a validation gate that can downgrade a severe reading.
-    Every step is recorded in `reasoning` so the conclusion can be audited."""
+    Every step is recorded in `reasoning` so the conclusion can be audited.
+
+    `monotony` (Foster monotony & strain, load_metrics.py) never governs or
+    gates anything here -- it only earns a visibility flag, the same way an
+    out-of-range ACWR does, when it crosses its own configured risk line."""
     sr = thresholds["state_resolution"]
     reasoning = []
 
@@ -301,6 +306,15 @@ def resolve_state(pmc, hrv, acwr, durability, thresholds):
         elif acwr["ratio"] < safe["min"]:
             flags.append(f"ACWR {acwr['ratio']} below the safe floor {safe['min']} "
                          f"— recent load is detraining relative to the base")
+
+    if monotony and monotony.get("available") and monotony.get("verdict") == "at_risk":
+        if monotony.get("monotony") is not None:
+            flags.append(f"Load monotony {monotony['monotony']} (7d) is above Foster's "
+                         f"risk line of {monotony['risk_threshold']} — strain "
+                         f"{monotony['strain']}, weekly load {monotony['weekly_load']}")
+        else:
+            flags.append(f"Load monotony (7d): {monotony['note']} — "
+                         f"weekly load {monotony['weekly_load']}")
 
     operational = ("recovery_priority"
                    if state in ("maladaptation_risk", "functional_overreach")
@@ -548,7 +562,7 @@ def taper_check(projection, goals, thresholds, pmc=None):
 # ══════════════════════════════════════════════════════════════════
 
 def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
-                    heads=None):
+                    heads=None, monotony=None, neuro=None):
     name = (data.get("profile") or {}).get("name") or aid
     L = []
     L.append("# STATE — AUTHORITATIVE")
@@ -607,6 +621,24 @@ def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, ta
                  f"{durability['sessions']} sessions | {durability['source']} |")
     else:
         L.append(f"| Durability | not available — {durability.get('reason')} | — |")
+    if monotony:
+        if monotony["monotony"] is not None:
+            L.append(f"| Load monotony / strain (7d) | {monotony['monotony']} "
+                     f"({monotony['verdict']}) / {monotony['strain']} — weekly load "
+                     f"{monotony['weekly_load']} | {monotony['source']} |")
+        else:
+            L.append(f"| Load monotony / strain (7d) | {monotony['verdict']} — "
+                     f"{monotony['note']}; weekly load {monotony['weekly_load']} "
+                     f"| {monotony['source']} |")
+    if neuro:
+        if neuro.get("available"):
+            L.append(f"| Neuromuscular density (7d) | {neuro['total_kj_7d']} kJ above "
+                     f"FTP — {neuro['days_over_threshold']} of {neuro['days_with_data']} "
+                     f"logged day(s) over {neuro['day_kj_threshold']} kJ "
+                     f"| {neuro['source']} |")
+        else:
+            L.append(f"| Neuromuscular density (7d) | not available — "
+                     f"{neuro['reason']} | — |")
     L.append("")
 
     if projection:
@@ -653,7 +685,9 @@ def build(aid, thresholds, quiet=False):
     hrv = hrv_signal(data, thresholds)
     acwr = acwr_signal(data)
     durability = durability_signal(data)
-    state = resolve_state(pmc, hrv, acwr, durability, thresholds)
+    monotony = load_metrics.monotony_signal(data, thresholds)
+    neuro = load_metrics.neuromuscular_density_signal(data, thresholds)
+    state = resolve_state(pmc, hrv, acwr, durability, thresholds, monotony)
     projection = project_pmc(pmc, data.get("events", []), data.get("activities", []))
     goals = load_declared_goals(aid)
     taper = taper_check(projection, goals, thresholds, pmc)
@@ -682,7 +716,8 @@ def build(aid, thresholds, quiet=False):
         "resolved_at": date.today().isoformat(),
         "heads_up": heads,
         "state": state,
-        "signals": {"pmc": pmc, "hrv": hrv, "acwr": acwr, "durability": durability},
+        "signals": {"pmc": pmc, "hrv": hrv, "acwr": acwr, "durability": durability,
+                   "monotony": monotony, "neuromuscular_density": neuro},
         "projection": projection,
         "taper": taper,
         "longitudinal": longit,
@@ -693,7 +728,7 @@ def build(aid, thresholds, quiet=False):
     dest = os.path.join(DATA, str(aid))
     os.makedirs(dest, exist_ok=True)
     md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
-                         heads)
+                         heads, monotony, neuro)
     md = md.rstrip() + "\n\n" + longitudinal.render(longit)
     if pp:
         md = md.rstrip() + "\n\n" + power_profile.render(pp)

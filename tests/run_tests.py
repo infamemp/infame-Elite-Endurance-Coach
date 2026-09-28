@@ -1065,6 +1065,78 @@ def unit_tests():
           hu.analyze(hu_data(wellness=half), "X", hu_cfg, True, today)
           ["optional_data"]["hrv_pct"], 50)
 
+    # ── load_metrics: Foster monotony & strain (M2), never a requirement ──
+    import load_metrics as lm
+
+    varied = lm.week_monotony_strain([20, 60, 10, 70, 30, 80, 0])
+    equal("week_monotony_strain: ordinary week has a numeric monotony",
+          varied["monotony"], 1.33)
+    equal("week_monotony_strain: strain is weekly load times monotony",
+          varied["strain"], round(varied["weekly_load"] * varied["monotony"], 1))
+    equal("week_monotony_strain: ordinary week has no pre-set verdict",
+          varied["verdict"], None)
+    equal("verdict_for: below the risk threshold is normal",
+          lm.verdict_for(varied, 2.0), "normal")
+    equal("verdict_for: above the risk threshold is at_risk",
+          lm.verdict_for(varied, 0.5), "at_risk")
+
+    all_zero = lm.week_monotony_strain([0, 0, 0, 0, 0, 0, 0])
+    equal("week_monotony_strain: an all-zero week has no monotony number",
+          all_zero["monotony"], None)
+    equal("week_monotony_strain: an all-zero week is 'no_load', not a risk",
+          all_zero["verdict"], "no_load")
+
+    flat = lm.week_monotony_strain([50, 50, 50, 50, 50, 50, 50])
+    equal("week_monotony_strain: identical nonzero load has no monotony number",
+          flat["monotony"], None)
+    check("week_monotony_strain: identical nonzero load is at_risk directly",
+          flat["verdict"] == "at_risk")
+    equal("verdict_for: a pre-set verdict is never re-derived from monotony",
+          lm.verdict_for(flat, 2.0), "at_risk")
+
+    thresholds_lm = {"load_monotony": {"risk_threshold": 2.0},
+                     "neuromuscular_density": {"day_kj_threshold": 20}}
+
+    padded_acts = [{"date": (today - timedelta(days=1)).isoformat(),
+                    "training_load": 40},
+                   {"date": (today - timedelta(days=4)).isoformat(),
+                    "training_load": 40}]
+    sig = lm.monotony_signal({"activities": padded_acts}, thresholds_lm, today)
+    check("monotony_signal: always available, days with nothing logged pad to 0",
+          sig["available"] is True)
+    equal("monotony_signal: weekly load only counts the two real days",
+          sig["weekly_load"], 80.0)
+    equal("monotony_signal: normal week stays under the risk threshold",
+          sig["verdict"], "normal")
+
+    no_acts_sig = lm.monotony_signal({"activities": []}, thresholds_lm, today)
+    equal("monotony_signal: a week with nothing logged is 'no_load', not a risk",
+          no_acts_sig["verdict"], "no_load")
+
+    # ── load_metrics: neuromuscular / high-intensity density (M3) ─────────
+    nm_acts = [
+        {"date": (today - timedelta(days=1)).isoformat(), "joules_above_ftp": 25000},
+        {"date": (today - timedelta(days=2)).isoformat(), "joules_above_ftp": 5000},
+        # No power on this day (e.g. a run) -- must not read as a zero.
+        {"date": (today - timedelta(days=3)).isoformat(), "type": "Run"},
+    ]
+    nd = lm.neuromuscular_density_signal({"activities": nm_acts}, thresholds_lm, today)
+    check("neuromuscular_density_signal: available once any day carries the field",
+          nd["available"] is True)
+    equal("neuromuscular_density_signal: totals only the days with the field",
+          nd["total_kj_7d"], 30.0)
+    equal("neuromuscular_density_signal: counts days over day_kj_threshold",
+          nd["days_over_threshold"], 1)
+    equal("neuromuscular_density_signal: days_with_data excludes the no-power day",
+          nd["days_with_data"], 2)
+
+    nd_unavailable = lm.neuromuscular_density_signal(
+        {"activities": [{"date": today.isoformat(), "type": "Run"}]},
+        thresholds_lm, today)
+    check("neuromuscular_density_signal: not available with no field anywhere "
+          "in the window",
+          nd_unavailable["available"] is False)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture
@@ -1372,6 +1444,18 @@ BLOCK_CASES = [
     # "--" as methodology, and a race session titled with a bare distance line.
     # None of this should require manual cleanup before validating.
     ("vianey_raw_unfixed.md", 0, []),
+    # Foster monotony & strain on the planned week (CHK-LOAD-MONOTONY) --
+    # never blocks, so want_code stays 0 in every case below.
+    # A full 7-day week, identical load every day: the zero-variance case,
+    # flagged directly as "at_risk" (see load_metrics.week_monotony_strain).
+    ("load_monotony_flat.md", 0, ["CHK-LOAD-MONOTONY"]),
+    # A full 7-day week with real day-to-day variation: must stay clean.
+    ("load_monotony_varied.md", 0, [], ["CHK-LOAD-MONOTONY"]),
+    # A block covering only Wed-Sun of a week whose Mon/Tue already happened
+    # for real (see the data/_test_monoblend/ fixture block_tests() writes
+    # below) -- "using each session's estimated TSS plus the last few real
+    # days." The blend of real + planned pushes this week over the line.
+    ("load_monotony_blend.md", 0, ["CHK-LOAD-MONOTONY"]),
 ]
 
 
@@ -1380,33 +1464,58 @@ def block_tests():
     import tempfile
     script = os.path.join(ROOT, "verify", "validate_block.py")
     tmpdir = tempfile.mkdtemp(prefix="infame_blocks_")
-    for fname, want_code, want_errors in BLOCK_CASES:
-        src = os.path.join(BLOCKS, fname)
-        if not os.path.exists(src):
-            FAILED.append((f"block: {fname}", "fixture not found"))
-            continue
-        # The validator rewrites the file it checks when it auto-corrects
-        # something. Validate a temporary copy, so a fixture that exists to
-        # test those corrections is never repaired on disk by its own test.
-        path = os.path.join(tmpdir, fname)
-        shutil.copy2(src, path)
-        # On Windows a captured subprocess inherits the locale encoding (cp1252),
-        # not UTF-8, and the validator prints em dashes and middle dots. Without
-        # this the child crashes on encoding rather than on anything real.
-        env = dict(os.environ, PYTHONIOENCODING="utf-8")
-        proc = subprocess.run([sys.executable, script, path, "--quiet"],
-                              capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", env=env)
-        out = proc.stdout + proc.stderr
-        if proc.returncode not in (0, 1):
-            FAILED.append((f"block: {fname} crashed",
-                           f"exit {proc.returncode}\n{out.strip()[:500]}"))
-            continue
-        equal(f"block: {fname} exit code", proc.returncode, want_code)
-        for code in want_errors:
-            check(f"block: {fname} reports {code}", code in out,
-                  "not found in validator output")
-    shutil.rmtree(tmpdir, ignore_errors=True)
+
+    # Real history for load_monotony_blend.md's athlete: Mon 24-Aug-2026 and
+    # Tue 25-Aug-2026 already happened before the block (Wed-Sun) was ever
+    # written. fetched_at is irrelevant here since both days carry an
+    # explicit activity, not a confirmed-empty gap.
+    blend_dir = os.path.join(ROOT, "data", "_test_monoblend")
+    os.makedirs(blend_dir, exist_ok=True)
+    with open(os.path.join(blend_dir, "athlete_data.json"), "w", encoding="utf-8") as f:
+        json.dump({
+            "fetched_at": "2026-08-31",
+            "activities": [
+                {"date": "2026-08-24", "training_load": 45},
+                {"date": "2026-08-25", "training_load": 55},
+            ],
+        }, f)
+
+    try:
+        for case in BLOCK_CASES:
+            fname, want_code, want_errors = case[:3]
+            not_errors = case[3] if len(case) > 3 else ()
+            src = os.path.join(BLOCKS, fname)
+            if not os.path.exists(src):
+                FAILED.append((f"block: {fname}", "fixture not found"))
+                continue
+            # The validator rewrites the file it checks when it auto-corrects
+            # something. Validate a temporary copy, so a fixture that exists to
+            # test those corrections is never repaired on disk by its own test.
+            path = os.path.join(tmpdir, fname)
+            shutil.copy2(src, path)
+            # On Windows a captured subprocess inherits the locale encoding
+            # (cp1252), not UTF-8, and the validator prints em dashes and
+            # middle dots. Without this the child crashes on encoding rather
+            # than on anything real.
+            env = dict(os.environ, PYTHONIOENCODING="utf-8")
+            proc = subprocess.run([sys.executable, script, path, "--quiet"],
+                                  capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", env=env)
+            out = proc.stdout + proc.stderr
+            if proc.returncode not in (0, 1):
+                FAILED.append((f"block: {fname} crashed",
+                               f"exit {proc.returncode}\n{out.strip()[:500]}"))
+                continue
+            equal(f"block: {fname} exit code", proc.returncode, want_code)
+            for code in want_errors:
+                check(f"block: {fname} reports {code}", code in out,
+                      "not found in validator output")
+            for code in not_errors:
+                check(f"block: {fname} does not report {code}", code not in out,
+                      "unexpectedly found in validator output")
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        shutil.rmtree(blend_dir, ignore_errors=True)
 
 
 # ══════════════════════════════════════════════════════════════════

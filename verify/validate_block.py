@@ -38,10 +38,12 @@ Version: 2.5
 """
 
 import argparse
+import json
 import os
 import re
 import sys
 import unicodedata
+from datetime import date, datetime, timedelta
 
 try:
     import yaml
@@ -53,6 +55,9 @@ CONFIG = os.path.join(ROOT, "config")
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 import zone_model  # noqa: E402  — resolves native author files (v7.2)
+if os.path.join(ROOT, "engine") not in sys.path:
+    sys.path.insert(0, os.path.join(ROOT, "engine"))
+import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared with build_state.py
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -623,6 +628,102 @@ def load_profile(athlete_id):
         return yaml.safe_load(f) or {}
 
 
+# ══════════════════════════════════════════════════════════════════
+# LOAD MONOTONY — CHK-LOAD-MONOTONY, a warning only, never a hard-
+# constraint failure. "Catch monotony before upload, not after": Foster
+# monotony & strain (engine/load_metrics.py) computed on the planned week,
+# filling in the days the block itself does not cover with the athlete's
+# real recent history. See week_monotony_strain() there for the formula.
+# ══════════════════════════════════════════════════════════════════
+
+def parse_header_date(s):
+    """[Date] is DD-MM-YYYY (the prompt's session-header template). Returns
+    None rather than guessing when it's missing or malformed."""
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s.strip(), "%d-%m-%Y").date()
+    except ValueError:
+        return None
+
+
+def load_recent_activity_loads(athlete_id):
+    """Real daily training load from data/<id>/athlete_data.json -- the same
+    fetch build_state.py reads. Returns (loads, fetched_at): `loads` maps
+    each date with at least one logged activity to its total training load,
+    and `fetched_at` is the date that fetch was taken. A date the fetch
+    didn't reach is not the same as a confirmed-empty day, so the caller
+    only trusts a day as a real zero when it falls on or before fetched_at
+    (and within its window) -- (None, None) when there is nothing fetched
+    for this athlete at all."""
+    if not athlete_id:
+        return None, None
+    path = os.path.join(ROOT, "data", str(athlete_id), "athlete_data.json")
+    if not os.path.exists(path):
+        return None, None
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None, None
+
+    fetched_at = None
+    raw = data.get("fetched_at")
+    if raw:
+        try:
+            fetched_at = datetime.strptime(str(raw)[:10], "%Y-%m-%d").date()
+        except ValueError:
+            fetched_at = None
+
+    loads = {}
+    for a in data.get("activities") or []:
+        ds = a.get("date")
+        if not ds:
+            continue
+        try:
+            ad = datetime.strptime(str(ds)[:10], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        loads[ad] = loads.get(ad, 0.0) + (a.get("training_load") or 0)
+    return loads, fetched_at
+
+
+def fill_planned_week(days, athlete_id, today, real_cache):
+    """Complete one calendar week (Monday..Sunday) from `days` (the dates a
+    block actually declares, mapped to their computed load) plus real
+    history for the rest of it. A day at or after `today` with no session
+    in the block is not yet planned -- a real zero for monotony purposes.
+    A day before `today` with no session is filled from the athlete's real
+    activity data when the fetch demonstrably covers it; otherwise this
+    week cannot be completed honestly, and returns None rather than
+    guessing.
+
+    `real_cache` is a {athlete_id: (loads, fetched_at)} dict the caller
+    keeps across calls, so one athlete's data file is read once per run,
+    not once per week."""
+    any_date = next(iter(days))
+    monday = any_date - timedelta(days=any_date.weekday())
+    week_dates = [monday + timedelta(days=i) for i in range(7)]
+
+    if athlete_id not in real_cache:
+        real_cache[athlete_id] = load_recent_activity_loads(athlete_id)
+    real, fetched_at = real_cache[athlete_id]
+
+    loads = []
+    for wd in week_dates:
+        if wd in days:
+            loads.append(days[wd])
+        elif wd >= today:
+            loads.append(0.0)
+        elif real and wd in real:
+            loads.append(real[wd])
+        elif fetched_at and wd <= fetched_at and wd >= fetched_at - timedelta(days=170):
+            loads.append(0.0)  # confirmed by the fetch: nothing logged that day
+        else:
+            return None, None  # can't complete this week honestly -- skip it
+    return week_dates, loads
+
+
 def _zone_rpe(zone):
     """Numeric RPE values of one author zone, as a set (empty if the zone has
     only a label, e.g. Coggan's 'Maximal')."""
@@ -1002,6 +1103,22 @@ def main():
     # Tempo-and-above, where repetition without progression is objectively
     # checkable, is verified here.
     mono_last = {}
+    # Foster monotony & strain on the PLANNED WEEK (CHK-LOAD-MONOTONY, see
+    # below) -- distinct from CHK-MONO's architecture-repeat check above.
+    # week_days: {(athlete_id, iso_year, iso_week): {date: load}}, filled in
+    # per session below. week_incomplete marks a group that hit a session
+    # this validator could not cost -- never guessed, the whole week's check
+    # is skipped rather than built on a hole.
+    today = date.today()
+    week_days = {}
+    week_incomplete = set()
+
+    def mono_key(hdr):
+        dt = parse_header_date(hdr.get("Date"))
+        if not dt:
+            return None, None
+        return (hdr.get("Athlete ID") or args.athlete, *dt.isocalendar()[:2]), dt
+
     for n, (header, code) in enumerate(sessions, 1):
         category = header.get("Category", "Training")
         # A Rest or Travel day carries no exercise block by design -- it has
@@ -1014,6 +1131,9 @@ def main():
             print(f"── Session {n}: {label}")
             print(f"   {category} day — no exercise block, nothing to validate")
             print("   clean\n")
+            mono_gkey, mono_dt = mono_key(header)
+            if mono_gkey:
+                week_days.setdefault(mono_gkey, {})[mono_dt] = 0.0
             continue
 
         methodology = args.methodology or header.get("Methodology")
@@ -1024,6 +1144,9 @@ def main():
             print(f"── Session {n}: {label}")
             print(f"   {category} day — methodology/discipline not applicable, skipped")
             print("   clean\n")
+            mono_gkey, mono_dt = mono_key(header)
+            if mono_gkey:
+                week_days.setdefault(mono_gkey, {})[mono_dt] = 0.0
             continue
         if not methodology or not discipline:
             missing = []
@@ -1043,6 +1166,9 @@ def main():
                 print("   Add the field(s) to the session header, or pass "
                       "--methodology / --discipline for a raw block.\n")
             failed = True
+            mono_gkey, _ = mono_key(header)
+            if mono_gkey:
+                week_incomplete.add(mono_gkey)
             continue
 
         try:
@@ -1056,6 +1182,9 @@ def main():
             # failure and keep validating the rest of the block.
             print(f"── Session {n}: cannot validate — {e}")
             failed = True
+            mono_gkey, _ = mono_key(header)
+            if mono_gkey:
+                week_incomplete.add(mono_gkey)
             continue
         label = (f"Week {header.get('Week', '?')} · {header.get('Date', '?')} · "
                  f"{header.get('Focus', '')}".strip(" ·") if header else "block")
@@ -1080,6 +1209,20 @@ def main():
         e, w = check_header(header)
         errors += e
         warns += w
+
+        # Load tracking for the planned-week Foster monotony/strain check
+        # (CHK-LOAD-MONOTONY, printed after every session is processed).
+        # Independent of the TSS-divergence block below, which only costs
+        # Category == "Training" -- a race's own load counts here too, since
+        # leaving it out would understate exactly the days that make a taper
+        # week what it is.
+        mono_gkey, mono_dt = mono_key(header)
+        if mono_gkey:
+            if steps and category in ("Training", "Race"):
+                mono_load, _, _ = compute_tss(steps, author, th, tssc)
+            else:
+                mono_load = 0.0
+            week_days.setdefault(mono_gkey, {})[mono_dt] = mono_load
 
         # CHK-MONO — never blocks. Compared against the last non-exempt
         # session of the same class seen so far in this file; exempt
@@ -1185,6 +1328,43 @@ def main():
             print("   clean")
         if errors:
             failed = True
+        print()
+
+    # ── Load pattern (planned week) — CHK-LOAD-MONOTONY, never blocks ────
+    # Foster monotony & strain per calendar week found in this file, filled
+    # in with the athlete's real recent history where the block itself
+    # doesn't cover a day. Requires a known athlete ([Athlete ID] or
+    # --athlete) and a complete, honestly-fillable week; anything else is
+    # skipped in silence rather than reported on a guess.
+    mono_cfg = th.get("load_monotony") or {"risk_threshold": 2.0}
+    real_cache = {}
+    reported_any = False
+    for gkey in sorted(week_days, key=lambda k: (str(k[0] or ""), k[1], k[2])):
+        athlete_id = gkey[0]
+        if not athlete_id or gkey in week_incomplete:
+            continue
+        week_dates, loads = fill_planned_week(week_days[gkey], athlete_id, today, real_cache)
+        if week_dates is None:
+            continue
+        if not reported_any:
+            print("── Load pattern (planned week)")
+            reported_any = True
+        result = load_metrics.week_monotony_strain(loads)
+        verdict = load_metrics.verdict_for(result, mono_cfg["risk_threshold"])
+        span = f"{week_dates[0].isoformat()} to {week_dates[-1].isoformat()}"
+        if result["monotony"] is None:
+            print(f"   athlete {athlete_id}, week of {span}: {result['note']} "
+                  f"(weekly load {result['weekly_load']})")
+        else:
+            print(f"   athlete {athlete_id}, week of {span}: monotony "
+                  f"{result['monotony']} ({verdict}) · strain {result['strain']} "
+                  f"· weekly load {result['weekly_load']}")
+        if verdict == "at_risk":
+            print(f"   WARN [CHK-LOAD-MONOTONY] L-: athlete {athlete_id}, week of "
+                  f"{span} is above Foster's risk line of "
+                  f"{mono_cfg['risk_threshold']} — a prompt for coaching "
+                  f"judgement, not a block")
+    if reported_any:
         print()
 
     if failed:

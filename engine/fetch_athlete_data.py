@@ -281,6 +281,11 @@ def fetch_activities(aid, days):
         ("icu_ftp", "ftp_at_time"), ("average_speed", "average_speed"),
         ("total_elevation_gain", "elevation_gain"),
         ("average_temp", "average_temp"),
+        # High-intensity / neuromuscular load density (M3, engine/load_metrics.py).
+        # Not populated for a workout prescribed by %FTP rather than absolute
+        # watts, or for a non-power sport -- reported as unavailable there,
+        # never guessed.
+        ("icu_joules_above_ftp", "joules_above_ftp"),
     ]
 
     out = []

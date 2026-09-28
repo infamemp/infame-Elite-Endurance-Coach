@@ -246,6 +246,20 @@
       "recent_mean": 36,
       "source": "wellness HRV, 7d mean vs 53d median"
     },
+    "monotony": {
+      "available": true,
+      "monotony": 0.63,
+      "note": null,
+      "risk_threshold": 2.0,
+      "source": "activity training_load, trailing 7 days, padded with 0",
+      "strain": 119.7,
+      "verdict": "normal",
+      "weekly_load": 190.0
+    },
+    "neuromuscular_density": {
+      "available": false,
+      "reason": "no icu_joules_above_ftp on any activity in the last 7 days — workouts prescribed by %FTP rather than absolute watts, or a non-power sport, do not populate it"
+    },
     "pmc": {
       "atl": 83.0,
       "ctl": 66.0,

@@ -711,6 +711,34 @@ heads_up:
     running: [Run, TrailRun, VirtualRun]
 
 # ══════════════════════════════════════════════════════════════════
+# LOAD MONOTONY & STRAIN (engine/load_metrics.py) — Foster 2001, M2
+# ══════════════════════════════════════════════════════════════════
+# monotony = mean(daily load) / stdev(daily load) over 7 days; strain =
+# weekly load total * monotony. Informational only, never a requirement:
+# reported wherever it can be computed, never blocking anything.
+#   - Past days: build_state.py's own #STATE signal, over the trailing
+#     real 7 days (a day with nothing logged counts as a real zero).
+#   - Planned week: verify/validate_block.py warns (never blocks) before
+#     upload, using the block's own estimated TSS for the days it covers
+#     and the athlete's real recent days for the rest of that same week.
+load_monotony:
+  risk_threshold: 2.0
+  # Foster's commonly cited risk line. Above this, warn -- never block.
+
+# ══════════════════════════════════════════════════════════════════
+# NEUROMUSCULAR / HIGH-INTENSITY DENSITY (engine/load_metrics.py) — M3
+# ══════════════════════════════════════════════════════════════════
+# TSS is built from an averaged intensity factor and undercounts short
+# supra-threshold efforts (sprints, attacks) -- this reads Intervals.icu's
+# own neuromuscular field instead of inferring it from TSS. Reported over
+# the trailing 7 days wherever the field is populated; not available for a
+# workout prescribed by %FTP rather than absolute watts, or a non-power
+# sport. Purely informational.
+neuromuscular_density:
+  day_kj_threshold: 20
+  # A day's kJ above FTP past this line counts toward "days over threshold".
+
+# ══════════════════════════════════════════════════════════════════
 # MCP SERVER
 # ══════════════════════════════════════════════════════════════════
 # The MCP server's tools call the same engine functions coach.py does.
