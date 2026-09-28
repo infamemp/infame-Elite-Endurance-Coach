@@ -109,7 +109,8 @@ def roster_overview() -> dict:
     athlete's saved #STATE (data/<id>/state.json) plus out/roster.md for the
     athletes on the account that were never prepared. No network call, and no
     figure computed here that state.json does not already carry — the only
-    arithmetic is "days since" against today's date. Each row says how old its
+    arithmetic is days-to-race against today and idle days counted to the
+    date of the last prep. Each row says how old its
     numbers are (`state_age_days`, `data_age_hours`); an athlete's row is only
     as current as the last time get_athlete_state ran for them."""
     ensure_import_paths()

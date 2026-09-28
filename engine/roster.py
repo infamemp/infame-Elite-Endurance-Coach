@@ -13,7 +13,14 @@ athlete with something to read is not buried in a list of seventeen.
 
 An athlete is only as current as the last time the engine prepared them.
 Every row says how old its numbers are, and an athlete on the account that
-was never prepared is listed as such instead of being left out.
+was never prepared is listed as such instead of being left out. Idle days are
+counted to the date of that prep, not to today: on data 20 days old, "days
+since the last activity as of today" would only measure the age of the data.
+
+An athlete the engine has put in a recovery-priority state (functional
+overreach, maladaptation risk) counts as one flagged item even when no
+individual flag was raised, so they are never ranked below athletes with
+nothing to read.
 """
 
 from __future__ import annotations
@@ -54,13 +61,19 @@ def _roster_names(out_dir):
 def _row(aid, state, adata, as_of, now_ts, data_path):
     heads = state.get("heads_up") or {}
     checks = [c.get("text") for c in heads.get("checks") or []]
-    flags = list((state.get("state") or {}).get("flags") or [])
+    st = state.get("state") or {}
+    flags = list(st.get("flags") or [])
+    if st.get("operational_state") == "recovery_priority":
+        flags.insert(0, f"State: {st.get('load_recovery_state')} — the engine has "
+                        f"set recovery as the priority")
     pmc = (state.get("signals") or {}).get("pmc") or {}
     taper = state.get("taper") or {}
     profile = (adata or {}).get("profile") or {}
 
     acts = [a for a in (adata or {}).get("activities") or [] if a.get("date")]
-    idle = (as_of - max(_d(a["date"]) for a in acts)).days if acts else None
+    fetched_at = (adata or {}).get("fetched_at")
+    prep_date = _d(fetched_at) if fetched_at else as_of
+    idle = (prep_date - max(_d(a["date"]) for a in acts)).days if acts else None
 
     race = None
     if taper.get("applicable") and taper.get("date"):
@@ -81,7 +94,7 @@ def _row(aid, state, adata, as_of, now_ts, data_path):
         "operational_state": (state.get("state") or {}).get("operational_state"),
         "tsb": pmc.get("tsb"),
         "ctl": pmc.get("ctl"),
-        "days_since_last_activity": idle,
+        "idle_days_at_prep": idle,
         "next_a_race": race,
         "flags": flags,
         "checks": checks,
@@ -131,7 +144,7 @@ def render(rows, as_of=None):
              f"nothing here was fetched just now. Ordered by items already "
              f"flagged, most first.")
     L.append("")
-    L.append("| Athlete | ID | State | TSB | CTL | Idle days | Next A race | "
+    L.append("| Athlete | ID | State | TSB | CTL | Idle days (at prep) | Next A race | "
              "Flags | Checks | State age |")
     L.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
     for r in rows:
@@ -143,7 +156,7 @@ def render(rows, as_of=None):
         age = f"{r['state_age_days']}d" if r["state_age_days"] is not None else "—"
         L.append(f"| {r['name']} | {r['athlete_id']} | {_v(r['load_recovery_state'])} | "
                  f"{_v(r['tsb'], 'g')} | {_v(r['ctl'], 'g')} | "
-                 f"{_v(r['days_since_last_activity'])} | {race_txt} | "
+                 f"{_v(r['idle_days_at_prep'])} | {race_txt} | "
                  f"{len(r['flags'])} | {len(r['checks'])} | {age} |")
     with_items = [r for r in prepared if r["attention_items"]]
     if with_items:

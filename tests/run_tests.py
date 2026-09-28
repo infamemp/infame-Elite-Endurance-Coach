@@ -1168,6 +1168,15 @@ def unit_tests():
                           "operational_state": "load_accepting"},
                 "signals": {"pmc": {"tsb": 8, "ctl": 60}},
                 "taper": {"applicable": False}}, "Zed Calm")
+    _put("i4", {"resolved_at": dago(10), "heads_up": {"checks": []},
+                "state": {"flags": [], "load_recovery_state": "maladaptation_risk",
+                          "operational_state": "recovery_priority"},
+                "signals": {"pmc": {"tsb": -33, "ctl": 40}},
+                "taper": {"applicable": False}}, "Vic Recovery")
+    _d4 = os.path.join(_dd, "i4")
+    json.dump({"profile": {"name": "Vic Recovery"}, "fetched_at": dago(10),
+               "activities": [{"date": dago(12)}]},
+              open(os.path.join(_d4, "athlete_data.json"), "w"))
     _put("i2", {"resolved_at": dago(0), "heads_up": {"checks": [{"text": "no FTP"}]},
                 "state": {"flags": ["ACWR high", "Durability degraded"],
                           "load_recovery_state": "functional_overreach",
@@ -1179,24 +1188,29 @@ def unit_tests():
     open(os.path.join(_od, "roster.md"), "w").write(
         "# ROSTER\n\n| Name | Athlete ID | Last fetched |\n| :--- | :--- | :--- |\n"
         "| Ana Flagged | i2 | 2026-01-01 |\n| Zed Calm | i1 | 2026-01-01 |\n"
-        "| Never Prepped | i3 | never fetched |\n")
+        "| Never Prepped | i3 | never fetched |\n| Vic Recovery | i4 | 2026-01-01 |\n")
     rrows = ro.build(_dd, _od, as_of=today)
-    equal("roster: most-flagged athlete first, then calm, then unprepared",
-          [r["athlete_id"] for r in rrows], ["i2", "i1", "i3"])
+    equal("roster: most-flagged first, recovery-priority above calm, unprepared last",
+          [r["athlete_id"] for r in rrows], ["i2", "i4", "i1", "i3"])
     equal("roster: an athlete on the account with no state is listed as not prepared",
-          rrows[2]["prepared"], False)
-    equal("roster: attention items = engine flags + heads-up checks",
-          rrows[0]["attention_items"], 3)
+          rrows[3]["prepared"], False)
+    equal("roster: attention items = engine flags + recovery-priority state + checks",
+          rrows[0]["attention_items"], 4)
+    equal("roster: recovery priority counts as flagged even with no individual flag",
+          (rrows[1]["athlete_id"], rrows[1]["attention_items"]), ("i4", 1))
+    equal("roster: idle days are counted to the date of the prep, not to today",
+          rrows[1]["idle_days_at_prep"], 2)
     equal("roster: days to the A race is computed against today, not stored",
           rrows[0]["next_a_race"]["days_out"], 20)
-    equal("roster: days since last activity from the athlete's own data",
-          rrows[1]["days_since_last_activity"], 3)
+    equal("roster: idle days from the athlete's own data (no fetch date -> today)",
+          rrows[2]["idle_days_at_prep"], 3)
     equal("roster: TSB is copied from state.json, not recomputed",
-          (rrows[0]["tsb"], rrows[1]["tsb"]), (-30, 8))
-    equal("roster: a row says how old its state is", rrows[1]["state_age_days"], 2)
+          (rrows[0]["tsb"], rrows[2]["tsb"]), (-30, 8))
+    equal("roster: a row says how old its state is", rrows[2]["state_age_days"], 2)
     check("roster: render lists every athlete and what was flagged",
           all(n in ro.render(rrows, today) for n in ("Ana Flagged", "Zed Calm",
-                                                    "Never Prepped", "ACWR high")))
+                                                    "Never Prepped", "ACWR high",
+                                                    "Vic Recovery")))
     equal("roster: an empty data dir and no roster.md gives no rows",
           ro.build(os.path.join(_rd, "nope"), os.path.join(_rd, "nope2")), [])
     shutil.rmtree(_rd, ignore_errors=True)
