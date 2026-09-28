@@ -323,6 +323,10 @@ class _Resp:
     def json(self):
         return self._d
 
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
 
 class _FakeSession:
     """Stands in for the Intervals.icu HTTP session: every call is recorded,
@@ -977,6 +981,59 @@ def test_mcp_first_workflow():
               rr)
 
 
+def test_fatigue_curves_fetch():
+    """fetch_fatigue_curves: optional data, silent when absent, never guessed."""
+    import fetch_athlete_data as fad
+    from datetime import date, timedelta
+    today = date.today()
+    d = lambda n: (today - timedelta(days=n)).isoformat() + "T08:00:00"
+    path = f"/athlete/{AID}/activity-power-curves"
+    profile = {"sport_settings": [{"types": ["Ride"], "after_kj0": 1500, "after_kj1": 3000}]}
+
+    def by_fatigue(kw):
+        f = kw["params"].get("fatigue")
+        w = {None: [300, 250], "kj0": [270, 220], "kj1": [240, 200]}[f]
+        return _Resp({"list": [{"start_date_local": d(5), "watts": w}]})
+
+    real = fad.SESSION
+    try:
+        fad.SESSION = _FakeSession({("GET", path): by_fatigue}, fad.BASE_URL)
+        out = fad.fetch_fatigue_curves(AID, profile)
+        params = [c[2]["params"] for c in fad.SESSION.calls]
+        check("fatigue curves: one fresh call plus one per configured kJ level",
+              len(params) == 3 and [p.get("fatigue") for p in params] == [None, "kj0", "kj1"])
+        check("fatigue curves: asks for Ride at 5 and 20 minutes",
+              all(p["type"] == "Ride" and p["secs"] == "300,1200" for p in params))
+        equal("fatigue curves: kJ levels come from the sport settings",
+              out["after_kj"], {"kj0": 1500, "kj1": 3000})
+        equal("fatigue curves: best kept per level",
+              (out["best"]["fresh"]["current"]["300"]["watts"],
+               out["best"]["kj0"]["current"]["1200"]["watts"],
+               out["best"]["kj1"]["current"]["300"]["watts"]), (300, 220, 240))
+
+        fad.SESSION = _FakeSession({("GET", path): by_fatigue}, fad.BASE_URL)
+        equal("fatigue curves: no kJ threshold set -> None, no request at all",
+              (fad.fetch_fatigue_curves(AID, {"sport_settings": [{"types": ["Ride"], "ftp": 225}]}),
+               fad.SESSION.calls), (None, []))
+        equal("fatigue curves: no Ride settings -> None",
+              fad.fetch_fatigue_curves(AID, {"sport_settings": [{"types": ["Run"]}]}), None)
+
+        fad.SESSION = _FakeSession({}, fad.BASE_URL)
+        equal("fatigue curves: fresh curve unreadable -> None",
+              fad.fetch_fatigue_curves(AID, profile), None)
+
+        def kj1_fails(kw):
+            if kw["params"].get("fatigue") == "kj1":
+                return _Resp({"error": "x"}, 500)
+            return by_fatigue(kw)
+        fad.SESSION = _FakeSession({("GET", path): kj1_fails}, fad.BASE_URL)
+        out = fad.fetch_fatigue_curves(AID, profile)
+        check("fatigue curves: a failed fatigued level is left out, the rest kept",
+              "kj1" not in out["best"] and "kj0" in out["best"] and "fresh" in out["best"])
+    finally:
+        fad.SESSION = real
+
+
 def main():
     print("mcp_server — regression tests\n")
     if not MCP_AVAILABLE:
@@ -985,7 +1042,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):

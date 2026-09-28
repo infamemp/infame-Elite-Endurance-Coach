@@ -42,6 +42,7 @@ import power_profile  # noqa: E402
 import architecture  # noqa: E402
 import heads_up  # noqa: E402
 import load_metrics  # noqa: E402
+import durability_watts  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -687,6 +688,7 @@ def build(aid, thresholds, quiet=False):
     durability = durability_signal(data)
     monotony = load_metrics.monotony_signal(data, thresholds)
     neuro = load_metrics.neuromuscular_density_signal(data, thresholds)
+    dur_watts = durability_watts.analyze(data)   # None when the athlete has no kJ curves
     state = resolve_state(pmc, hrv, acwr, durability, thresholds, monotony)
     projection = project_pmc(pmc, data.get("events", []), data.get("activities", []))
     goals = load_declared_goals(aid)
@@ -717,7 +719,10 @@ def build(aid, thresholds, quiet=False):
         "heads_up": heads,
         "state": state,
         "signals": {"pmc": pmc, "hrv": hrv, "acwr": acwr, "durability": durability,
-                   "monotony": monotony, "neuromuscular_density": neuro},
+                   "monotony": monotony, "neuromuscular_density": neuro,
+                   # Only present for athletes with kJ thresholds set in
+                   # Intervals.icu; absent otherwise, never a zero.
+                   **({"durability_watts": dur_watts} if dur_watts else {})},
         "projection": projection,
         "taper": taper,
         "longitudinal": longit,
@@ -730,6 +735,8 @@ def build(aid, thresholds, quiet=False):
     md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
                          heads, monotony, neuro)
     md = md.rstrip() + "\n\n" + longitudinal.render(longit)
+    if dur_watts:
+        md = md.rstrip() + "\n\n" + durability_watts.render(dur_watts)
     if pp:
         md = md.rstrip() + "\n\n" + power_profile.render(pp)
     md = md.rstrip() + "\n\n" + architecture.render(recent_arch)

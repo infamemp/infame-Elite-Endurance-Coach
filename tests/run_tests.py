@@ -1287,6 +1287,82 @@ def unit_tests():
           "in the window",
           nd_unavailable["available"] is False)
 
+    # ── durability in watts: best 5/20 min power fresh vs after X kJ ──
+    import durability_watts as dw
+
+    def dw_row(n, w5, w20):
+        return {"start_date_local": (today - timedelta(days=n)).isoformat() + "T08:00:00",
+                "watts": [w5, w20]}
+
+    rows_dw = [dw_row(3, 300, 250), dw_row(10, 320, None), dw_row(50, 290, 240),
+               dw_row(60, 0, 235), dw_row(200, 999, 999), dw_row(-2, 999, 999)]
+    bw = dw.best_by_window(rows_dw, today)
+    equal("durability_watts: best of the current window, 5 min",
+          bw["current"]["300"], {"watts": 320, "n": 2})
+    equal("durability_watts: a duration not reached is skipped, not counted",
+          bw["current"]["1200"], {"watts": 250, "n": 1})
+    equal("durability_watts: previous window keeps its own best",
+          bw["previous"]["300"], {"watts": 290, "n": 1})
+    check("durability_watts: zero watts and dates outside the span are ignored",
+          bw["previous"]["1200"] == {"watts": 240, "n": 2}
+          and "999" not in json.dumps(bw))
+    equal("durability_watts: no rows gives empty windows",
+          dw.best_by_window([], today), {"current": {}, "previous": {}})
+
+    check("durability_watts: absent without fatigue_curves", dw.analyze({}) is None
+          and dw.render(None) == "")
+    fc_dw = {"secs": [300, 1200], "after_kj": {"kj0": 1500},
+             "windows": {"current": {"from": "a", "to": "b"},
+                         "previous": {"from": "c", "to": "d"}},
+             "best": {"fresh": {"current": {"300": {"watts": 300, "n": 5}},
+                                "previous": {"300": {"watts": 300, "n": 4}}},
+                      "kj0": {"current": {"300": {"watts": 270, "n": 2}},
+                              "previous": {"300": {"watts": 240, "n": 1}}}}}
+    an = dw.analyze({"fatigue_curves": fc_dw})
+    r0 = an["levels"]["kj0"]["rows"][0]
+    check("durability_watts: retained percentage and change in points",
+          an["available"] and r0["retained_pct_current"] == 90.0
+          and r0["retained_pct_previous"] == 80.0
+          and r0["retained_change_pts"] == 10.0)
+    check("durability_watts: a duration with no fatigued effort has no row",
+          len(an["levels"]["kj0"]["rows"]) == 1)
+    md_dw = dw.render(an)
+    check("durability_watts: render shows the table and n",
+          "## Durability in watts" in md_dw and "1500 kJ" in md_dw
+          and "(n=2)" in md_dw and "+10 pts" in md_dw)
+    no_fresh = dw.analyze({"fatigue_curves": {**fc_dw, "best": {"kj0": fc_dw["best"]["kj0"]}}})
+    check("durability_watts: unreadable fresh curve is reported, not guessed",
+          no_fresh["available"] is False and "Not available" in dw.render(no_fresh))
+    none_reached = dw.analyze({"fatigue_curves": {**fc_dw, "best": {
+        "fresh": fc_dw["best"]["fresh"], "kj0": {"current": {}, "previous": {}}}}})
+    check("durability_watts: no efforts after the kJ is reported as unavailable",
+          none_reached["available"] is False and "reason" in none_reached)
+
+    import build_state as bs_dw
+    import contextlib, io
+    src_dw = os.path.join(FIXTURES, "cyclist_building", "athlete_data.json")
+    with open(src_dw, encoding="utf-8") as f:
+        payload_dw = json.load(f)
+    dir_dw = os.path.join(ROOT, "data", "_test_durwatts")
+    os.makedirs(dir_dw, exist_ok=True)
+    th_dw, _, _ = load_cfg()
+    for label, extra in (("with", {"fatigue_curves": fc_dw}), ("without", {})):
+        with open(os.path.join(dir_dw, "athlete_data.json"), "w", encoding="utf-8") as f:
+            json.dump({**payload_dw, **extra}, f)
+        with contextlib.redirect_stdout(io.StringIO()):
+            res_dw = bs_dw.build("_test_durwatts", th_dw, quiet=True)
+        with open(os.path.join(dir_dw, "state.md"), encoding="utf-8") as f:
+            md_state = f.read()
+        if label == "with":
+            check("build_state: durability_watts signal and section present when populated",
+                  "durability_watts" in res_dw["signals"]
+                  and "## Durability in watts" in md_state)
+        else:
+            check("build_state: durability_watts absent when the athlete has no kJ curves",
+                  "durability_watts" not in res_dw["signals"]
+                  and "Durability in watts" not in md_state)
+    shutil.rmtree(dir_dw, ignore_errors=True)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture
