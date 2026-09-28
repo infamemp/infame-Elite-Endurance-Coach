@@ -19,6 +19,8 @@ that makes it safe to exist.
 | `get_athlete_state` | reads, fetches | Fetch (if stale) + resolve + return `#STATE` |
 | `get_athlete_profile` | reads, fetches | Same pattern, for `profile.md` |
 | `list_roster` | reads | `out/roster.md`, no network call |
+| `roster_overview` | reads | All athletes in one table from each `state.json` (+ `out/roster.md` for never-prepared ones); no network call |
+| `get_execution` | reads, fetches | Planned vs done via Intervals.icu's `paired_event_id`; refreshes once if the cache predates pairing |
 | `save_continuity` | writes | `out/<athlete>/continuity.md` — requires a `#SESSION ... #END` envelope |
 | `save_race_result` | writes | Appends a `#RACE_RESULT` block to `race_notes.md`, never overwrites |
 | `save_availability` | writes | `out/<athlete>/availability.md` — the head coach's stated daily maximums, returned by `get_athlete_state` |

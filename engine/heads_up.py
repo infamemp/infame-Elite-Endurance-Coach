@@ -28,6 +28,8 @@ from __future__ import annotations
 import os
 from datetime import date, datetime, timedelta
 
+import execution
+
 
 def _d(s):
     return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
@@ -109,6 +111,24 @@ def analyze(data, aid, cfg, declared_profile_exists, as_of=None):
     else:
         checks.append({"kind": "inactive",
                        "text": "No activities in the fetched window."})
+
+    # Planned sessions with no activity paired to them (engine/execution.py).
+    # "Unpaired", not "missed": skipped, or done and never paired -- only the
+    # head coach knows which. Silent when the cached data cannot say.
+    ex = execution.analyze(data, days=cfg.get("unpaired_lookback_days", 7),
+                           as_of=as_of)
+    if ex.get("available"):
+        unp = [r for r in ex["sessions"] if r["status"] == "unpaired"]
+        if unp:
+            shown = "; ".join(f"{r['date']} {r['name'] or 'session'}" for r in unp[:3])
+            more = f" (+{len(unp) - 3} more)" if len(unp) > 3 else ""
+            checks.append({
+                "kind": "unpaired_sessions",
+                "text": f"{len(unp)} planned session(s) in the last "
+                        f"{ex['window']['days']} days have no activity paired in "
+                        f"Intervals.icu: {shown}{more}. Skipped, or done without "
+                        f"pairing — ask before assuming.",
+            })
 
     # Sports trained in the lookback window, by activity type.
     recent = [a for a in acts if start <= _d(a["date"]) <= as_of]

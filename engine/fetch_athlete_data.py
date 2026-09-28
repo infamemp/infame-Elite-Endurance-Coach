@@ -286,6 +286,12 @@ def fetch_activities(aid, days):
         # watts, or for a non-power sport -- reported as unavailable there,
         # never guessed.
         ("icu_joules_above_ftp", "joules_above_ftp"),
+        # Planned-vs-done (engine/execution.py). paired_event_id is
+        # Intervals.icu's own pairing of this activity to a planned event;
+        # compliance, rpe and feel are what the athlete/Intervals.icu recorded.
+        # Left out of the row when not recorded -- never defaulted to 0.
+        ("id", "id"), ("paired_event_id", "paired_event_id"),
+        ("compliance", "compliance"), ("icu_rpe", "rpe"), ("feel", "feel"),
     ]
 
     out = []
@@ -352,6 +358,7 @@ def fetch_recent_sessions(aid, days=RECENT_SESSIONS_DAYS):
     out = []
     for e in evs:
         out.append({
+            "id": e.get("id"),
             "date": (e.get("start_date_local") or "")[:10],
             "name": e.get("name"),
             "category": e.get("category"),

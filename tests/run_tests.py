@@ -1065,6 +1065,142 @@ def unit_tests():
           hu.analyze(hu_data(wellness=half), "X", hu_cfg, True, today)
           ["optional_data"]["hrv_pct"], 50)
 
+    # ── execution: planned vs done, paired by Intervals.icu's own pairing ──
+    import execution as ex
+
+    def dago(n):
+        return (today - timedelta(days=n)).isoformat()
+
+    def ev(i, ago, load=50, minutes=60, cat="WORKOUT"):
+        return {"id": i, "date": dago(ago), "name": f"S{i}", "category": cat,
+                "planned_load": load, "planned_time": minutes * 60}
+
+    def act(ago, paired=None, load=48, minutes=58, **kw):
+        a = {"date": dago(ago), "name": "ride", "type": "Ride",
+             "training_load": load, "moving_time": minutes * 60}
+        if paired is not None:
+            a["paired_event_id"] = paired
+        a.update(kw)
+        return a
+
+    exd = {"recent_sessions": [ev(1, 5), ev(2, 4), ev(3, 3), ev(4, 2, cat="NOTE"),
+                               ev(5, 0)],
+           "activities": [act(5, paired=1, compliance=96, rpe=6, feel=2),
+                          act(3, paired=3, load=60, compliance=110, rpe=8, feel=4),
+                          act(1, load=30)]}
+    exr = ex.analyze(exd, days=28, as_of=today)
+    tt = exr["totals"]
+    check("execution: available when events carry ids", exr["available"] is True)
+    equal("execution: notes are not sessions", tt["planned_sessions"], 4)
+    equal("execution: paired count comes from paired_event_id", tt["paired"], 2)
+    equal("execution: a past planned session with no paired activity is unpaired",
+          tt["unpaired"], 1)
+    equal("execution: today's undone session is pending, not unpaired",
+          tt["pending_today"], 1)
+    equal("execution: paired share is of sessions already due",
+          tt["paired_pct_of_due"], 67)
+    equal("execution: load compared only on paired sessions (108 of 100)",
+          (tt["actual_load_of_paired"], tt["planned_load_of_paired"],
+           tt["load_pct_of_planned"]), (108.0, 100.0, 108))
+    equal("execution: mean compliance over paired sessions", tt["mean_compliance"], 103.0)
+    equal("execution: mean RPE over rated sessions", tt["mean_rpe"], 7.0)
+    equal("execution: an activity with no pairing is an extra, not a match",
+          (tt["extra_activities"], tt["extra_load"]), (1, 30.0))
+    check("execution: no matching by date -- unpaired session stays unpaired "
+          "even with a same-day loose activity, and says so",
+          any(r["status"] == "unpaired" and r.get("note") is None
+              for r in exr["sessions"]))
+    same = ex.analyze({"recent_sessions": [ev(1, 3)], "activities": [act(3)]},
+                      days=28, as_of=today)
+    check("execution: same-day unpaired activity is noted, never silently matched",
+          same["sessions"][0]["status"] == "unpaired" and "note" in same["sessions"][0])
+    none_rated = ex.analyze({"recent_sessions": [ev(1, 2)],
+                             "activities": [act(2, paired=1)]}, days=28, as_of=today)
+    equal("execution: RPE/feel not recorded stay None, never 0",
+          (none_rated["totals"]["mean_rpe"], none_rated["totals"]["mean_feel"]),
+          (None, None))
+    old_cache = ex.analyze({"recent_sessions": [{"date": dago(2), "name": "S",
+                                                 "category": "WORKOUT"}],
+                            "activities": []}, days=28, as_of=today)
+    check("execution: cached events without ids cannot be paired -> needs_refresh",
+          old_cache["available"] is False and old_cache["needs_refresh"] is True)
+    check("execution: no recent_sessions at all -> needs_refresh",
+          ex.analyze({"activities": []}, as_of=today)["needs_refresh"] is True)
+    equal("execution: a nothing-planned window is available and empty",
+          ex.analyze({"recent_sessions": [], "activities": []}, as_of=today)
+          ["totals"]["planned_sessions"], 0)
+    equal("execution: the window is capped at the fetched history",
+          ex.analyze(exd, days=400, as_of=today)["window"]["days"], 56)
+    check("execution: render never raises and names unpaired",
+          "unpaired" in ex.render(exr) and "not available" in ex.render(old_cache))
+
+    hd = hu_data()
+    hd["recent_sessions"] = [ev(1, 3), ev(2, 2)]
+    hd["activities"] = hd["activities"] + [act(2, paired=2)]
+    unp = hu.analyze(hd, "X", hu_cfg, True, today)
+    check("heads_up: a planned session with no paired activity is a Check item",
+          "unpaired_sessions" in kinds(unp)
+          and "1 planned session" in [c for c in unp["checks"]
+                                      if c["kind"] == "unpaired_sessions"][0]["text"])
+    check("heads_up: unpaired wording never claims the session was missed",
+          "missed" not in [c for c in unp["checks"]
+                           if c["kind"] == "unpaired_sessions"][0]["text"].lower())
+    check("heads_up: cached data that cannot pair adds no unpaired Check item",
+          "unpaired_sessions" not in kinds(hu.analyze(hu_data(), "X", hu_cfg, True, today)))
+
+    # ── roster: one table from what is already on disk, no network ──
+    import roster as ro
+    import tempfile as _rt
+    _rd = _rt.mkdtemp()
+    _dd, _od = os.path.join(_rd, "data"), os.path.join(_rd, "out")
+    os.makedirs(_od)
+
+    def _put(aid, state, name):
+        d = os.path.join(_dd, aid)
+        os.makedirs(d)
+        json.dump(state, open(os.path.join(d, "state.json"), "w"))
+        json.dump({"profile": {"name": name},
+                   "activities": [{"date": dago(3)}, {"date": dago(9)}]},
+                  open(os.path.join(d, "athlete_data.json"), "w"))
+
+    _put("i1", {"resolved_at": dago(2), "heads_up": {"checks": []},
+                "state": {"flags": [], "load_recovery_state": "fresh",
+                          "operational_state": "load_accepting"},
+                "signals": {"pmc": {"tsb": 8, "ctl": 60}},
+                "taper": {"applicable": False}}, "Zed Calm")
+    _put("i2", {"resolved_at": dago(0), "heads_up": {"checks": [{"text": "no FTP"}]},
+                "state": {"flags": ["ACWR high", "Durability degraded"],
+                          "load_recovery_state": "functional_overreach",
+                          "operational_state": "recovery_priority"},
+                "signals": {"pmc": {"tsb": -30, "ctl": 90}},
+                "taper": {"applicable": True, "race": "Big Race",
+                          "date": (today + timedelta(days=20)).isoformat()}},
+         "Ana Flagged")
+    open(os.path.join(_od, "roster.md"), "w").write(
+        "# ROSTER\n\n| Name | Athlete ID | Last fetched |\n| :--- | :--- | :--- |\n"
+        "| Ana Flagged | i2 | 2026-01-01 |\n| Zed Calm | i1 | 2026-01-01 |\n"
+        "| Never Prepped | i3 | never fetched |\n")
+    rrows = ro.build(_dd, _od, as_of=today)
+    equal("roster: most-flagged athlete first, then calm, then unprepared",
+          [r["athlete_id"] for r in rrows], ["i2", "i1", "i3"])
+    equal("roster: an athlete on the account with no state is listed as not prepared",
+          rrows[2]["prepared"], False)
+    equal("roster: attention items = engine flags + heads-up checks",
+          rrows[0]["attention_items"], 3)
+    equal("roster: days to the A race is computed against today, not stored",
+          rrows[0]["next_a_race"]["days_out"], 20)
+    equal("roster: days since last activity from the athlete's own data",
+          rrows[1]["days_since_last_activity"], 3)
+    equal("roster: TSB is copied from state.json, not recomputed",
+          (rrows[0]["tsb"], rrows[1]["tsb"]), (-30, 8))
+    equal("roster: a row says how old its state is", rrows[1]["state_age_days"], 2)
+    check("roster: render lists every athlete and what was flagged",
+          all(n in ro.render(rrows, today) for n in ("Ana Flagged", "Zed Calm",
+                                                    "Never Prepped", "ACWR high")))
+    equal("roster: an empty data dir and no roster.md gives no rows",
+          ro.build(os.path.join(_rd, "nope"), os.path.join(_rd, "nope2")), [])
+    shutil.rmtree(_rd, ignore_errors=True)
+
     # ── load_metrics: Foster monotony & strain (M2), never a requirement ──
     import load_metrics as lm
 

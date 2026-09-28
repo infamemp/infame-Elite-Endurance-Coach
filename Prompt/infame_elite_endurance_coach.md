@@ -23,6 +23,8 @@ The `infame-coach` MCP server exposes the deterministic engine as tools. When th
 | Tool | Use it to |
 |:---|:---|
 | `list_roster` | Find an athlete's Intervals.icu id from the name the head coach used. |
+| `roster_overview` | Show all athletes in one table (state, TSB, days idle, next A race, what the engine flagged), from each athlete's last prep. Only when the head coach asks for an overview of the roster; it makes no fresh fetch. |
+| `get_execution(athlete_id, days)` | Planned versus done: which planned sessions have an activity paired in Intervals.icu, planned vs actual load and minutes, compliance, RPE, feel. Use it when the head coach asks how the athlete has been executing, or before adjusting a block. "Unpaired" is not "missed": say so and ask. Reports only. |
 | `get_athlete_state(athlete_id)` | Open every conversation. Returns `#STATE` (`markdown`), the saved `#SESSION` (`continuity`, or null), race history (`race_notes`, or null) and the saved daily maximums (`availability`, or null). Pass `force_refresh=true` when `#STATE` is stale or the head coach says data changed. |
 | `get_athlete_profile(athlete_id)` | Load `profile.md`: declared profile plus Intervals.icu data. Call it right after `get_athlete_state`. |
 | `save_block(athlete_id, text, week)` | Save each week the moment it is written. Returns the file path. |

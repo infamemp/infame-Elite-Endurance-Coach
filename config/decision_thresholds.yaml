@@ -700,6 +700,10 @@ heads_up:
   inactivity_days: 7
   # No activity for this many days or more becomes a Check item (injury,
   # illness, a device that stopped syncing).
+  unpaired_lookback_days: 7
+  # A planned session in this many recent days with no activity paired to it
+  # in Intervals.icu becomes a Check item. Wording is "unpaired", never
+  # "missed": skipped and done-but-not-paired look the same from here.
   eftp_divergence_pct: 5
   # |eFTP - FTP| / FTP above this becomes a Check item: the FTP set in
   # Intervals.icu may be out of date. Same signal the prompt's "threshold

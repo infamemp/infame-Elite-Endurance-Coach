@@ -1,4 +1,5 @@
-"""tools_read.py — get_athlete_state, get_athlete_profile, list_roster
+"""tools_read.py — get_athlete_state, get_athlete_profile, list_roster,
+roster_overview, get_execution
 =========================================================================
 Every value returned here is exactly what `state.md`/`profile.md`/
 `roster.md` already carry — these tools read and, where a fetch is needed,
@@ -10,7 +11,8 @@ from __future__ import annotations
 
 import os
 
-from .common import DATA, OUT, ensure_import_paths, read_json_file, read_text, resolve_and_prep
+from .common import (DATA, OUT, ensure_import_paths, load_athlete_data, read_json_file,
+                     read_text, resolve_and_prep)
 from .guard import ToolError, guarded
 
 
@@ -99,3 +101,62 @@ def list_roster() -> dict:
         )
     with open(path, encoding="utf-8") as f:
         return {"ok": True, "markdown": f.read()}
+
+
+@guarded
+def roster_overview() -> dict:
+    """Every athlete in one table, from what is already on disk: each
+    athlete's saved #STATE (data/<id>/state.json) plus out/roster.md for the
+    athletes on the account that were never prepared. No network call, and no
+    figure computed here that state.json does not already carry — the only
+    arithmetic is "days since" against today's date. Each row says how old its
+    numbers are (`state_age_days`, `data_age_hours`); an athlete's row is only
+    as current as the last time get_athlete_state ran for them."""
+    ensure_import_paths()
+    import roster
+
+    rows = roster.build(DATA, OUT)
+    if not rows:
+        raise ToolError(
+            "No athlete has been prepared yet and out/roster.md doesn't exist — "
+            "call get_athlete_state for an athlete first."
+        )
+    return {
+        "ok": True,
+        "markdown": roster.render(rows),
+        "athletes": rows,
+    }
+
+
+@guarded
+def get_execution(athlete_id: str, days: int = 28, force_refresh: bool = False) -> dict:
+    """Planned versus done for the last `days` days (at most 56, the history
+    the engine fetches): which planned sessions have an activity paired to
+    them in Intervals.icu, planned vs actual load and minutes, and the
+    compliance, RPE and feel Intervals.icu recorded. Reports only.
+
+    Pairing is Intervals.icu's own (`paired_event_id`); nothing is matched by
+    guessing. A planned session with no paired activity is "unpaired", not
+    "missed" — the athlete may have skipped it or done it without pairing.
+
+    Uses the same cache as get_athlete_state. If the cached data was fetched
+    before pairing was recorded, it is refreshed once, automatically."""
+    ensure_import_paths()
+    import execution
+
+    info = resolve_and_prep(athlete_id, force_refresh=force_refresh)
+    result = execution.analyze(load_athlete_data(athlete_id) or {}, days=days)
+    refreshed = False
+    if not result.get("available") and result.get("needs_refresh") and not force_refresh:
+        info = resolve_and_prep(athlete_id, force_refresh=True)
+        result = execution.analyze(load_athlete_data(athlete_id) or {}, days=days)
+        refreshed = True
+    return {
+        "ok": True,
+        "athlete_id": athlete_id,
+        "name": info["name"],
+        "cache_hit": info["cache_hit"] and not refreshed,
+        "refreshed_for_pairing": refreshed,
+        "markdown": execution.render(result),
+        "execution": result,
+    }

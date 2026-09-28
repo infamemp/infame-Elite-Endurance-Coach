@@ -244,6 +244,78 @@ def test_tools_read():
           "ok" in r4)
 
 
+def _write_pairing_data(paired=True):
+    """Add planned events and activities to the seeded TESTRAMP data, keeping
+    the file's mtime fresh so the cache-hit path still runs. paired=False
+    writes events without ids, the shape cached before pairing was recorded."""
+    from datetime import timedelta
+    path = os.path.join(ROOT, "data", AID, "athlete_data.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    day = lambda n: (date.today() - timedelta(days=n)).isoformat()
+    ev = lambda i, n: dict({"date": day(n), "name": f"S{i}", "category": "WORKOUT",
+                            "planned_load": 50, "planned_time": 3600},
+                           **({"id": i} if paired else {}))
+    data["recent_sessions"] = [ev(1, 4), ev(2, 3)]
+    data["activities"] = [{"date": day(4), "type": "Ride", "training_load": 45,
+                           "moving_time": 3500, "paired_event_id": 1,
+                           "compliance": 90, "rpe": 6}]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+
+def test_tools_roster_and_execution():
+    import mcp_server.tools_read as tr
+
+    _seed_athlete_data(fresh=True)
+    tr.get_athlete_state(AID)          # writes data/TESTRAMP/state.json
+
+    r = tr.roster_overview()
+    equal("roster_overview: succeeds once an athlete has been prepared", r.get("ok"), True)
+    row = next((a for a in r.get("athletes", []) if a["athlete_id"] == AID), None)
+    check("roster_overview: the prepared athlete is a row, prepared, with its name",
+          bool(row) and row["prepared"] is True and row["name"] == "Test Fixture", row)
+    check("roster_overview: the markdown table names the athlete",
+          "Test Fixture" in (r.get("markdown") or ""))
+
+    _seed_athlete_data(fresh=True)
+    _write_pairing_data(paired=True)
+    r = tr.get_execution(AID, days=28)
+    equal("get_execution: succeeds on a cache-fresh fixture", r.get("ok"), True)
+    equal("get_execution: no refresh when the cache can already pair",
+          r.get("refreshed_for_pairing"), False)
+    ex = r.get("execution") or {}
+    equal("get_execution: paired and unpaired sessions counted from paired_event_id",
+          (ex["totals"]["paired"], ex["totals"]["unpaired"]), (1, 1))
+    check("get_execution: the markdown reports planned vs done",
+          "Planned vs done" in (r.get("markdown") or ""))
+
+    # Cached data from before pairing was recorded: refreshed once, automatically.
+    _seed_athlete_data(fresh=True)
+    _write_pairing_data(paired=False)
+    real, calls = tr.resolve_and_prep, []
+
+    def _fake(aid, days=180, force_refresh=False):
+        calls.append(force_refresh)
+        if force_refresh:
+            _write_pairing_data(paired=True)   # stands in for the network fetch
+        return real(aid, days=days, force_refresh=False)
+
+    tr.resolve_and_prep = _fake
+    try:
+        r = tr.get_execution(AID)
+    finally:
+        tr.resolve_and_prep = real
+    equal("get_execution: cache without event ids triggers exactly one forced refresh",
+          calls, [False, True])
+    equal("get_execution: and reports that it refreshed", r.get("refreshed_for_pairing"), True)
+    check("get_execution: after the refresh the answer is available",
+          (r.get("execution") or {}).get("available") is True)
+
+    r = tr.get_execution("no-such-athlete-id")
+    equal("get_execution: an unknown, uncached athlete fails cleanly", r.get("ok"), False)
+
+
 # ══════════════════════════════════════════════════════════════════
 # tools_write — save_continuity / save_race_result / save_block
 # ══════════════════════════════════════════════════════════════════
@@ -733,7 +805,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
