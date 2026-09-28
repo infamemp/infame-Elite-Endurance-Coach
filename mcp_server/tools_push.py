@@ -159,8 +159,10 @@ def push_block(
     only when explicitly told twice (dry_run=False AND confirm=True), POST
     it to `/athlete/{id}/events/bulk?upsert=true` — the same endpoint and
     upsert semantics IMPROVEMENT_BACKLOG.md §5 describes. Every session's
-    `external_id` is deterministic (athlete + date + week), so re-pushing a
-    corrected block updates the same events instead of duplicating them.
+    `external_id` is deterministic (athlete + date + week, plus -2, -3 for a
+    second or third session on the same date), so re-pushing a corrected
+    block updates the same events instead of duplicating them — and two
+    sessions on one day never overwrite each other.
 
     Every call not opening both gates returns the constructed payload and
     `sent: False` without making any network request at all — this is the
@@ -199,6 +201,7 @@ def push_block(
 
     language = _athlete_language(athlete_id)
     events, skipped = [], []
+    same_day: dict[str, int] = {}
     for header, code in sessions:
         if not header:
             skipped.append({"reason": "no session header found", "header": header})
@@ -235,6 +238,14 @@ def push_block(
             skipped.append({"reason": f"unknown methodology: {exc}", "header": header})
             continue
         activity_type, inferred = _activity_type(author.get("sport"), discipline)
+        # One external_id per SESSION, not per date: a double day (AM run +
+        # PM bike, or a strength session) used to get the same id twice, and
+        # upsert=true silently kept only the last one. The first session of
+        # a date keeps the original id (so events already pushed still match
+        # on re-push); later sessions on that date get -2, -3, ...
+        base_id = f"infame-{athlete_id}-{iso}-w{header.get('Week', '')}"
+        same_day[base_id] = same_day.get(base_id, 0) + 1
+        external_id = base_id if same_day[base_id] == 1 else f"{base_id}-{same_day[base_id]}"
         events.append({
             "start_date_local": f"{iso}T00:00:00",
             "category": "WORKOUT",
@@ -242,7 +253,7 @@ def push_block(
             "type_inferred": inferred,
             "name": header.get("Focus") or f"{author['name']} session",
             "description": _description(header, code, language, include_notes),
-            "external_id": f"infame-{athlete_id}-{iso}-w{header.get('Week', '')}",
+            "external_id": external_id,
         })
 
     if not events:

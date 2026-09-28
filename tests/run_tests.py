@@ -981,6 +981,38 @@ def unit_tests():
     equal("taper_check strips a trailing newline from goals[].description",
           messy_taper["race"], "Barbie 10k — llegar en su mejor forma.")
 
+    # ── taper_check: race-MORNING TSB, race-day load excluded ──────
+    # Each projection entry is end-of-day, so the entry dated on the race
+    # already contains the race's own planned load. The verdict must use
+    # the end of the day before (race morning), never the race evening.
+    race_pmc = {"date": today.isoformat(), "ctl": 60.0, "atl": 45.0}
+    race_day = today + timedelta(days=3)
+    race_events = [
+        {"date": (today + timedelta(days=1)).isoformat(), "planned_load": 0},
+        {"date": (today + timedelta(days=2)).isoformat(), "planned_load": 0},
+        {"date": race_day.isoformat(), "planned_load": 250},
+    ]
+    race_proj = bs.project_pmc(race_pmc, race_events, [], horizon_days=10)
+    race_by_date = {s["date"]: s for s in race_proj["series"]}
+    morning_tsb = race_by_date[(race_day - timedelta(days=1)).isoformat()]["tsb"]
+    evening_tsb = race_by_date[race_day.isoformat()]["tsb"]
+    race_goal = [{"description": "Morning Test Race", "date": race_day.isoformat(),
+                  "priority": "A", "event_type": "marathon"}]
+    morning_taper = bs.taper_check(race_proj, race_goal, thresholds, race_pmc)
+    equal("taper_check uses the end of the day before the race (race morning)",
+          morning_taper.get("projected_tsb_at_race"), morning_tsb)
+    check("taper_check never reads the race-evening TSB that includes race load",
+          morning_taper.get("projected_tsb_at_race") != evening_tsb)
+    check("taper_check states its basis (race morning, race-day load excluded)",
+          "race-day load excluded" in (morning_taper.get("tsb_basis") or ""))
+
+    tomorrow_goal = [{"description": "Tomorrow Race",
+                      "date": (today + timedelta(days=1)).isoformat(),
+                      "priority": "A", "event_type": "marathon"}]
+    tomorrow_taper = bs.taper_check(race_proj, tomorrow_goal, thresholds, race_pmc)
+    equal("taper_check: race tomorrow uses today's real PMC as race morning",
+          tomorrow_taper.get("projected_tsb_at_race"), 15.0)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture

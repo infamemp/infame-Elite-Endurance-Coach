@@ -178,13 +178,14 @@
     "applicable": true,
     "days_out": 1,
     "phase": "taper",
-    "projected_tsb_at_race": 12.3,
+    "projected_tsb_at_race": 11.3,
     "race": "Test Marathon",
     "target_source": "marathon",
     "target_tsb_range": [
       10,
       20
     ],
+    "tsb_basis": "race morning = end of the day before the race; race-day load excluded",
     "verdict": "in_target_range"
   }
 }

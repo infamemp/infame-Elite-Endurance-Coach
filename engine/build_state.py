@@ -443,9 +443,12 @@ def project_pmc(pmc, events, activities=None, horizon_days=42):
     }
 
 
-def taper_check(projection, goals, thresholds):
-    """Locate the next A-priority goal and compare projected TSB at that date
-    against the target range for its event_type.
+def taper_check(projection, goals, thresholds, pmc=None):
+    """Locate the next A-priority goal and compare projected race-MORNING TSB
+    (end of the day before the race, so the race's own planned load is never
+    counted) against the target range for its event_type. `pmc` is the
+    latest real PMC reading, used when the race is tomorrow and its morning
+    state is today's.
 
     Priority and event_type are read from the head coach's DECLARED profile
     (goals[] in config/athletes/<id>.yaml) -- never from Intervals.icu's own
@@ -501,7 +504,18 @@ def taper_check(projection, goals, thresholds):
         result["note"] = "No PMC projection available"
         return result
 
-    at_race = next((s for s in projection["series"] if s["date"] == race_date.isoformat()), None)
+    # Race-MORNING form, not race-evening form. Each projection entry is the
+    # end-of-day state after that day's load has been applied, so the entry
+    # dated on the race itself already carries the race's own planned load
+    # (a 250-TSS race drops TSB by ~27 points) -- the athlete never races in
+    # that state. The athlete starts the race with the end-of-day state of
+    # the day BEFORE. That day is either inside the projection series or,
+    # when the race is tomorrow, the latest real PMC reading itself.
+    morning_of = (race_date - timedelta(days=1)).isoformat()
+    at_race = next((s for s in projection["series"] if s["date"] == morning_of), None)
+    if at_race is None and pmc and pmc.get("date") and pmc["date"][:10] == morning_of \
+            and pmc.get("ctl") is not None and pmc.get("atl") is not None:
+        at_race = {"date": morning_of, "tsb": round(pmc["ctl"] - pmc["atl"], 1)}
     if not at_race:
         result["note"] = (f"Race is beyond the {projection['horizon_days']}-day "
                           f"projection horizon")
@@ -511,6 +525,10 @@ def taper_check(projection, goals, thresholds):
     target = tp["target_tsb_by_event_type"].get(ev_type,
                                                 tp["target_tsb_by_event_type"]["default"])
     tsb = at_race["tsb"]
+    # No date inside this string on purpose: golden tests strip date fields
+    # as volatile, and a date embedded in free text would fail every day.
+    result["tsb_basis"] = ("race morning = end of the day before the race; "
+                           "race-day load excluded")
     verdict = ("too_fatigued" if tsb < target["min"]
                else "too_fresh" if tsb > target["max"]
                else "in_target_range")
@@ -613,8 +631,10 @@ def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, ta
         L.append(f"- Phase: {taper['phase']}")
         if "projected_tsb_at_race" in taper:
             lo, hi = taper["target_tsb_range"]
-            L.append(f"- Projected TSB at race: {taper['projected_tsb_at_race']} "
+            L.append(f"- Projected TSB on race morning: {taper['projected_tsb_at_race']} "
                      f"· target [{lo}, {hi}] · **{taper['verdict']}**")
+            if taper.get("tsb_basis"):
+                L.append(f"  ({taper['tsb_basis']})")
         if taper.get("note"):
             L.append(f"- {taper['note']}")
         L.append("")
@@ -631,7 +651,7 @@ def build(aid, thresholds, quiet=False):
     state = resolve_state(pmc, hrv, acwr, durability, thresholds)
     projection = project_pmc(pmc, data.get("events", []), data.get("activities", []))
     goals = load_declared_goals(aid)
-    taper = taper_check(projection, goals, thresholds)
+    taper = taper_check(projection, goals, thresholds, pmc)
     longit = longitudinal.analyze(data, thresholds)
 
     ppcfg = load_power_profile_cfg()

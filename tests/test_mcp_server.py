@@ -489,6 +489,25 @@ def test_tools_push():
         equal("tools_push: default call reports dry_run=True", r.get("dry_run"), True)
         check("tools_push: dry-run still constructs at least one event", r.get("count", 0) > 0)
 
+        # A double day: the same session written twice on one date. Before
+        # the fix both got the same external_id and upsert=true kept only
+        # the last one. The first keeps the original id (already-pushed
+        # events still match); the second gets a -2 suffix.
+        with open(good, encoding="utf-8") as f:
+            one_session = f.read().strip()
+        double = os.path.join(tmp, "double_day.md")
+        with open(double, "w", encoding="utf-8") as f:
+            f.write(one_session + "\n\n" + one_session + "\n")
+        r2 = push_block(AID, file_path=double)
+        ids = [e.get("external_id") for e in r2.get("events", [])]
+        equal("tools_push: a double day builds two events", len(ids), 2)
+        equal("tools_push: two sessions on one date never share an external_id",
+              len(set(ids)), 2)
+        equal("tools_push: first session of a date keeps the original id",
+              ids[0] if ids else None, f"infame-{AID}-2026-08-24-w03")
+        equal("tools_push: second session of that date gets a -2 suffix",
+              ids[1] if len(ids) > 1 else None, f"infame-{AID}-2026-08-24-w03-2")
+
         r = push_block(AID, file_path=copy, dry_run=False)
         equal("tools_push: dry_run=False alone (confirm still False) still never sends",
               r.get("sent"), False)
