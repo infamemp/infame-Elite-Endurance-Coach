@@ -133,11 +133,25 @@ def _run_validation(
                 result.returncode)
     report = (result.stdout or "") + (result.stderr or "")
     logger.info("CHECKPOINT validate_block: about to build return dict")
+    try:
+        # On Windows, file_path and ROOT can sit on different drives (a
+        # block saved on Downloads' drive validated against a repo checked
+        # out on another one, or -- as this file's own test coverage does --
+        # a temp file under %TEMP%, which Windows often puts on C: even when
+        # the repo lives on E:). relpath() has no answer for that and raises
+        # ValueError('path is on mount ... start on mount ...'); confirmed
+        # via a real run on the head coach's own E:-drive checkout. The
+        # absolute path is still a correct, useful value for this report
+        # field, so that's the fallback rather than letting the whole tool
+        # call raise.
+        rel_file = os.path.relpath(file_path, ROOT)
+    except ValueError:
+        rel_file = file_path
     return {
         "ok": True,
         "passed": result.returncode == 0,
         "exit_code": result.returncode,
-        "file": os.path.relpath(file_path, ROOT),
+        "file": rel_file,
         "fill_tss_requested": fill_tss,
         "report": report,
     }
