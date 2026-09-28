@@ -1,5 +1,22 @@
 {
   "athlete_id": "_test_taper_active",
+  "heads_up": {
+    "checks": [
+      {
+        "kind": "no_sport_settings",
+        "text": "Run: no sport settings in Intervals.icu, so no zones or thresholds for it."
+      }
+    ],
+    "optional_data": {
+      "hrv_pct": 96,
+      "hrv_sdnn_only": false,
+      "resting_hr_pct": 96,
+      "sleep_pct": 96,
+      "subjective_pct": 0,
+      "w_prime_set": true,
+      "window_days": 28
+    }
+  },
   "longitudinal": {
     "adaptation_state": {
       "anchors_set_recently": "0/6",

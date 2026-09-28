@@ -683,6 +683,34 @@ longitudinal:
     # is no longer able to reach the same anaerobic depth.
 
 # ══════════════════════════════════════════════════════════════════
+# HEADS-UP (engine/heads_up.py)
+# ══════════════════════════════════════════════════════════════════
+# The short list at the top of #STATE that the coach reads out when work on
+# an athlete starts. Two kinds of line, never mixed:
+#   - "Check" items: something the head coach may want to fix in
+#     Intervals.icu or the declared profile before planning. Reported,
+#     never blocking.
+#   - "Optional data": wellness coverage and W'. Information only. Few
+#     athletes keep HRV, sleep or W' accurate, so none of it is ever a fault
+#     or a requirement.
+heads_up:
+  lookback_days: 28
+  # Window for "which sports does this athlete train" and for wellness
+  # coverage.
+  inactivity_days: 7
+  # No activity for this many days or more becomes a Check item (injury,
+  # illness, a device that stopped syncing).
+  eftp_divergence_pct: 5
+  # |eFTP - FTP| / FTP above this becomes a Check item: the FTP set in
+  # Intervals.icu may be out of date. Same signal the prompt's "threshold
+  # #STATE contradicts is provisional" rule reasons from.
+  sport_types:
+    # Intervals.icu activity types whose thresholds this system prescribes
+    # from. Other types (swim, strength, walk) are never checked.
+    cycling: [Ride, VirtualRide, MountainBikeRide, GravelRide, TrackRide]
+    running: [Run, TrailRun, VirtualRun]
+
+# ══════════════════════════════════════════════════════════════════
 # MCP SERVER
 # ══════════════════════════════════════════════════════════════════
 # The MCP server's tools call the same engine functions coach.py does.

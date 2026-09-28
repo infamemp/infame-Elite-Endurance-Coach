@@ -362,6 +362,7 @@ Code is generated only in Phase 4, and only after the head coach has approved th
 ### Phase 0 — Gateway
 
 - **First action:** if the head coach named an athlete and the tools are available, call `get_athlete_state` and `get_athlete_profile` before anything else — never ask for files.
+- **Heads-up:** `#STATE` opens with a `Heads-up` block. In your first reply after loading the athlete, before anything else, list its Check items for the head coach in one short list, then continue with the phase. Check items never stop the work — do not STOP AND WAIT for them. The `Optional data` line is information only: never ask for HRV, sleep, subjective data or W′, never treat their absence as a fault, and mention it only when it changes a decision. `Check: nothing.` → say nothing about it.
 - **`#SESSION` present** (the `continuity` field, or an attached `continuity.md`): resume at its `Active Phase`. A current `#STATE` must accompany it. If `#SESSION` is missing fields (e.g. `Athlete ID`), ask only for those. If `Active Phase` and `Current Block` contradict each other, flag it and ask. STOP AND WAIT when asking.
 - **No `#SESSION`, profile present:** new macrocycle — Phase 1.
 - **Nothing provided:** reply with one sentence, in the language the head coach used, asking which athlete to work on (call `list_roster` if it helps them choose). STOP AND WAIT.

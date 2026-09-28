@@ -1,5 +1,22 @@
 {
   "athlete_id": "_test_sparse",
+  "heads_up": {
+    "checks": [
+      {
+        "kind": "no_declared_profile",
+        "text": "No declared profile (config/athletes/_test_sparse.yaml): goals, availability and metric choices are unknown."
+      }
+    ],
+    "optional_data": {
+      "hrv_pct": 36,
+      "hrv_sdnn_only": false,
+      "resting_hr_pct": 36,
+      "sleep_pct": 36,
+      "subjective_pct": 0,
+      "w_prime_set": true,
+      "window_days": 28
+    }
+  },
   "longitudinal": {
     "adaptation_state": {
       "available": false,

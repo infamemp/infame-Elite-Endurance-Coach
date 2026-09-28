@@ -1013,6 +1013,58 @@ def unit_tests():
     equal("taper_check: race tomorrow uses today's real PMC as race morning",
           tomorrow_taper.get("projected_tsb_at_race"), 15.0)
 
+    # ── heads_up: Check items vs optional data ─────────────────────
+    # Check items are reported, never blocking. Wellness and W' are
+    # optional data: a gap there must never become a Check item.
+    import heads_up as hu
+    hu_cfg = thresholds["heads_up"]
+
+    def hu_data(ftp=250, eftp=None, lthr=165, w_prime=None, last_ago=1,
+                atype="Ride", watts=200, wellness=None):
+        s = {"types": ["Ride", "VirtualRide"], "ftp": ftp, "eftp": eftp,
+             "lthr": lthr, "w_prime": w_prime}
+        acts = [{"date": (today - timedelta(days=last_ago + i)).isoformat(),
+                 "type": atype, "average_watts": watts} for i in range(3)]
+        return {"profile": {"sport_settings": [s]}, "activities": acts,
+                "wellness": wellness or []}
+
+    clean = hu.analyze(hu_data(), "X", hu_cfg, True, today)
+    equal("heads_up: complete data, declared profile present → no Check items",
+          clean["checks"], [])
+    check("heads_up: no HRV, sleep or W' is information only, never a Check item",
+          clean["optional_data"]["hrv_pct"] == 0
+          and clean["optional_data"]["w_prime_set"] is False)
+
+    kinds = lambda r: [c["kind"] for c in r["checks"]]
+    check("heads_up: missing declared profile is a Check item",
+          "no_declared_profile" in kinds(hu.analyze(hu_data(), "X", hu_cfg, False, today)))
+    check("heads_up: rides with power and no FTP is a Check item",
+          "missing_threshold" in kinds(hu.analyze(hu_data(ftp=None), "X", hu_cfg, True, today)))
+    check("heads_up: rides without power and no FTP is not a Check item",
+          kinds(hu.analyze(hu_data(ftp=None, watts=None), "X", hu_cfg, True, today)) == [])
+    check("heads_up: eFTP 10% above FTP is a Check item",
+          "ftp_vs_eftp" in kinds(hu.analyze(hu_data(eftp=275), "X", hu_cfg, True, today)))
+    check("heads_up: eFTP within the divergence band is not",
+          "ftp_vs_eftp" not in kinds(hu.analyze(hu_data(eftp=255), "X", hu_cfg, True, today)))
+    check("heads_up: a week without activity is a Check item",
+          "inactive" in kinds(hu.analyze(hu_data(last_ago=hu_cfg["inactivity_days"]),
+                                         "X", hu_cfg, True, today)))
+    check("heads_up: a run with no running sport settings is a Check item",
+          "no_sport_settings" in kinds(hu.analyze(hu_data(atype="Run", watts=None),
+                                                  "X", hu_cfg, True, today)))
+    check("heads_up: a swim is never checked (not a prescribed sport)",
+          kinds(hu.analyze(hu_data(atype="Swim", watts=None), "X", hu_cfg, True, today)) == [])
+    sdnn = [{"date": (today - timedelta(days=i)).isoformat(), "hrv_sdnn": 60}
+            for i in range(10)]
+    sdnn_r = hu.analyze(hu_data(wellness=sdnn), "X", hu_cfg, True, today)
+    check("heads_up: HRV recorded only as SDNN is flagged as information",
+          sdnn_r["optional_data"]["hrv_sdnn_only"] is True and sdnn_r["checks"] == [])
+    half = [{"date": (today - timedelta(days=i)).isoformat(), "hrv": 60}
+            for i in range(14)]
+    equal("heads_up: HRV coverage counts days over the whole window",
+          hu.analyze(hu_data(wellness=half), "X", hu_cfg, True, today)
+          ["optional_data"]["hrv_pct"], 50)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture

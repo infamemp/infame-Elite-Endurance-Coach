@@ -40,6 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import longitudinal  # noqa: E402
 import power_profile  # noqa: E402
 import architecture  # noqa: E402
+import heads_up  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -546,7 +547,8 @@ def taper_check(projection, goals, thresholds, pmc=None):
 # OUTPUT
 # ══════════════════════════════════════════════════════════════════
 
-def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper):
+def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
+                    heads=None):
     name = (data.get("profile") or {}).get("name") or aid
     L = []
     L.append("# STATE — AUTHORITATIVE")
@@ -559,6 +561,9 @@ def render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, ta
              "config/decision_thresholds.yaml. Do not recalculate or contradict these "
              "values. Prescribe on top of them.")
     L.append("")
+
+    if heads:
+        L.append(heads_up.render(heads))
 
     L.append("## Resolved state")
     L.append("")
@@ -663,6 +668,11 @@ def build(aid, thresholds, quiet=False):
         if pts:
             pp = power_profile.analyze(pts, data.get("profile") or {}, ppcfg)
 
+    heads = None
+    if thresholds.get("heads_up"):
+        heads = heads_up.analyze(data, aid, thresholds["heads_up"],
+                                 heads_up.declared_profile_exists(CONFIG, aid))
+
     recent_arch = architecture.summarize_recent(data.get("recent_sessions") or [],
                                                  thresholds)
 
@@ -670,6 +680,7 @@ def build(aid, thresholds, quiet=False):
         "schema_version": 1,
         "athlete_id": aid,
         "resolved_at": date.today().isoformat(),
+        "heads_up": heads,
         "state": state,
         "signals": {"pmc": pmc, "hrv": hrv, "acwr": acwr, "durability": durability},
         "projection": projection,
@@ -681,7 +692,8 @@ def build(aid, thresholds, quiet=False):
 
     dest = os.path.join(DATA, str(aid))
     os.makedirs(dest, exist_ok=True)
-    md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper)
+    md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
+                         heads)
     md = md.rstrip() + "\n\n" + longitudinal.render(longit)
     if pp:
         md = md.rstrip() + "\n\n" + power_profile.render(pp)

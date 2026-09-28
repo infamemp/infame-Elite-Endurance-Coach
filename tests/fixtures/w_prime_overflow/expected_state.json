@@ -1,5 +1,22 @@
 {
   "athlete_id": "_test_w_prime_overflow",
+  "heads_up": {
+    "checks": [
+      {
+        "kind": "no_declared_profile",
+        "text": "No declared profile (config/athletes/_test_w_prime_overflow.yaml): goals, availability and metric choices are unknown."
+      }
+    ],
+    "optional_data": {
+      "hrv_pct": 96,
+      "hrv_sdnn_only": false,
+      "resting_hr_pct": 96,
+      "sleep_pct": 96,
+      "subjective_pct": 0,
+      "w_prime_set": true,
+      "window_days": 28
+    }
+  },
   "longitudinal": {
     "adaptation_state": {
       "anchors_set_recently": "5/5",
