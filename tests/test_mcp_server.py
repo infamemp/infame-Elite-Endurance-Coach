@@ -586,6 +586,16 @@ def test_tools_validate():
         check("tools_validate: fill_tss=True actually wrote a computed TSS to disk",
               "pending" not in filled.lower() or "Estimated TSS" not in filled)
 
+        blk = os.path.join(tmp, "flat.md")
+        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "load_monotony_flat.md"), blk)
+        r = validate_block(file_path=blk, week_targets={"2027-03-01": 1000})
+        check("tools_validate: week_targets reaches the validator and only warns",
+              "Weekly TSS target" in (r.get("report") or "")
+              and "CHK-LOAD-TARGET" in (r.get("report") or "") and r.get("passed") is True)
+        r = validate_block(file_path=blk)
+        check("tools_validate: no week_targets, no target section",
+              "Weekly TSS target" not in (r.get("report") or ""))
+
         _test_windows_style_narrow_codec(validate_block, good)
 
 

@@ -1796,6 +1796,61 @@ def block_tests():
         shutil.rmtree(blend_dir, ignore_errors=True)
 
 
+def week_target_tests():
+    """--week-target: CHK-LOAD-TARGET warns when a fully written week sits
+    outside max(5, 3%) of its target, and says so when it cannot judge."""
+    import re
+    import shutil
+    import tempfile
+    script = os.path.join(ROOT, "verify", "validate_block.py")
+    tmpdir = tempfile.mkdtemp(prefix="infame_wt_")
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+
+    def run(fname, *targets):
+        path = os.path.join(tmpdir, fname)
+        shutil.copy2(os.path.join(BLOCKS, fname), path)
+        cmd = [sys.executable, script, path, "--quiet"]
+        for t in targets:
+            cmd += ["--week-target", t]
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", env=env)
+        return proc.returncode, proc.stdout + proc.stderr
+
+    try:
+        code, out = run("load_monotony_flat.md", "2027-03-01=1")
+        m = re.search(r"([\d.]+) TSS written", out)
+        check("week target: the week's written TSS is reported", bool(m), out[-400:])
+        written = float(m.group(1)) if m else 0
+        code, out = run("load_monotony_flat.md", f"2027-03-01={written:g}")
+        check("week target: a week on target is clean",
+              "CHK-LOAD-TARGET" not in out and code == 0)
+        code, out = run("load_monotony_flat.md", f"2027-03-01={written + 5:g}")
+        check("week target: 5 TSS off is inside the minimum tolerance",
+              "CHK-LOAD-TARGET" not in out)
+        code, out = run("load_monotony_flat.md", f"2027-03-01={written + 60:g}")
+        check("week target: 60 TSS off warns, and never blocks",
+              "WARN [CHK-LOAD-TARGET]" in out and "below its target" in out and code == 0)
+        code, out = run("load_monotony_flat.md", f"2027-03-01={max(written - 60, 1):g}")
+        check("week target: a week above its target is named as above",
+              "above its target" in out)
+        code, out = run("load_monotony_flat.md", "2027-03-08=300")
+        check("week target: a week with no session in the file is not checked",
+              "no session in this file falls in that week" in out
+              and "CHK-LOAD-TARGET" not in out)
+        code, out = run("load_monotony_blend.md", "2026-08-24=300")
+        check("week target: a partly written week is not judged",
+              "days are written in this file" in out and "CHK-LOAD-TARGET" not in out)
+        code, out = run("load_monotony_flat.md", "2027-03-02=300")
+        check("week target: a date that is not a Monday is refused", code not in (0, 1) or "Monday" in out)
+        code, out = run("load_monotony_flat.md", "not-a-date")
+        check("week target: a malformed value is refused", "DATE=TSS" in out)
+        code, out = run("load_monotony_flat.md")
+        check("week target: without the flag nothing is added",
+              "Weekly TSS target" not in out)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 # ══════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════
@@ -1838,6 +1893,7 @@ def main():
     if run_all or args.blocks:
         print("Block validation...")
         block_tests()
+        week_target_tests()
 
     if run_all or args.golden:
         print("Golden comparisons..."

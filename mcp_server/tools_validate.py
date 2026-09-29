@@ -40,6 +40,7 @@ def _run_validation(
     tolerance: float | None = None,
     quiet: bool = False,
     athlete_name: str | None = None,
+    week_targets: dict | None = None,
 ) -> dict:
     """The actual validation logic — deliberately not decorated with
     `@guarded`. `guard.py`'s call lock is a plain, non-reentrant
@@ -92,6 +93,8 @@ def _run_validation(
         cmd += ["--athlete", str(athlete_id)]
     if quiet:
         cmd.append("--quiet")
+    for monday, target in (week_targets or {}).items():
+        cmd += ["--week-target", f"{monday}={target}"]
 
     # encoding="utf-8" below only controls how THIS process decodes the
     # pipe's bytes — it says nothing about what encoding the CHILD process
@@ -168,10 +171,17 @@ def validate_block(
     tolerance: float | None = None,
     quiet: bool = False,
     athlete_name: str | None = None,
+    week_targets: dict[str, float] | None = None,
 ) -> dict:
     """Validate a block. Pass file_path explicitly (save_block returns it), or
     athlete_id alone to validate the most recently saved block in
     out/<athlete>/blocks/.
+
+    week_targets maps the Monday of a week (YYYY-MM-DD) to its TSS target from
+    load_targets, e.g. {"2026-10-05": 330}. The report then says how far that
+    week's written TSS sits from the target and warns (CHK-LOAD-TARGET) outside
+    max(5, 3%). It only warns, never blocks, and only judges a week written in
+    full in this file.
 
     Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
     tool never repairs or interprets the result, only reports it.
@@ -186,5 +196,5 @@ def validate_block(
         athlete_id=athlete_id, file_path=file_path, fill_tss=fill_tss,
         methodology=methodology, discipline=discipline,
         expected_tss=expected_tss, tolerance=tolerance, quiet=quiet,
-        athlete_name=athlete_name,
+        athlete_name=athlete_name, week_targets=week_targets,
     )

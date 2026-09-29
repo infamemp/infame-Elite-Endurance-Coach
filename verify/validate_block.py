@@ -27,6 +27,11 @@ Options:
     --tss           Expected TSS for a raw block with no header
     --tolerance     Override the divergence tolerance from config (percent)
     --quiet         Report findings only, omit the per-interval TSS breakdown
+    --week-target   DATE=TSS, repeatable. DATE is the Monday of a week; TSS is
+                    the target from load_targets. Warns (CHK-LOAD-TARGET, never
+                    blocks) when that week's summed TSS in this file sits more
+                    than max(5, 3%) from the target. Needs the whole week in
+                    the file.
     --fill-tss      Write the computed TSS into the header. The model writes
                     [Estimated TSS] pending; the engine supplies the number.
                     Refused if any hard constraint fails — a defective block is
@@ -57,6 +62,7 @@ if ROOT not in sys.path:
 import zone_model  # noqa: E402  — resolves native author files (v7.2)
 if os.path.join(ROOT, "engine") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "engine"))
+import load_targets  # noqa: E402  — weekly TSS targets (P1); tolerance shared with the tool
 import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared with build_state.py
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
@@ -1068,10 +1074,24 @@ def main():
     ap.add_argument("--tolerance", type=float)
     ap.add_argument("--athlete", help="athlete id, to load config/athletes/<id>.yaml")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--week-target", action="append", default=[], metavar="DATE=TSS",
+                    help="Monday of a week and its TSS target, e.g. 2026-10-05=330. "
+                         "Repeatable. Warns only.")
     ap.add_argument("--fill-tss", action="store_true",
                     help="write the computed TSS into each [Estimated TSS] header field. "
                          "Only applied when the block passes every hard constraint.")
     args = ap.parse_args()
+
+    week_targets = {}
+    for item in args.week_target:
+        try:
+            d_txt, t_txt = item.split("=")
+            monday = datetime.strptime(d_txt.strip(), "%Y-%m-%d").date()
+            week_targets[monday] = float(t_txt)
+        except ValueError:
+            sys.exit(f"--week-target '{item}' is not DATE=TSS, e.g. 2026-10-05=330")
+        if monday.weekday() != 0:
+            sys.exit(f"--week-target date {d_txt} is not a Monday")
 
     if not os.path.exists(args.file):
         sys.exit(f"File not found: {args.file}")
@@ -1365,6 +1385,45 @@ def main():
                   f"{mono_cfg['risk_threshold']} — a prompt for coaching "
                   f"judgement, not a block")
     if reported_any:
+        print()
+
+    # ── Weekly TSS target (CHK-LOAD-TARGET) — warns only, never blocks ────
+    # Sum of the TSS this validator computes for the sessions written in this
+    # file, against the target the coach took from load_targets. Only a week
+    # fully written here can be judged: a week with a missing day, or a
+    # session this validator could not cost, is reported as not checked,
+    # never estimated.
+    if week_targets:
+        print("── Weekly TSS target")
+        found = set()
+        for gkey in sorted(week_days, key=lambda k: (str(k[0] or ""), k[1], k[2])):
+            monday = date.fromisocalendar(gkey[1], gkey[2], 1)
+            if monday not in week_targets:
+                continue
+            found.add(monday)
+            target = week_targets[monday]
+            if gkey in week_incomplete:
+                print(f"   week of {monday.isoformat()}: not checked — a session in it "
+                      f"could not be costed")
+                continue
+            days = week_days[gkey]
+            if len(days) < 7:
+                print(f"   week of {monday.isoformat()}: not checked — {len(days)} of 7 "
+                      f"days are written in this file")
+                continue
+            res = load_targets.check_week(round(target, 1), round(sum(days.values()), 1))
+            print(f"   week of {monday.isoformat()}: {res['actual']:g} TSS written "
+                  f"against a target of {res['target']:g} ({res['difference']:+g}, "
+                  f"tolerance {res['tolerance']:g})")
+            if not res["within"]:
+                print(f"   WARN [CHK-LOAD-TARGET] L-: week of {monday.isoformat()} is "
+                      f"{abs(res['difference']):g} TSS "
+                      f"{'above' if res['difference'] > 0 else 'below'} its target, "
+                      f"outside the tolerance of {res['tolerance']:g} — a prompt for "
+                      f"coaching judgement, not a block")
+        for monday in sorted(set(week_targets) - found):
+            print(f"   week of {monday.isoformat()}: not checked — no session in this "
+                  f"file falls in that week")
         print()
 
     if failed:
