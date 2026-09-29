@@ -1309,6 +1309,18 @@ def unit_tests():
     equal("durability_watts: no rows gives empty windows",
           dw.best_by_window([], today), {"current": {}, "previous": {}})
 
+    rows_p, kj_p = dw.rows_from_payload(
+        {"after_kj": 1500, "secs": [1200, 300],
+         "curves": [{"start_date_local": "2026-09-01", "watts": [250, 300]}]})
+    equal("durability_watts: payload watts are re-aligned to 5 and 20 minutes",
+          (rows_p[0]["watts"], kj_p), ([300, 250], 1500))
+    equal("durability_watts: a payload without a positive after_kj has no level",
+          dw.rows_from_payload({"secs": [300, 1200], "curves": []})[1], None)
+    equal("durability_watts: a duration missing from the payload is null, not shifted",
+          dw.rows_from_payload({"secs": [300], "curves": [{"watts": [300]}]})[0][0]["watts"],
+          [300, None])
+    equal("durability_watts: a bare list of curves is accepted",
+          dw.rows_from_payload([{"watts": [1, 2]}])[0][0]["watts"], [1, 2])
     check("durability_watts: absent without fatigue_curves", dw.analyze({}) is None
           and dw.render(None) == "")
     fc_dw = {"secs": [300, 1200], "after_kj": {"kj0": 1500},

@@ -258,43 +258,56 @@ def fetch_curves(aid):
 
 
 def fetch_fatigue_curves(aid, profile):
-    """Best 5- and 20-minute power per window, fresh and after the athlete's
-    own kJ thresholds (durability in watts, engine/durability_watts.py).
+    """Best 5- and 20-minute power per window, fresh and after the kJ of the
+    athlete's fatigued curves (durability in watts, engine/durability_watts.py).
 
-    Uses the documented `fatigue` parameter of activity-power-curves, which
-    returns each activity's power at the requested durations for one of the
-    two fatigued curves Intervals.icu keeps per athlete (after_kj0/after_kj1
-    in the Ride sport settings). Returns None -- silently, this is optional
-    data -- when the athlete has no kJ threshold set, or when the fresh curve
-    cannot be read. A fatigued curve that fails is left out, not guessed."""
+    Uses the documented `fatigue` parameter of activity-power-curves. The
+    answer carries `after_kj`, the kJ each fatigued curve was cut at, so the
+    level comes from Intervals.icu itself and not from a setting read here.
+    Returns (curves, probe). `curves` is None -- silently, this is optional
+    data -- when the athlete has no Ride settings, no power curve in the last
+    84 days, or no fatigued curve defined; a fatigued curve that fails is left
+    out, not guessed. `probe` says what each request came back with, kept in
+    athlete_data.json so an absent section can be explained."""
     import durability_watts as dw
 
     ride = next((s for s in (profile or {}).get("sport_settings") or []
                  if "Ride" in (s.get("types") or [])), None)
     if not ride:
-        return None
-    levels = {k: ride.get(f"after_{k}") for k in ("kj0", "kj1")}
-    levels = {k: v for k, v in levels.items()
-              if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0}
-    if not levels:
-        return None
+        return None, {"reason": "no Ride sport settings"}
 
     today = date.today()
     oldest = today - timedelta(days=2 * dw.WINDOW_DAYS - 1)
     base = {"oldest": oldest.isoformat(), "newest": today.isoformat(),
             "type": "Ride", "secs": ",".join(str(x) for x in dw.SECS)}
+    endpoint = f"/athlete/{aid}/activity-power-curves"
+    probe = {}
 
-    best = {}
-    for name in ("fresh", *levels):
-        params = dict(base)
-        if name != "fresh":
-            params["fatigue"] = name
-        data = get(f"/athlete/{aid}/activity-power-curves", params=params, optional=True)
+    fresh = get(endpoint, params=dict(base), optional=True)
+    if fresh is None:
+        probe["fresh"] = "request failed"
+        return None, probe
+    rows, _ = dw.rows_from_payload(fresh)
+    probe["fresh"] = {"curves": len(rows)}
+    if not rows:
+        return None, probe
+
+    best = {"fresh": dw.best_by_window(rows, today)}
+    levels = {}
+    for name in ("kj0", "kj1"):
+        data = get(endpoint, params=dict(base, fatigue=name), optional=True)
         if data is None:
-            if name == "fresh":
-                return None
+            probe[name] = "request failed"
             continue
-        best[name] = dw.best_by_window(unwrap(data), today)
+        rws, kj = dw.rows_from_payload(data)
+        probe[name] = {"after_kj": kj, "curves": len(rws),
+                       "settings_after_kj": ride.get(f"after_{name}")}
+        if not kj:
+            continue                      # no such fatigued curve for this athlete
+        levels[name] = kj
+        best[name] = dw.best_by_window(rws, today)
+    if not levels:
+        return None, probe
 
     cur_from = today - timedelta(days=dw.WINDOW_DAYS - 1)
     prev_to = cur_from - timedelta(days=1)
@@ -307,7 +320,7 @@ def fetch_fatigue_curves(aid, profile):
             "previous": {"from": oldest.isoformat(), "to": prev_to.isoformat()},
         },
         "best": best,
-    }
+    }, probe
 
 
 def fetch_activities(aid, days):
@@ -544,9 +557,9 @@ def fetch_one(aid, name, days, outdir):
     activities = fetch_activities(aid, days)
     print(f"      {len(activities)} activities")
 
-    print("   fatigued power curves (only if kJ thresholds are set)...")
-    fatigue_curves = fetch_fatigue_curves(aid, profile)
-    print("      " + ("fetched" if fatigue_curves else "not set for this athlete, skipped"))
+    print("   fatigued power curves (only if the athlete has them defined)...")
+    fatigue_curves, fatigue_probe = fetch_fatigue_curves(aid, profile)
+    print("      " + ("fetched" if fatigue_curves else "none defined for this athlete, skipped"))
 
     print("   power and pace curves...")
     curves = fetch_curves(aid)
@@ -578,6 +591,8 @@ def fetch_one(aid, name, days, outdir):
     }
     if fatigue_curves:
         payload["fatigue_curves"] = fatigue_curves
+    if fatigue_probe:
+        payload["fatigue_probe"] = fatigue_probe
 
     dest = os.path.join(outdir, str(aid))
     os.makedirs(dest, exist_ok=True)

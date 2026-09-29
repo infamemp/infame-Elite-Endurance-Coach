@@ -992,54 +992,97 @@ def test_mcp_first_workflow():
 
 
 def test_fatigue_curves_fetch():
-    """fetch_fatigue_curves: optional data, silent when absent, never guessed."""
+    """fetch_fatigue_curves: optional data, silent when absent, never guessed.
+    The fake answers have the shape of the API's ActivityPowerCurvePayload:
+    {"after_kj", "secs", "curves": [{"start_date_local", "watts"}]}."""
     import fetch_athlete_data as fad
     from datetime import date, timedelta
     today = date.today()
     d = lambda n: (today - timedelta(days=n)).isoformat() + "T08:00:00"
     path = f"/athlete/{AID}/activity-power-curves"
-    profile = {"sport_settings": [{"types": ["Ride"], "after_kj0": 1500, "after_kj1": 3000}]}
+    profile = {"sport_settings": [{"types": ["Ride"], "after_kj0": None, "after_kj1": None}]}
+
+    def payload(kj, watts, secs=(300, 1200), curves=True):
+        body = {"secs": list(secs),
+                "curves": [{"id": "i1", "start_date_local": d(5), "watts": watts}] if curves else []}
+        if kj is not None:
+            body["after_kj"] = kj
+        return _Resp(body)
 
     def by_fatigue(kw):
         f = kw["params"].get("fatigue")
-        w = {None: [300, 250], "kj0": [270, 220], "kj1": [240, 200]}[f]
-        return _Resp({"list": [{"start_date_local": d(5), "watts": w}]})
+        return {None: payload(None, [300, 250]), "kj0": payload(1500, [270, 220]),
+                "kj1": payload(3000, [240, 200])}[f]
 
     real = fad.SESSION
     try:
         fad.SESSION = _FakeSession({("GET", path): by_fatigue}, fad.BASE_URL)
-        out = fad.fetch_fatigue_curves(AID, profile)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
         params = [c[2]["params"] for c in fad.SESSION.calls]
-        check("fatigue curves: one fresh call plus one per configured kJ level",
-              len(params) == 3 and [p.get("fatigue") for p in params] == [None, "kj0", "kj1"])
+        check("fatigue curves: one fresh call plus kj0 and kj1",
+              [p.get("fatigue") for p in params] == [None, "kj0", "kj1"])
         check("fatigue curves: asks for Ride at 5 and 20 minutes",
               all(p["type"] == "Ride" and p["secs"] == "300,1200" for p in params))
-        equal("fatigue curves: kJ levels come from the sport settings",
+        equal("fatigue curves: the kJ levels come from the answer, not the settings",
               out["after_kj"], {"kj0": 1500, "kj1": 3000})
         equal("fatigue curves: best kept per level",
               (out["best"]["fresh"]["current"]["300"]["watts"],
                out["best"]["kj0"]["current"]["1200"]["watts"],
                out["best"]["kj1"]["current"]["300"]["watts"]), (300, 220, 240))
+        equal("fatigue curves: the probe records what each request returned",
+              (probe["fresh"]["curves"], probe["kj0"]["after_kj"]), (1, 1500))
 
-        fad.SESSION = _FakeSession({("GET", path): by_fatigue}, fad.BASE_URL)
-        equal("fatigue curves: no kJ threshold set -> None, no request at all",
-              (fad.fetch_fatigue_curves(AID, {"sport_settings": [{"types": ["Ride"], "ftp": 225}]}),
-               fad.SESSION.calls), (None, []))
+        def reordered(kw):
+            f = kw["params"].get("fatigue")
+            return payload(1500 if f else None, [250, 300], secs=(1200, 300))
+        fad.SESSION = _FakeSession({("GET", path): reordered}, fad.BASE_URL)
+        out, _ = fad.fetch_fatigue_curves(AID, profile)
+        equal("fatigue curves: watts are aligned by the answer's own secs",
+              (out["best"]["fresh"]["current"]["300"]["watts"],
+               out["best"]["fresh"]["current"]["1200"]["watts"]), (300, 250))
+
+        def only_kj0(kw):
+            f = kw["params"].get("fatigue")
+            if f == "kj1":
+                return payload(None, [], curves=False)      # no such curve defined
+            return by_fatigue(kw)
+        fad.SESSION = _FakeSession({("GET", path): only_kj0}, fad.BASE_URL)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
+        check("fatigue curves: a fatigued curve the athlete lacks is left out",
+              list(out["after_kj"]) == ["kj0"] and "kj1" not in out["best"]
+              and probe["kj1"]["after_kj"] is None)
+
+        def none_defined(kw):
+            return payload(None, [300, 250] if not kw["params"].get("fatigue") else [], curves=not kw["params"].get("fatigue"))
+        fad.SESSION = _FakeSession({("GET", path): none_defined}, fad.BASE_URL)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
+        check("fatigue curves: no fatigued curve defined -> None, with the probe kept",
+              out is None and "kj0" in probe and "kj1" in probe)
+
+        def no_power(kw):
+            return payload(None, [], curves=False)
+        fad.SESSION = _FakeSession({("GET", path): no_power}, fad.BASE_URL)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
+        check("fatigue curves: no power curves at all -> None after a single request",
+              out is None and len(fad.SESSION.calls) == 1)
+
         equal("fatigue curves: no Ride settings -> None",
-              fad.fetch_fatigue_curves(AID, {"sport_settings": [{"types": ["Run"]}]}), None)
+              fad.fetch_fatigue_curves(AID, {"sport_settings": [{"types": ["Run"]}]})[0], None)
 
         fad.SESSION = _FakeSession({}, fad.BASE_URL)
-        equal("fatigue curves: fresh curve unreadable -> None",
-              fad.fetch_fatigue_curves(AID, profile), None)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
+        check("fatigue curves: fresh curve unreadable -> None",
+              out is None and probe["fresh"] == "request failed")
 
         def kj1_fails(kw):
             if kw["params"].get("fatigue") == "kj1":
                 return _Resp({"error": "x"}, 500)
             return by_fatigue(kw)
         fad.SESSION = _FakeSession({("GET", path): kj1_fails}, fad.BASE_URL)
-        out = fad.fetch_fatigue_curves(AID, profile)
+        out, probe = fad.fetch_fatigue_curves(AID, profile)
         check("fatigue curves: a failed fatigued level is left out, the rest kept",
-              "kj1" not in out["best"] and "kj0" in out["best"] and "fresh" in out["best"])
+              "kj1" not in out["best"] and "kj0" in out["best"] and "fresh" in out["best"]
+              and probe["kj1"] == "request failed")
     finally:
         fad.SESSION = real
 

@@ -8,12 +8,13 @@ the same durations fresh, this window against the one before it.
 It answers what HR decoupling can only hint at. Decoupling says the heart rate
 drifted; this says what the legs could still produce.
 
-Source. Intervals.icu keeps two "fatigued" power curves per athlete, defined by
-the kJ thresholds in the sport settings (`after_kj0`, `after_kj1`). The fetcher
-asks for each activity's best power at 5 and 20 minutes, fresh and fatigued
-(`activity-power-curves`, its documented `fatigue` parameter), and keeps the
-best of each window. An athlete with no kJ threshold set has nothing here: the
-section is absent, never reported as zero and never a fault.
+Source. Intervals.icu keeps up to two "fatigued" power curves per athlete
+(`kj0`, `kj1`). The fetcher asks for each activity's best power at 5 and 20
+minutes, fresh and fatigued (`activity-power-curves`, its documented
+`fatigue` parameter), and keeps the best of each window. The kJ each fatigued
+curve was cut at is read from the answer itself (`after_kj`). An athlete with
+no fatigued curve defined has nothing here: the section is absent, never
+reported as zero and never a fault.
 
 Two windows of the same length that do NOT overlap (the last 42 days and the 42
 before them), so the comparison is fair, unlike the nested 42d/90d/1y curves in
@@ -34,6 +35,33 @@ WINDOW_DAYS = 42
 
 def _d(s):
     return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+
+
+def rows_from_payload(payload, secs=SECS):
+    """(rows, after_kj) from an `activity-power-curves` answer. The endpoint
+    returns {"after_kj", "secs", "curves": [{"start_date_local", "watts"}]},
+    with `watts` aligned to the answer's own `secs`: they are re-aligned here
+    to the durations asked for, whatever order the answer uses. `after_kj` is
+    the kJ the fatigued curve was cut at (None for a fresh curve, or when
+    Intervals.icu defines no such curve). A bare list of curves is accepted."""
+    if isinstance(payload, dict):
+        curves = payload.get("curves") or payload.get("list") or []
+        psecs, kj = payload.get("secs"), payload.get("after_kj")
+    elif isinstance(payload, list):
+        curves, psecs, kj = payload, None, None
+    else:
+        return [], None
+    idx = {s: i for i, s in enumerate(psecs)} if psecs else None
+    rows = []
+    for c in curves:
+        w = c.get("watts") or []
+        if idx is None:
+            aligned = list(w)
+        else:
+            aligned = [w[idx[s]] if s in idx and idx[s] < len(w) else None for s in secs]
+        rows.append({"start_date_local": c.get("start_date_local"), "watts": aligned})
+    ok_kj = kj if isinstance(kj, int) and not isinstance(kj, bool) and kj > 0 else None
+    return rows, ok_kj
 
 
 def best_by_window(rows, today, secs=SECS, window_days=WINDOW_DAYS):

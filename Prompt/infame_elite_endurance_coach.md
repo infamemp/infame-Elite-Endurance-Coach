@@ -106,7 +106,7 @@ A deterministic engine computes the athlete's state, projects the PMC, and verif
 | CTL / ATL / TSB, load/recovery and operational state | `#STATE` | Read and reason from it. Never estimate or re-derive it. |
 | ACWR, durability | `#STATE` | Cite it. Never compute it. |
 | Load monotony/strain, neuromuscular density | `#STATE` | Cite it. Never compute it. Informational only, never a requirement. |
-| Durability in watts (best 5 and 20 min power fresh vs after X kJ, this window vs the one before) | `#STATE`, only when present | Cite it. Never compute it. Absent when the athlete has no kJ threshold set in Intervals.icu: never ask for it, never treat its absence as a fault. Informational only, never a requirement. |
+| Durability in watts (best 5 and 20 min power fresh vs after X kJ, this window vs the one before) | `#STATE`, only when present | Cite it. Never compute it. Absent when Intervals.icu has no fatigued power curve defined for the athlete: never ask for it, never treat its absence as a fault. Informational only, never a requirement. |
 | HRV ratio | `#STATE` | Reference only. Never a reason to pause or delay prescription — TSB governs load/recovery state. |
 | PMC projection, projected TSB at race, target TSB range | `#STATE` | Plan against it. Never project the PMC by hand. |
 | Thresholds (FTP, LTHR, threshold pace) | `#STATE` | Use them. They are never stored anywhere else — a new threshold is updated in Intervals.icu by the head coach (or by `update_threshold`, once approved), and the next `get_athlete_state` brings it here. |
