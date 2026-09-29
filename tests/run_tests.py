@@ -1415,6 +1415,69 @@ def unit_tests():
     check("load_targets: render shows the table",
           "## Load targets" in md_lt and "| 1 | 2026-10-05 | build | 300 |" in md_lt)
 
+    # ── what-if: weekly targets fed into the PMC projection ──
+    import what_if as wi
+    hist = [140, 0, 60, 70, 0, 150, 100]           # Mon..Sun habitual load
+    acts_wi = [{"date": (today - timedelta(days=i)).isoformat(),
+                "training_load": hist[(today - timedelta(days=i)).weekday()]}
+               for i in range(1, 70)]
+    pmc_wi = {"date": today.isoformat(), "ctl": 50.0, "atl": 55.0}
+    race_wi = (today + timedelta(days=40)).isoformat()
+    mon_wi = today + timedelta(days=7 - today.weekday())
+    mondays = [(mon_wi + timedelta(days=7 * i)).isoformat() for i in range(5)]
+
+    def wi_run(target, **kw):
+        return wi.analyze(pmc_wi, kw.pop("events", []), kw.pop("acts", acts_wi),
+                          {m: target for m in mondays}, [], th_dw,
+                          race_date=race_wi, event_type="road", **kw)
+
+    low, high = wi_run(200), wi_run(700)
+    check("what_if: available with a race and whole future weeks",
+          low["available"] and low["race"]["days_out"] == 40)
+    check("what_if: a target below the habit lowers race-morning CTL, above raises it",
+          low["what_if"]["ctl_at_race"] < low["baseline"]["ctl_at_race"]
+          < high["what_if"]["ctl_at_race"])
+    day_sums = [round(sum(w["daily_load"])) for w in low["weeks"]]
+    equal("what_if: a week's days add up to its target", day_sums, [200] * 5)
+    equal("what_if: the rest day of the athlete's pattern stays at zero",
+          low["weeks"][0]["daily_load"][1], 0)
+    check("what_if: the weekday pattern comes from history",
+          low["weekday_pattern_from_history"] is True)
+    thin = wi_run(300, acts=[])
+    check("what_if: thin history spreads the week evenly and says so",
+          thin["weekday_pattern_from_history"] is False
+          and len(set(thin["weeks"][0]["daily_load"])) == 1
+          and any("evenly" in n for n in thin["notes"]))
+    ev_day = (mon_wi + timedelta(days=2)).isoformat()
+    with_ev = wi_run(300, events=[{"date": ev_day, "planned_load": 900}])
+    equal("what_if: a planned event inside a targeted week is set aside",
+          round(sum(with_ev["weeks"][0]["daily_load"])), 300)
+    check("what_if: a whole future week only",
+          wi.analyze(pmc_wi, [], acts_wi, {(today - timedelta(days=today.weekday())).isoformat(): 300},
+                     [], th_dw, race_date=race_wi)["available"] is False)
+    started = wi.analyze(pmc_wi, [], acts_wi,
+                         {(today - timedelta(days=today.weekday())).isoformat(): 300, mondays[0]: 300},
+                         [], th_dw, race_date=race_wi)
+    check("what_if: a started week is skipped and named, the rest is used",
+          started["available"] and len(started["skipped"]) == 1)
+    for label, kw in (("a date that is not a Monday", {mondays[0][:8] + "31": 300}),
+                      ("a negative target", {mondays[0]: -5}),
+                      ("a bad date", {"pronto": 300})):
+        try:
+            wi.analyze(pmc_wi, [], acts_wi, kw, [], th_dw, race_date=race_wi)
+            ok_wi = False
+        except ValueError:
+            ok_wi = True
+        check(f"what_if: rejects {label}", ok_wi)
+    check("what_if: no race declared or given is reported, not guessed",
+          wi.analyze(pmc_wi, [], acts_wi, {mondays[0]: 300}, [], th_dw)["available"] is False)
+    check("what_if: no PMC reading is reported",
+          wi.analyze(None, [], acts_wi, {mondays[0]: 300}, [], th_dw)["available"] is False)
+    md_wi = wi.render(low)
+    check("what_if: render shows both rows and the weeks",
+          "Without the targets" in md_wi and "With the targets" in md_wi
+          and mondays[0] in md_wi)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture

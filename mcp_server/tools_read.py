@@ -1,5 +1,5 @@
 """tools_read.py — get_athlete_state, get_athlete_profile, list_roster,
-roster_overview, get_execution, load_targets
+roster_overview, get_execution, load_targets, what_if_targets
 =========================================================================
 Every value returned here is exactly what `state.md`/`profile.md`/
 `roster.md` already carry — these tools read and, where a fetch is needed,
@@ -186,3 +186,35 @@ def load_targets(start_weekly_tss: float, weeks: int, cycle: str = "3:1",
     except ValueError as e:
         raise ToolError(str(e))
     return {"ok": True, "markdown": lt.render(result), **result}
+
+
+@guarded
+def what_if_targets(athlete_id: str, week_targets: dict[str, float],
+                    race_date: str | None = None, event_type: str | None = None,
+                    force_refresh: bool = False) -> dict:
+    """What if these weekly TSS targets are followed? Feeds them into the same
+    projection #STATE uses and returns CTL and TSB on race morning with and
+    without the targets, before any session is written. week_targets maps the
+    Monday of each whole future week (YYYY-MM-DD) to its TSS target, normally
+    the numbers load_targets gave. A target is spread over the week by the
+    athlete's own weekday pattern; that week's planned Intervals.icu events
+    are set aside. The race is the athlete's next declared A goal unless
+    race_date (and event_type, for the target TSB range) are given.
+    Reports only: the verdict shown is taper_check's own, and the head coach
+    decides."""
+    ensure_import_paths()
+    import build_state as bs
+    import what_if
+
+    resolve_and_prep(athlete_id, force_refresh=force_refresh)
+    data = load_athlete_data(athlete_id)
+    if not data:
+        raise ToolError(f"No data for '{athlete_id}' — call get_athlete_state first.")
+    try:
+        result = what_if.analyze(
+            bs.latest_pmc(data), data.get("events", []), data.get("activities", []),
+            week_targets, bs.load_declared_goals(athlete_id), bs.load_thresholds(),
+            race_date=race_date, event_type=event_type)
+    except ValueError as e:
+        raise ToolError(str(e))
+    return {"ok": True, "athlete_id": athlete_id, "markdown": what_if.render(result), **result}

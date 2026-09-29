@@ -1055,6 +1055,24 @@ def test_load_targets_tool():
     equal("load_targets tool: a nonsensical input fails cleanly", r.get("ok"), False)
 
 
+def test_what_if_tool():
+    from datetime import date, timedelta
+    import mcp_server.tools_read as tr
+    today = date.today()
+    mon = today + timedelta(days=7 - today.weekday())
+    race = (today + timedelta(days=35)).isoformat()
+    _seed_athlete_data(fresh=True)
+    r = tr.what_if_targets(AID, {mon.isoformat(): 300}, race_date=race, event_type="road")
+    check("what_if tool: answers for a prepared athlete",
+          r.get("ok") is True and r.get("available") is True, str(r)[:300])
+    check("what_if tool: both projections and the table come back",
+          r.get("baseline") and r.get("what_if") and "With the targets" in r["markdown"])
+    r = tr.what_if_targets(AID, {"2026-13-45": 300}, race_date=race)
+    equal("what_if tool: a bad date fails cleanly", r.get("ok"), False)
+    r = tr.what_if_targets("no-such-athlete-id", {mon.isoformat(): 300}, race_date=race)
+    equal("what_if tool: an unknown athlete fails cleanly", r.get("ok"), False)
+
+
 def main():
     print("mcp_server — regression tests\n")
     if not MCP_AVAILABLE:
@@ -1063,7 +1081,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch, test_load_targets_tool,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
