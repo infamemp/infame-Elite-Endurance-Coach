@@ -1363,6 +1363,58 @@ def unit_tests():
                   and "Durability in watts" not in md_state)
     shutil.rmtree(dir_dw, ignore_errors=True)
 
+    # ── load targets: weekly TSS and hours from the coach's own inputs ──
+    import load_targets as lt
+
+    def tss(**kw):
+        return [(w["type"], w["target_tss"]) for w in lt.plan(**kw)["weeks"]]
+
+    equal("load_targets: 3:1 with 10% growth and 30% recovery",
+          tss(start_weekly_tss=300, weeks=8, cycle="3:1", growth_pct=10, recovery_pct=30),
+          [("build", 300), ("build", 330), ("build", 363), ("recovery", 254),
+           ("build", 399), ("build", 439), ("build", 483), ("recovery", 338)])
+    equal("load_targets: a list of growth steps applies step by step",
+          tss(start_weekly_tss=300, weeks=3, growth_pct=[10, 5]),
+          [("build", 300), ("build", 330), ("build", 346)])
+    equal("load_targets: the last growth step repeats",
+          [t for _, t in tss(start_weekly_tss=100, weeks=4, cycle="4:1", growth_pct=[10, 0])],
+          [100, 110, 110, 110])
+    equal("load_targets: 2:1 cycle",
+          [k for k, _ in tss(start_weekly_tss=200, weeks=6, cycle="2:1")],
+          ["build", "build", "recovery", "build", "build", "recovery"])
+    equal("load_targets: cycle without recovery weeks never recovers",
+          {k for k, _ in tss(start_weekly_tss=200, weeks=6, cycle="3:0")}, {"build"})
+    equal("load_targets: zero growth holds the load",
+          [t for _, t in tss(start_weekly_tss=250, weeks=3, growth_pct=0)], [250, 250, 250])
+    rows_lt = lt.plan(300, 2, tss_per_hour=50, start_date="2026-10-05")["weeks"]
+    equal("load_targets: hours from TSS per hour", rows_lt[0]["target_hours"], 6.0)
+    equal("load_targets: week start dates step by 7 days", rows_lt[1]["week_start"], "2026-10-12")
+    check("load_targets: no hours column without tss_per_hour",
+          "target_hours" not in lt.plan(300, 2)["weeks"][0])
+    equal("load_targets: tolerance is max(5, 3%) - small week", lt.tolerance(100), 5)
+    equal("load_targets: tolerance is max(5, 3%) - big week", lt.tolerance(400), 12)
+    chk = lt.check_week(400, 410)
+    check("load_targets: a week inside tolerance is within",
+          chk["within"] is True and chk["difference"] == 10)
+    check("load_targets: a week outside tolerance is not within",
+          lt.check_week(400, 420)["within"] is False)
+    for label, kw in (("start TSS", dict(start_weekly_tss=5, weeks=4)),
+                      ("weeks", dict(start_weekly_tss=300, weeks=0)),
+                      ("cycle", dict(start_weekly_tss=300, weeks=4, cycle="three")),
+                      ("growth", dict(start_weekly_tss=300, weeks=4, growth_pct=60)),
+                      ("recovery", dict(start_weekly_tss=300, weeks=4, recovery_pct=90)),
+                      ("date", dict(start_weekly_tss=300, weeks=4, start_date="mañana")),
+                      ("bool", dict(start_weekly_tss=True, weeks=4))):
+        try:
+            lt.plan(**kw)
+            ok_lt = False
+        except ValueError:
+            ok_lt = True
+        check(f"load_targets: rejects a nonsensical {label}", ok_lt)
+    md_lt = lt.render(lt.plan(300, 4, tss_per_hour=50, start_date="2026-10-05"))
+    check("load_targets: render shows the table",
+          "## Load targets" in md_lt and "| 1 | 2026-10-05 | build | 300 |" in md_lt)
+
 
 # ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture

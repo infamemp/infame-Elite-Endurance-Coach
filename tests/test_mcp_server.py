@@ -1034,6 +1034,17 @@ def test_fatigue_curves_fetch():
         fad.SESSION = real
 
 
+def test_load_targets_tool():
+    import mcp_server.tools_read as tr
+    r = tr.load_targets(300, 4, cycle="3:1", growth_pct=10, recovery_pct=30)
+    check("load_targets tool: returns the four weeks and a table",
+          r.get("ok") is True and len(r["weeks"]) == 4 and "## Load targets" in r["markdown"])
+    equal("load_targets tool: recovery week follows the last build week",
+          [w["type"] for w in r["weeks"]], ["build", "build", "build", "recovery"])
+    r = tr.load_targets(300, 0)
+    equal("load_targets tool: a nonsensical input fails cleanly", r.get("ok"), False)
+
+
 def main():
     print("mcp_server — regression tests\n")
     if not MCP_AVAILABLE:
@@ -1042,7 +1053,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch, test_load_targets_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):

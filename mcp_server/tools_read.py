@@ -1,5 +1,5 @@
 """tools_read.py — get_athlete_state, get_athlete_profile, list_roster,
-roster_overview, get_execution
+roster_overview, get_execution, load_targets
 =========================================================================
 Every value returned here is exactly what `state.md`/`profile.md`/
 `roster.md` already carry — these tools read and, where a fetch is needed,
@@ -161,3 +161,28 @@ def get_execution(athlete_id: str, days: int = 28, force_refresh: bool = False) 
         "markdown": execution.render(result),
         "execution": result,
     }
+
+
+@guarded
+def load_targets(start_weekly_tss: float, weeks: int, cycle: str = "3:1",
+                 growth_pct: float | list[float] = 5, recovery_pct: float = 30,
+                 tss_per_hour: float | None = None,
+                 start_date: str | None = None) -> dict:
+    """Weekly TSS (and hours) targets for a block, from the coach's own
+    choices: the cycle ("3:1" = three build weeks then one recovery week),
+    the TSS of the first week, the growth from one build week to the next, and
+    how far a recovery week drops. Pure arithmetic: no athlete data is read
+    and nothing is sent anywhere. Compare the result with #STATE (CTL, ramp
+    rate, ACWR) before using it; the engine does not say a target is right.
+    Each week also carries its tolerance, max(5, 3% of the target): how far
+    the summed TSS of the written sessions may sit from the target."""
+    ensure_import_paths()
+    import load_targets as lt
+
+    try:
+        result = lt.plan(start_weekly_tss, weeks, cycle=cycle, growth_pct=growth_pct,
+                         recovery_pct=recovery_pct, tss_per_hour=tss_per_hour,
+                         start_date=start_date)
+    except ValueError as e:
+        raise ToolError(str(e))
+    return {"ok": True, "markdown": lt.render(result), **result}
