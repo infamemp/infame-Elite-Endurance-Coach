@@ -37,6 +37,11 @@
       "type": "string",
       "description": "Path, relative to Knowledge/, of the book KB the coach reads for this methodology. Must exist on disk. The literal value `none` marks a zones-only methodology (no book in the repository) and then requires knowledge_note."
     },
+    "supplementary_knowledge_files": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Optional. Further book KBs by the SAME author (paths relative to Knowledge/, each must exist). The coach reads them together with knowledge_file; where they differ on a zone boundary, this methodology's zone table governs."
+    },
     "knowledge_note": {
       "type": "string",
       "description": "Required when knowledge_file is `none`: where the zones come from and why there is no KB."

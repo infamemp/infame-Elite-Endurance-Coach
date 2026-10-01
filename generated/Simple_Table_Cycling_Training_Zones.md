@@ -9,7 +9,7 @@
 - `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.
 - Notation: ranges use `X–Y%` (en dash), open lower bound `< X%`, open upper bound `> X%`, undefined value `N/A`. Zones with an open lower bound are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE — DO NOT EDIT.** Built 2026-09-27 by `build_zone_tables.py`.
+**GENERATED FILE — DO NOT EDIT.** Built 2026-10-01 by `build_zone_tables.py`.
 If this date is older than your last change to `config/`, this file is stale —
 run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
@@ -101,7 +101,8 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % FTP
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
-* **Knowledge Base (Project file):** `Joe_Friel_cyclists_training_bible_knowledge_base.md` (`Knowledge/Joe_Friel_cyclists_training_bible_knowledge_base.md`)
+* **Knowledge Base (Project file):** `Friel_Cyclists_Training_Bible.md` (`Knowledge/Principles/Friel_Cyclists_Training_Bible.md`)
+* **Supplementary Knowledge (same author, Project file):** `Friel_High_Performance_Cyclist.md` (`Knowledge/Principles/Friel_High_Performance_Cyclist.md`) — read it together with the Knowledge Base above; where the two differ on a zone boundary, this zone table governs.
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 

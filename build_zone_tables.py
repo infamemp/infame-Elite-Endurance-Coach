@@ -141,6 +141,11 @@ def cross_field_errors(data, stem):
             extra.append("knowledge_file is `none` but knowledge_note is missing")
     elif not os.path.isfile(os.path.join(ROOT, "Knowledge", kf)):
         extra.append(f"knowledge_file 'Knowledge/{kf}' does not exist")
+    for skf in data.get("supplementary_knowledge_files") or []:
+        if kf == "none":
+            extra.append("supplementary_knowledge_files cannot be used with knowledge_file `none`")
+        elif not os.path.isfile(os.path.join(ROOT, "Knowledge", skf)):
+            extra.append(f"supplementary_knowledge_files 'Knowledge/{skf}' does not exist")
     available = set(data.get("available_metrics", []))
     resolvable = available | set(zm.sport_metrics(data.get("sport", "cycling")))
     if data.get("default_metric") not in resolvable:
@@ -409,6 +414,11 @@ def render_author(author, thresholds):
         L.append(f"* **Knowledge Base (Project file):** "
                  f"`{os.path.basename(author['knowledge_file'])}` "
                  f"(`Knowledge/{author['knowledge_file']}`)")
+        for skf in author.get("supplementary_knowledge_files") or []:
+            L.append(f"* **Supplementary Knowledge (same author, Project file):** "
+                     f"`{os.path.basename(skf)}` (`Knowledge/{skf}`) — read it together "
+                     f"with the Knowledge Base above; where the two differ on a zone "
+                     f"boundary, this zone table governs.")
 
     dl = author.get("dual_layer") or {"required": False}
     L.append(f"* **Dual-Layer Required:** {'Yes' if dl.get('required') else 'No'}")

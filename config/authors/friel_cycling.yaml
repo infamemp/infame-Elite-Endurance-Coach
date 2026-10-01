@@ -6,7 +6,11 @@ id: friel_cycling
 name: Friel Cycling Zones
 
 # Knowledge base the coach reads for this methodology (path relative to Knowledge/).
-knowledge_file: Joe_Friel_cyclists_training_bible_knowledge_base.md
+knowledge_file: Principles/Friel_Cyclists_Training_Bible.md
+# Same author, second book (2025). Read together with the file above; where the
+# two differ on a zone boundary, this file's zone table governs.
+supplementary_knowledge_files:
+  - Principles/Friel_High_Performance_Cyclist.md
 sport: cycling
 
 zone_identifier_style: Zone N (with sub-zone letters, e.g. "Zone 5 / 5a")

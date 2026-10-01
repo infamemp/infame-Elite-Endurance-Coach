@@ -50,14 +50,16 @@ authoritative. The model prescribes on top of it and never recalculates it.
 - **`tests/`** — 409 regression tests (plus 76 in `tests/test_mcp_server.py`) over synthetic athletes with frozen expected
   outputs. Run after any change to config or engine.
 - **`Prompt/`** — the gated state machine, Phases 0–6.
-- **`Knowledge/`** — 13 book-derived knowledge bases (each methodology's YAML
-  declares its file in `knowledge_file`; Friel cycling and running share one, and
-  Mujika on tapering belongs to no single methodology). 11 are split into `Principles/`
-  (binding zone definitions, ratios, ceilings — loaded in the Project) and
-  `Catalogs/` (the author's own named worked examples, for calibration only,
-  never loaded by default). The other 2 (Friel, Palladino) have no worked-plan
-  content to split out and stay as a single file. Originals before the split
-  are in `archive/Knowledge_legacy/`.
+- **`Knowledge/`** — 14 book-derived knowledge bases (each methodology's YAML
+  declares its file in `knowledge_file`, plus any further book by the same author
+  in `supplementary_knowledge_files` — Friel cycling has two: the 2018 Cyclist's
+  Training Bible and the 2025 High-Performance Cyclist; Friel running is
+  zones-only, and Mujika on tapering belongs to no single methodology). 13 are
+  split into `Principles/` (binding zone definitions, ratios, ceilings — loaded in
+  the Project) and `Catalogs/` (the author's own named worked examples, for
+  calibration only, never loaded by default). Palladino has no worked-plan content
+  to split out and stays as a single file. Originals before the split (and the
+  old single-file Friel) are in `archive/Knowledge_legacy/`.
 
 ### Daily use
 
@@ -84,7 +86,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.10.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.11.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -153,6 +155,16 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.11 — Friel cycling reads two books (2026-09-30)**
+
+The 2018 *Cyclist's Training Bible* was re-extracted with the book pipeline
+(411 entries, numbers checked against the source) and split into `Principles/` and
+`Catalogs/` like the other authors; the old single file moved to
+`archive/Knowledge_legacy/`. The 2025 *High-Performance Cyclist* joins it as a second
+file by the same author: `friel_cycling.yaml` gets `supplementary_knowledge_files`,
+the zone-table header and `profile.md` list both, and the prompt says that where
+the two differ on a zone boundary the zone table governs.
 
 **v7.10 — the language guide uses the head coach's own vocabulary (2026-09-27)**
 

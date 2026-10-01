@@ -467,13 +467,17 @@ def knowledge_lines(declared):
         if not os.path.isfile(path):
             continue
         with open(path, encoding="utf-8") as f:
-            kf = (yaml.safe_load(f) or {}).get("knowledge_file")
+            cfg = yaml.safe_load(f) or {}
+        kf = cfg.get("knowledge_file")
         if kf == "none":
             L.append(f"- `{disc}` → `{author}` → no Knowledge file: ZONES ONLY — "
                      f"never attribute training principles to it")
         elif kf:
             L.append(f"- `{disc}` → `{author}` → Project file "
                      f"`{os.path.basename(kf)}` (`Knowledge/{kf}`)")
+            for skf in (cfg.get("supplementary_knowledge_files") or []):
+                L.append(f"  - plus, same author: `{os.path.basename(skf)}` "
+                         f"(`Knowledge/{skf}`)")
     if not L:
         return []
     return ["**Knowledge files to read for the declared methodologies** "

@@ -636,6 +636,8 @@ def unit_tests():
 
     # Every author declares its KB file; every KB on disk is claimed (Mujika is a topic KB)
     claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
+    for a in on_disk:   # further books by the same author are claimed too
+        claimed |= set(zm.load_author_raw(a).get("supplementary_knowledge_files") or [])
     check("authors: every author declares an existing knowledge_file (or `none`)",
           all(k == "none" or (k and os.path.isfile(os.path.join(ROOT, "Knowledge", k)))
               for k in claimed), claimed)
@@ -644,6 +646,9 @@ def unit_tests():
     # "Friel running method" from The Cyclist's Training Bible).
     cycling_kbs = {zm.load_author_raw(a)["knowledge_file"] for a in on_disk
                    if zm.load_author_raw(a).get("sport") == "cycling"}
+    for a in on_disk:
+        if zm.load_author_raw(a).get("sport") == "cycling":
+            cycling_kbs |= set(zm.load_author_raw(a).get("supplementary_knowledge_files") or [])
     borrowed = sorted(a for a in on_disk
                       if zm.load_author_raw(a).get("sport") == "running"
                       and zm.load_author_raw(a)["knowledge_file"] in cycling_kbs)
@@ -651,6 +656,18 @@ def unit_tests():
     equal("authors: friel_running is zones-only (no Friel running book in the repo)",
           zm.load_author_raw("friel_running")["knowledge_file"], "none")
     claimed.discard("none")
+    _fc = zm.load_author_raw("friel_cycling")
+    _fsup = _fc.get("supplementary_knowledge_files") or []
+    equal("friel: the primary book is the 2018 Cyclist's Training Bible KB",
+          _fc["knowledge_file"], "Principles/Friel_Cyclists_Training_Bible.md")
+    equal("friel: the 2025 High-Performance Cyclist is the supplementary book",
+          _fsup, ["Principles/Friel_High_Performance_Cyclist.md"])
+    check("friel: both books exist and have a Catalogs companion",
+          all(os.path.isfile(os.path.join(ROOT, "Knowledge", k)) for k in [_fc["knowledge_file"]] + _fsup)
+          and all(os.path.isfile(os.path.join(ROOT, "Knowledge", "Catalogs", os.path.basename(k)))
+                  for k in [_fc["knowledge_file"]] + _fsup))
+    check("friel: the old single-file KB is gone from Knowledge/",
+          not os.path.exists(os.path.join(ROOT, "Knowledge", "Joe_Friel_cyclists_training_bible_knowledge_base.md")))
     kb_disk = {os.path.relpath(f, os.path.join(ROOT, "Knowledge")).replace(os.sep, "/")
                for f in glob.glob(os.path.join(ROOT, "Knowledge", "**", "*.md"), recursive=True)
                if os.sep + "Catalogs" + os.sep not in f}
@@ -671,6 +688,8 @@ def unit_tests():
               f"`Knowledge/{kf}`" in gen_txt, kf)
     check("generated: one Knowledge Base line per methodology",
           gen_txt.count("**Knowledge Base (Project file):**") == len(on_disk))
+    check("generated: Friel cycling's header names its supplementary book",
+          "**Supplementary Knowledge (same author, Project file):** `Friel_High_Performance_Cyclist.md`" in gen_txt)
     import build_profile as _bp
     kl = "\n".join(_bp.knowledge_lines({"preferences": {"methodology": {
         "road_run": "hudson", "road_bike": "coggan", "trail_run": None, "gravel": "nope",
@@ -681,6 +700,9 @@ def unit_tests():
     check("profile: declared methodologies list their Knowledge file",
           "Hudson_Run_Faster_From_5K_to_Marathon.md" in kl and
           "Allen - Coggan_Training_and_Racing_With_a_Powermeter.md" in kl, kl)
+    _kf = "\n".join(_bp.knowledge_lines({"preferences": {"methodology": {"road_bike": "friel_cycling"}}}))
+    check("profile: Friel cycling lists both books",
+          "Friel_Cyclists_Training_Bible.md" in _kf and "plus, same author: `Friel_High_Performance_Cyclist.md`" in _kf, _kf)
     check("profile: null or unknown methodologies add no line",
           "nope" not in kl and "trail_run" not in kl)
     equal("profile: no declared methodology adds nothing", _bp.knowledge_lines({}), [])
