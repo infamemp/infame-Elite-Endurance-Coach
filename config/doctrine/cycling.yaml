@@ -1,0 +1,278 @@
+# Cycling Doctrine — the governing matrix for Coggan, Friel and Cusick.
+# Conforms to config/schema/doctrine.schema.json.
+# Generated into generated/Cycling_Doctrine.md by build_zone_tables.py; never edit the generated file.
+#
+# Rule of use: every decision has ONE governing source. Refinements add precision inside it and
+# never override it. Every statement cites KB entry IDs that the build checks exist.
+
+sport: cycling
+version: "1.0"
+title: Cycling Doctrine
+purpose: >-
+  How the three cycling sources work as one system. Coggan and Allen give the language
+  (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume,
+  limiters), and Cusick gives the diagnosis and the fine control of training (the
+  power-duration model, time to exhaustion, optimized intervals, intensity distribution).
+  Use this file to decide which source answers a question; open the cited entries when you
+  need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and
+  name the source behind each one. Outside this file the one-author attribution rule applies
+  unchanged. The zone table of the athlete's declared methodology always governs zone
+  boundaries.
+
+sources:
+  - id: coggan
+    author: Hunter Allen, Andrew Coggan & Stephen McGregor
+    title: Training and Racing with a Power Meter (3rd ed., 2019)
+    knowledge_file: Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md
+    id_prefix: TRPM
+  - id: friel_tb
+    author: Joe Friel
+    title: The Cyclist's Training Bible
+    knowledge_file: Principles/Friel_Cyclists_Training_Bible.md
+    id_prefix: CTB
+  - id: friel_hpc
+    author: Joe Friel
+    title: The High-Performance Cyclist
+    knowledge_file: Principles/Friel_High_Performance_Cyclist.md
+    id_prefix: HPC
+  - id: cusick
+    author: Tim Cusick
+    title: WKO Coaching Webinars (2016-2021)
+    knowledge_file: Principles/Cusick_WKO_Coaching_Webinars.md
+    id_prefix: WKOC
+
+decisions:
+  - key: intensity_language
+    decision: Intensity language — levels, zones and TSS classes
+    lives_in: zone_tables
+    governs:
+      source: coggan
+      rule: >-
+        Coggan Classic Levels 1-7 as % of FTP are the common language for every cycling
+        prescription and for TSS. Levels are continuous; boundaries are not physiological walls.
+      refs: [TRPM-C06-001, TRPM-C04-012]
+    refines:
+      - source: coggan
+        rule: >-
+          Above Level 4, individualized levels (iLevels) from the power-duration model replace
+          fixed percentages for riders who do not fit the classic levels; at and below Level 4
+          classic and individual levels coincide. Sweet spot (Level 4a) is kept as its own band.
+        refs: [TRPM-C06-005, TRPM-C05-078]
+      - source: cusick
+        rule: >-
+          iLevels describe training; they are the way to read time-in-zone across the whole
+          curve. Classic levels, training targets and iLevels align as one ladder.
+        refs: [WKOC-C05-019, WKOC-C06-019]
+
+  - key: athlete_diagnosis
+    decision: Athlete diagnosis — phenotype, strengths and limiters
+    lives_in: engine
+    governs:
+      source: cusick
+      rule: >-
+        Diagnose from the power-duration curve, not from a few test points: phenotype is the
+        shape of the curve, not its height; read Pmax, FRC and FTP against reference bands,
+        then strengths and limiters relative to the athlete's own average.
+      refs: [WKOC-C07-001, WKOC-C04-003, WKOC-C05-015]
+    refines:
+      - source: coggan
+        rule: >-
+          The Power Profile (5 s, 1 min, 5 min, FTP) ranks the athlete against standards and
+          supplies the testing durations; the power-duration model is its continuous successor.
+        refs: [TRPM-C07-005, TRPM-C04-022, TRPM-C02-010]
+      - source: friel_tb
+        rule: >-
+          A limiter is an ability the target race demands and the athlete lacks; limiters turn
+          the diagnosis into training objectives.
+        refs: [CTB-C05-063, CTB-C06-007, CTB-C08-016]
+
+  - key: season_structure
+    decision: Season structure — periods and their order
+    lives_in: doctrine
+    governs:
+      source: friel_tb
+      rule: >-
+        Plan the season backward from the first A race with linear periodization as the
+        default (Preparation, Base, Build, Peak, Race, Transition). Choose another model only
+        with a reason that fits the athlete.
+      refs: [CTB-C08-011, CTB-C08-020, CTB-C08-033]
+    refines:
+      - source: cusick
+        rule: >-
+          Inside Friel's periods, stack the systems: chronic then acute aerobic work, extensive
+          then intensive FTP building. When hours are capped, deepen the base (more time in
+          zone) instead of stretching the cycles longer.
+        refs: [WKOC-C08-010, WKOC-C08-015, WKOC-C08-016]
+      - source: friel_hpc
+        rule: The same six periods, with their purpose restated for the advanced rider.
+        refs: [HPC-C05-058]
+
+  - key: annual_volume
+    decision: Training volume — annual and weekly hours
+    lives_in: doctrine
+    governs:
+      source: friel_tb
+      rule: >-
+        Set annual volume (hours or TSS) first, then read weekly hours per period from it.
+        Weekly hours never exceed the athlete's declared availability.
+      refs: [CTB-C08-017, CTB-C06-009]
+    refines:
+      - source: friel_hpc
+        rule: Suggested weekly riding hours by period for the advanced rider.
+        refs: [HPC-C06-007]
+
+  - key: load_progression
+    decision: Load progression — CTL ramp rate
+    lives_in: engine
+    governs:
+      source: coggan
+      rule: >-
+        Ramp CTL within the band for the athlete's training age and current CTL (long-term
+        over 14-28 days; short-term over 7 days). A week or two at these rates requires a
+        rest week afterward.
+      refs: [TRPM-C06-019, TRPM-C06-018]
+    refines:
+      - source: cusick
+        rule: >-
+          The same ramp bands, used as the main measure of volume uptake: aggressive early in
+          base, managed in mid and late base.
+        refs: [WKOC-C06-020, WKOC-C08-024, WKOC-C08-034]
+
+  - key: threshold_progression
+    decision: Threshold and sub-threshold progression
+    lives_in: doctrine
+    governs:
+      source: cusick
+      rule: >-
+        Decide for each session whether it builds extensively (same power, longer: time to
+        exhaustion out) or intensively (more power: the curve up). Do not mix both in one
+        session. FTP is built in phases, extensive before intensive.
+      refs: [WKOC-C08-008, WKOC-C08-004, WKOC-C08-003]
+    refines:
+      - source: friel_tb
+        rule: Muscular endurance is the ability this work develops in Friel's terms.
+        refs: [CTB-C05-069]
+      - source: friel_hpc
+        rule: Time to exhaustion per zone is a moving target that follows fitness, fatigue and form.
+        refs: [HPC-C04-007]
+      - source: coggan
+        rule: Sweet spot is the efficient band for extensive threshold work.
+        refs: [TRPM-C05-078]
+
+  - key: above_threshold_intervals
+    decision: Above-threshold interval design (VO2max, anaerobic)
+    lives_in: doctrine
+    governs:
+      source: cusick
+      rule: >-
+        Optimized intervals prescribe work from FTP to Pmax: rep length and power come from the
+        athlete's own curve, so a more anaerobic rider does longer max aerobic reps. Round
+        sensibly, and progress reps one step at a time.
+      refs: [WKOC-C08-001, WKOC-C06-006, WKOC-C09-002]
+    refines:
+      - source: coggan
+        rule: Levels 5-7 name the target band and the expected adaptation.
+        refs: [TRPM-C06-001, TRPM-C06-002]
+
+  - key: intensity_distribution
+    decision: Intensity distribution across the season
+    lives_in: doctrine
+    governs:
+      source: cusick
+      rule: >-
+        Base moves from mostly easy volume to pyramidal (time between LT1 and LT2 grows).
+        Polarized is a peak tool, effective for about 6-10 weeks. Events under about 4 hours
+        peak polarized; longer events stay pyramidal with more Zone 1-2.
+      refs: [WKOC-C08-036, WKOC-C08-039, WKOC-C08-042]
+    refines:
+      - source: coggan
+        rule: How time in each level is distributed across the season.
+        refs: [TRPM-C11-006]
+      - source: friel_tb
+        rule: Which abilities each period trains.
+        refs: [CTB-C08-025]
+
+  - key: testing
+    decision: Testing — protocol and cadence
+    lives_in: engine
+    governs:
+      source: coggan
+      rule: >-
+        FTP by the 20-minute protocol or the Power Profile test, repeated every 6-8 weeks in
+        comparable conditions.
+      refs: [TRPM-C07-004, TRPM-C07-005, TRPM-C07-002]
+    refines:
+      - source: cusick
+        rule: >-
+          Testing is training: test in 4-6 week cycles, a full profile at the start of the
+          season, and use unstructured testing to keep the curve current.
+        refs: [WKOC-C09-012]
+      - source: friel_tb
+        rule: Field-test options and where tests sit in the annual plan (recovery weeks).
+        refs: [CTB-C07-002, CTB-C08-026]
+
+  - key: emphasis_cost_benefit
+    decision: Cost and benefit of a training emphasis
+    lives_in: doctrine
+    governs:
+      source: cusick
+      rule: >-
+        Every emphasis gains somewhere and costs elsewhere; track the power-duration model
+        across 4-week cycles and judge whether the cost is worth it for the target event.
+      refs: [WKOC-C09-001, WKOC-C02-005]
+    refines:
+      - source: friel_tb
+        rule: Training objectives follow the race's limiters, not the athlete's favourite strengths.
+        refs: [CTB-C08-016]
+
+  - key: peak_and_taper
+    decision: Peak phase and taper
+    lives_in: config
+    governs:
+      source: friel_tb
+      rule: >-
+        Taper by cutting duration while keeping race-like intensity, with frequent recovery.
+        The numbers live in config/decision_thresholds.yaml (taper section).
+      refs: [CTB-C08-048, CTB-C08-049, CTB-C08-050]
+    refines:
+      - source: cusick
+        rule: >-
+          The intensive peak block lasts 3-6 weeks and must progress (+1 each hard day); it only
+          works on a solid aerobic foundation.
+        refs: [WKOC-C08-040, WKOC-C08-041]
+      - source: coggan
+        rule: Target TSB for racing and how to time it for single or multiple peaks.
+        refs: [TRPM-C06-020, TRPM-C08-007, TRPM-C08-006]
+
+  - key: race_pacing
+    decision: Race power and pacing
+    lives_in: doctrine
+    governs:
+      source: cusick
+      rule: >-
+        Read the expected race duration on the power-duration curve for a starting power, and
+        pace by segments of the course rather than one average.
+      refs: [WKOC-C09-004]
+    refines:
+      - source: coggan
+        rule: Pacing with a power meter and race-file analysis.
+        refs: [TRPM-C09-003, TRPM-C09-001]
+      - source: friel_tb
+        rule: Pacing is emotional control; avoid early surging.
+        refs: [CTB-C05-077, CTB-C02-008]
+
+  - key: limited_weekly_hours
+    decision: Weekly hours below what the plan needs
+    lives_in: doctrine
+    governs:
+      source: friel_tb
+      rule: >-
+        Keep the planned season volume and cap the weeks that exceed available time by
+        shortening the longest sessions; as duration falls, intensity may rise by at most one
+        zone in a few sessions. Never drop to a lower annual volume. The time-crunched mode
+        (Carmichael) is a different thing and applies only when the head coach requests it.
+      refs: [CTB-C08-036]
+    refines:
+      - source: cusick
+        rule: With capped hours, improve base quality instead of lengthening cycles.
+        refs: [WKOC-C08-015]
