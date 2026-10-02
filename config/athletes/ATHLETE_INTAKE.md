@@ -125,6 +125,9 @@ Especially heat, humidity, or altitude. These change what a given effort costs y
 
 > **New to training? Skip this whole section.** Write "starting from zero" and move on.
 
+**6.0 How many years have you been training consistently?**
+Regular endurance training most weeks of the year, with or without a plan. Count the years, not the season.
+
 **6.1 What have you been doing for the last three months?**
 Roughly: how many sessions a week, how long, how hard.
 
@@ -208,6 +211,9 @@ Transfer rules that are easy to get wrong:
 - **Equipment** is true, false, or null when it was not asked. Only false
   restricts prescription: false for a power meter blocks power targets, false
   for `hr_monitor` blocks % LTHR. Pace on runs needs no device.
+- **Training age** (history.training_age_years): a number of years from 6.0; `0` for
+  "starting from zero"; `null` only when it was not asked. It sets the CTL ramp band
+  shown in `#STATE`.
 - After `prep`, the top of `profile.md` flags any name the system does not
   recognize.
 

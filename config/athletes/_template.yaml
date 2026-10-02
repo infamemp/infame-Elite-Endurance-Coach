@@ -76,6 +76,8 @@ context:
 # For a complete beginner: set starting_from_zero true and leave the rest null.
 history:
   starting_from_zero: false
+  training_age_years: null     # years of consistent endurance training (number; 0 for a
+                               # beginner). Sets the CTL ramp band in #STATE.
   recent_pattern: null         # what the last 3 months actually looked like
   peak_sustained: null         # biggest consistent week or month, and when
   longest_session: null        # in the last year
