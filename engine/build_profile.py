@@ -473,7 +473,7 @@ def knowledge_lines(declared):
             L.append(f"- `{disc}` → `{author}` → no Knowledge file: ZONES ONLY — "
                      f"never attribute training principles to it")
         elif kf:
-            L.append(f"- `{disc}` → `{author}` → Project file "
+            L.append(f"- `{disc}` → `{author}` → `get_knowledge(source=\"{author}\")` reads "
                      f"`{os.path.basename(kf)}` (`Knowledge/{kf}`)")
             for skf in (cfg.get("supplementary_knowledge_files") or []):
                 L.append(f"  - plus, same author: `{os.path.basename(skf)}` "
@@ -484,8 +484,8 @@ def knowledge_lines(declared):
                          f"— attribute it to {ck['author']}, not to this methodology")
     if not L:
         return []
-    return ["**Knowledge files to read for the declared methodologies** "
-            "(they must be in the Project):"] + L
+    return ["**Knowledge files for the declared methodologies** "
+            "(read them with the `get_knowledge` tool; they are not in the Project):"] + L
 
 
 def render_declared(aid, config_dir=None):

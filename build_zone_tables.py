@@ -627,22 +627,22 @@ def render_author(author, thresholds):
                  ", ".join(labels[m] for m in est))
     L.append("* **Primary Metrics:** " + ", ".join(author["primary_metrics"]))
     if author.get("knowledge_file") == "none":
-        L.append("* **Knowledge Base (Project file):** none — ZONES ONLY. "
+        L.append("* **Knowledge Base:** none — ZONES ONLY. "
                  + str(author.get("knowledge_note", "")).strip()
                  + " Never attribute progressions, session types or training "
                  "philosophy to this methodology; never choose it unless the head "
                  "coach asks for it.")
     elif author.get("knowledge_file"):
-        L.append(f"* **Knowledge Base (Project file):** "
+        L.append(f"* **Knowledge Base (read with `get_knowledge`, source `{author['id']}`):** "
                  f"`{os.path.basename(author['knowledge_file'])}` "
                  f"(`Knowledge/{author['knowledge_file']}`)")
         for skf in author.get("supplementary_knowledge_files") or []:
-            L.append(f"* **Supplementary Knowledge (same author, Project file):** "
+            L.append(f"* **Supplementary Knowledge (same author, `get_knowledge`):** "
                      f"`{os.path.basename(skf)}` (`Knowledge/{skf}`) — read it together "
                      f"with the Knowledge Base above; where the two differ on a zone "
                      f"boundary, this zone table governs.")
         for ck in author.get("companion_knowledge_files") or []:
-            L.append(f"* **Companion Knowledge (different author — {ck['author']}, Project file):** "
+            L.append(f"* **Companion Knowledge (different author — {ck['author']}, `get_knowledge`):** "
                      f"`{os.path.basename(ck['file'])}` (`Knowledge/{ck['file']}`) — a "
                      f"complement to this methodology, not part of it: attribute what it "
                      f"says to {ck['author']}, never to this methodology's author; it never "

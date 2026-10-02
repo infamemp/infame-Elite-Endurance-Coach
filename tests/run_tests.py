@@ -695,9 +695,9 @@ def unit_tests():
         check(f"generated: {a_id} header names its Knowledge Base file",
               f"`Knowledge/{kf}`" in gen_txt, kf)
     check("generated: one Knowledge Base line per methodology",
-          gen_txt.count("**Knowledge Base (Project file):**") == len(on_disk))
+          gen_txt.count("* **Knowledge Base") == len(on_disk))
     check("generated: Friel cycling's header names its supplementary book",
-          "**Supplementary Knowledge (same author, Project file):** `Friel_High_Performance_Cyclist.md`" in gen_txt)
+          "**Supplementary Knowledge (same author, `get_knowledge`):** `Friel_High_Performance_Cyclist.md`" in gen_txt)
     import build_profile as _bp
     kl = "\n".join(_bp.knowledge_lines({"preferences": {"methodology": {
         "road_run": "hudson", "road_bike": "coggan", "trail_run": None, "gravel": "nope",
@@ -1404,6 +1404,40 @@ def unit_tests():
                   "durability_watts" not in res_dw["signals"]
                   and "Durability in watts" not in md_state)
     shutil.rmtree(dir_dw, ignore_errors=True)
+
+    # ── book knowledge on demand (get_knowledge) ──
+    import knowledge as kn
+    check("knowledge: every author's knowledge_file resolves by its id",
+          all(kn.resolve(a) for a in ("coggan", "friel_cycling", "daniels", "koop", "palladino",
+                                      "hansons_marathon", "carmichael")))
+    check("knowledge: doctrine source ids resolve (companions, Mujika)",
+          all(kn.resolve(a) for a in ("cusick", "friel_hpc", "uphill", "mujika", "rlrf")))
+    r_kn = kn.get("coggan", refs=["TRPM-C06-019", "TRPM-C99-999"])
+    check("knowledge: an entry ID returns exactly that entry; unknown ones are listed missing",
+          [e["ref"] for e in r_kn["entries"]] == ["TRPM-C06-019"]
+          and r_kn["missing"] == ["TRPM-C99-999"] and "Table 9.2" in r_kn["entries"][0]["title"])
+    r_kn = kn.get("palladino", refs=["§12"])
+    check("knowledge: a section reference returns that numbered section",
+          r_kn["format"] == "numbered" and r_kn["entries"][0]["title"].startswith("Treadmill"))
+    r_kn = kn.get("cusick", query="optimized intervals", max_entries=3)
+    check("knowledge: query returns at most max_entries, best match first",
+          0 < len(r_kn["entries"]) <= 3 and "ptimized" in r_kn["entries"][0]["title"])
+    r_kn = kn.get(query="taper volume reduction", max_entries=4)
+    check("knowledge: query without a source searches every book and names the file",
+          all("file" in e for e in r_kn["entries"]) and len(r_kn["entries"]) == 4)
+    check("knowledge: answers are capped in size",
+          sum(len(e["text"]) for e in kn.get(query="threshold", max_entries=15)["entries"])
+          <= kn.DEFAULT_MAX_CHARS + 20)
+    check("knowledge: catalogs are never served",
+          not any("Catalogs" in f for f in kn.registry().values()))
+    for bad in ({"source": "nobody", "refs": ["X"]}, {"refs": ["TRPM-C06-019"]}):
+        try:
+            kn.get(**bad)
+            check(f"knowledge: refuses {bad}", False)
+        except ValueError:
+            check(f"knowledge: refuses {bad}", True)
+    check("knowledge: no source and no query lists the sources",
+          any("coggan" in x["names"] for x in kn.get()["sources"]))
 
     # ── power-duration diagnosis (Cycling Doctrine: Cusick / Coggan) ──
     import pd_diagnosis as pdx

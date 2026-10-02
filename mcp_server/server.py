@@ -23,7 +23,7 @@ from .tools_coach import post_activity_comment, remove_block, update_threshold
 from .tools_push import push_block
 from .tools_read import (get_athlete_state, get_athlete_profile, get_execution,
                          list_roster, load_targets, roster_overview,
-                         what_if_targets)
+                         what_if_targets, get_knowledge)
 from .tools_validate import validate_block
 from .tools_write import (save_availability, save_block, save_continuity, save_race_result,
                           save_training_age)
@@ -66,6 +66,7 @@ def build_app():
     # writes.
     app.tool()(get_athlete_state)
     app.tool()(get_athlete_profile)
+    app.tool()(get_knowledge)
     app.tool()(list_roster)
     app.tool()(roster_overview)
     app.tool()(get_execution)

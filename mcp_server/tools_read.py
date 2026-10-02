@@ -218,3 +218,29 @@ def what_if_targets(athlete_id: str, week_targets: dict[str, float],
     except ValueError as e:
         raise ToolError(str(e))
     return {"ok": True, "athlete_id": athlete_id, "markdown": what_if.render(result), **result}
+
+
+@guarded
+def get_knowledge(source: str | None = None, refs: list[str] | None = None,
+                  query: str | None = None, max_entries: int = 6) -> dict:
+    """Read the book knowledge bases, which are not in the Claude Project.
+
+    - source: who to read — an author or doctrine source id (coggan, friel_cycling,
+      friel_tb, friel_hpc, cusick, carmichael, daniels, palladino, koop, uphill,
+      hansons_marathon, hansons_half, hudson, rosario, olbrich, run_less_run_faster
+      / rlrf, mujika).
+    - refs: exact references, as the doctrines and zone tables cite them —
+      entry IDs ("TRPM-C06-019") or sections ("§7"). Needs a source.
+    - query: keywords, searched inside the source (or across every source when
+      source is omitted); returns the best `max_entries` entries (max 15).
+    - neither: the source's table of contents; with no source either, the list of
+      sources. Principles only — Catalogs are never served.
+    Answers are capped in size and say when they were cut."""
+    ensure_import_paths()
+    import knowledge
+
+    try:
+        return {"ok": True, **knowledge.get(source=source, refs=refs, query=query,
+                                            max_entries=max_entries)}
+    except ValueError as e:
+        raise ToolError(str(e))

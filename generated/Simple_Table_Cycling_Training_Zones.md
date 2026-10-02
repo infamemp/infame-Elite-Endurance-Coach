@@ -54,7 +54,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % CTS Field Test
 * **Native Metrics (author's own numbers):** % CTS Field Test, % LTHR
 * **Primary Metrics:** CTS Field Test Power, CTS Field Test Heart Rate (LTHR)
-* **Knowledge Base (Project file):** `Chris_Carmichael_Time_Crunched_Cyclist.md` (`Knowledge/Principles/Chris_Carmichael_Time_Crunched_Cyclist.md`)
+* **Knowledge Base (read with `get_knowledge`, source `carmichael`):** `Chris_Carmichael_Time_Crunched_Cyclist.md` (`Knowledge/Principles/Chris_Carmichael_Time_Crunched_Cyclist.md`)
 * **Dual-Layer Required:** No
 * **Note:** The anchor applies to POWER only. The field test heart rate anchor is the average HR of an 8-minute maximal effort, which already sits at LTHR — heart rate saturates near maximum where power does not. The % LTHR column is the author's, used verbatim, with no conversion.
 * **Note:** Prescribe from the native column when the athlete has performed the CTS Field Test (protocol in the Carmichael knowledge base). Prescribe from the "% FTP (equivalent)" column when the athlete has only an FTP from a 20 or 60 minute test. Both routes reach the same absolute intensity.
@@ -79,8 +79,8 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % FTP
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
-* **Knowledge Base (Project file):** `Allen - Coggan_Training_and_Racing_With_a_Powermeter.md` (`Knowledge/Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md`)
-* **Companion Knowledge (different author — Tim Cusick, Project file):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
+* **Knowledge Base (read with `get_knowledge`, source `coggan`):** `Allen - Coggan_Training_and_Racing_With_a_Powermeter.md` (`Knowledge/Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md`)
+* **Companion Knowledge (different author — Tim Cusick, `get_knowledge`):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 
@@ -102,9 +102,9 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Default Metric:** % FTP
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
-* **Knowledge Base (Project file):** `Friel_Cyclists_Training_Bible.md` (`Knowledge/Principles/Friel_Cyclists_Training_Bible.md`)
-* **Supplementary Knowledge (same author, Project file):** `Friel_High_Performance_Cyclist.md` (`Knowledge/Principles/Friel_High_Performance_Cyclist.md`) — read it together with the Knowledge Base above; where the two differ on a zone boundary, this zone table governs.
-* **Companion Knowledge (different author — Tim Cusick, Project file):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
+* **Knowledge Base (read with `get_knowledge`, source `friel_cycling`):** `Friel_Cyclists_Training_Bible.md` (`Knowledge/Principles/Friel_Cyclists_Training_Bible.md`)
+* **Supplementary Knowledge (same author, `get_knowledge`):** `Friel_High_Performance_Cyclist.md` (`Knowledge/Principles/Friel_High_Performance_Cyclist.md`) — read it together with the Knowledge Base above; where the two differ on a zone boundary, this zone table governs.
+* **Companion Knowledge (different author — Tim Cusick, `get_knowledge`):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 
