@@ -185,6 +185,7 @@ The moderate/heavy boundary (LT1) is individual: on % Threshold Pace it lies bet
 * **Estimated Metrics (`~`, computed through the crosswalk):** % Threshold Pace, % LTHR, % FTP (run power)
 * **Primary Metrics:** Perceived Exertion, Physiological Adaptation Target
 * **Knowledge Base (Project file):** `Jason_Koop_Training_essentials_ultrarunning.md` (`Knowledge/Principles/Jason_Koop_Training_essentials_ultrarunning.md`)
+* **Companion Knowledge (different author — Steve House, Scott Johnston & Kilian Jornet, Project file):** `House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md` (`Knowledge/Principles/House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md`) — a complement to this methodology, not part of it: attribute what it says to Steve House, Scott Johnston & Kilian Jornet, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
 * **Dual-Layer Required:** Yes
 * **Dual-Layer Engine:** % LTHR Range — feeds Intervals.icu load calculation
 * **Dual-Layer Steering:** RPE per workout code — athlete reads on device

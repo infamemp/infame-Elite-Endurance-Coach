@@ -7,6 +7,12 @@ name: Koop Running Workout Zones
 
 # Knowledge base the coach reads for this methodology (path relative to Knowledge/).
 knowledge_file: Principles/Jason_Koop_Training_essentials_ultrarunning.md
+# Steve House, Scott Johnston & Kilian Jornet cover what Koop treats only briefly:
+# vertical and mountain training (uphill/downhill specificity, muscular endurance,
+# strength for the mountains). Different authors: the coach must attribute it to them.
+companion_knowledge_files:
+  - file: Principles/House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md
+    author: Steve House, Scott Johnston & Kilian Jornet
 sport: running
 sport_note: Ultrarunning / Running
 
