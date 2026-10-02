@@ -274,6 +274,34 @@ def fetch_curves(aid):
                     got[entry.get("id", window)] = parsed
         if got:
             out[label] = got
+
+    # Indoor and outdoor power curves, apart. Intervals.icu keeps a separate
+    # indoor FTP (sport settings `indoor_ftp`) and applies it to indoor rides,
+    # so a curve has to be judged against the FTP of the same environment
+    # (engine/pd_diagnosis.py). The combined curve above stays as it is: the
+    # longitudinal analysis and its golden tests read it unchanged.
+    # `filters` is the same filter the Intervals.icu power page uses; it is not
+    # in the published API docs. Verified 2026-10-02: "indoor" returns the
+    # indoor rides only, "outdoor" returns nothing for an athlete with none.
+    for env in ("indoor", "outdoor"):
+        got = {}
+        flt = json.dumps([{"field_id": "indoor", "value": env, "id": 1}])
+        for window in CURVE_WINDOWS:
+            data = get(f"/athlete/{aid}/power-curves",
+                       params={"curves": window, "type": "Ride", "filters": flt},
+                       optional=True)
+            for entry in unwrap(data):
+                parsed = extract_power_curve(entry)
+                if parsed:
+                    parsed["window"] = {
+                        "id": entry.get("id", window),
+                        "from": (entry.get("start_date_local") or "")[:10],
+                        "to": (entry.get("end_date_local") or "")[:10],
+                        "days": entry.get("days"),
+                    }
+                    got[entry.get("id", window)] = parsed
+        if got:
+            out[f"power_{env}"] = got
     return out
 
 

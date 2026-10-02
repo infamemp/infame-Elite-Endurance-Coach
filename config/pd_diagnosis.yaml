@@ -1,0 +1,61 @@
+# Power-duration diagnosis — config for engine/pd_diagnosis.py
+# Implements the Cycling Doctrine rows "Athlete diagnosis", "Threshold progression",
+# "Above-threshold interval design" and "Load progression" (config/doctrine/cycling.yaml).
+# Measured curve values only: no fitted model is read or trusted here.
+
+# Curve windows reported side by side (named windows fetched by engine/fetch_athlete_data.py).
+windows: [90d, 1y]
+
+# Environments, each judged against its own FTP. Intervals.icu applies the indoor FTP
+# (`indoor_ftp`) to indoor rides and the FTP to outdoor ones, so mixing them misreads
+# both. `curve` is the key under curves{} written by the fetcher; when `ftp_field` is
+# not set for the athlete, `fallback_ftp_field` is used and the block says so.
+environments:
+  - key: outdoor
+    label: Outdoor
+    curve: power_outdoor
+    ftp_field: ftp
+  - key: indoor
+    label: Indoor
+    curve: power_indoor
+    ftp_field: indoor_ftp
+    fallback_ftp_field: ftp
+
+# Below this curve length (seconds) TTE at FTP is not reported: the window holds no
+# effort long enough to say how long FTP can be held.
+min_curve_secs_for_tte: 1200
+
+# Above-threshold level windows: the durations over which the athlete's own curve sits
+# inside each level. Boundaries are read from this author's zone file, never typed here.
+levels_author: coggan
+levels: ["Level 5", "Level 6"]
+
+# The 20-minute best is reported as a share of FTP, as a plain fact for the coach.
+reference_secs: 1200
+
+# CTL ramp rate by training age (TSS/day). Coggan & Allen, Training and Racing with a
+# Power Meter, Table 9.2 (TRPM-C06-019); Cusick uses the same bands (WKOC-C06-020).
+# Long term = over 14-28 days; short term = over 7-14 days and needs a rest week after.
+ramp_rates:
+  ctl_split: 100
+  bands:
+    - training_age: "<1 year"
+      min_years: 0
+      max_years: 1
+      long_term: {below: [3, 5], above: [3, 4]}
+      short_term: {below: [6, 10], above: [6, 8]}
+    - training_age: "1-3 years"
+      min_years: 1
+      max_years: 3
+      long_term: {below: [4, 7], above: [3, 5]}
+      short_term: {below: [8, 14], above: [6, 12]}
+    - training_age: "3-5 years"
+      min_years: 3
+      max_years: 5
+      long_term: {below: [5, 8], above: [3, 6]}
+      short_term: {below: [10, 16], above: [6, 12]}
+    - training_age: "5+ years"
+      min_years: 5
+      max_years: null
+      long_term: {below: [7, 10], above: [5, 7]}
+      short_term: {below: [14, 20], above: [10, 14]}

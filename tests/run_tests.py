@@ -1405,6 +1405,98 @@ def unit_tests():
                   and "Durability in watts" not in md_state)
     shutil.rmtree(dir_dw, ignore_errors=True)
 
+    # ── power-duration diagnosis (Cycling Doctrine: Cusick / Coggan) ──
+    import pd_diagnosis as pdx
+
+    curve = [(1, 900), (60, 450), (300, 300), (1200, 260), (2400, 240)]
+    secs_x, kind_x = pdx.crossing(curve, 250)
+    check("pd_diagnosis: crossing between two points is interpolated on log time",
+          kind_x == "exact" and 1200 < secs_x < 2400, (secs_x, kind_x))
+    equal("pd_diagnosis: still above at the curve's end is 'at least' the end",
+          pdx.crossing(curve, 230), (2400, "at_least"))
+    equal("pd_diagnosis: below at the first point is reported as below",
+          pdx.crossing(curve, 1000), (1, "below"))
+    equal("pd_diagnosis: a point exactly on the target counts as held",
+          pdx.crossing(curve, 300)[0] >= 300, True)
+
+    cfg_pd = pdx.load_cfg()
+    equal("pd_diagnosis: Coggan Levels 5 and 6 read from the author file",
+          pdx.level_bounds(cfg_pd), {"Level 5": (106, 120), "Level 6": (121, 150)})
+    rb = pdx.ramp_band(cfg_pd, 4, 80)
+    equal("pd_diagnosis: ramp band, 3-5 years, CTL < 100 (Coggan Table 9.2)",
+          (rb["training_age"], rb["long_term"], rb["short_term"]),
+          ("3-5 years", [5, 8], [10, 16]))
+    equal("pd_diagnosis: ramp band, 5+ years, CTL >= 100",
+          pdx.ramp_band(cfg_pd, 12, 110)["long_term"], [5, 7])
+    check("pd_diagnosis: no ramp band without a declared training age",
+          pdx.ramp_band(cfg_pd, None, 80) is None
+          and pdx.ramp_band(cfg_pd, "unknown", 80) is None)
+
+    def pd_data(points_90, points_1y=None, ftp=250, w_prime=None, indoor=None,
+                indoor_ftp=None, env="outdoor"):
+        """Outdoor curve by default; `indoor` adds an indoor curve (90d)."""
+        def win(p):
+            return {"pd_points": {str(k): v for k, v in p}} if p else {}
+        st = {"types": ["Ride", "VirtualRide"], "ftp": ftp}
+        if w_prime:
+            st["w_prime"] = w_prime
+        if indoor_ftp:
+            st["indoor_ftp"] = indoor_ftp
+        curves = {f"power_{env}": {"90d": win(points_90), "1y": win(points_1y)}}
+        if indoor:
+            curves["power_indoor"] = {"90d": win(indoor), "1y": {}}
+        return {"profile": {"sport_settings": [st]}, "curves": curves}
+
+    def env_of(dx, key):
+        return next(e for e in dx["environments"] if e["key"] == key)
+
+    check("pd_diagnosis: absent without indoor/outdoor curves (combined curve only)",
+          pdx.analyze({"profile": {"sport_settings": [{"types": ["Ride"], "ftp": 250}]},
+                       "curves": {"power": {"90d": {"pd_points": {"60": 400}}}}}) is None)
+    check("pd_diagnosis: absent without an FTP",
+          pdx.analyze(pd_data(curve, ftp=None)) is None)
+    check("pd_diagnosis: settings holding only VirtualRide are not the Ride settings",
+          pdx.ride_settings({"sport_settings": [{"types": ["VirtualRide"], "ftp": 1},
+                                                {"types": ["Ride"], "ftp": 250}]})["ftp"] == 250)
+    full = pdx.analyze(pd_data(curve, curve, w_prime=18000),
+                       {"history": {"training_age_years": 4}}, 80)
+    w90 = env_of(full, "outdoor")["windows"]["90d"]
+    check("pd_diagnosis: TTE at FTP is exact when the curve crosses FTP",
+          w90["tte"]["kind"] == "exact" and 1200 < w90["tte"]["secs"] < 2400, w90["tte"])
+    equal("pd_diagnosis: best 20 min as % of FTP", w90["ref_pct_ftp"], 104)
+    equal("pd_diagnosis: Pmax is the 1-second point", w90["pmax"], 900)
+    l5 = w90["levels"]["Level 5"]
+    check("pd_diagnosis: Level 5 window runs from the 120% to the 106% crossing",
+          l5["from"]["kind"] == "exact" and l5["to"]["kind"] == "exact"
+          and 60 < l5["from"]["secs"] < l5["to"]["secs"] < 1200, l5)
+    short = pdx.analyze(pd_data([(1, 900), (60, 450), (300, 300), (600, 280)]))
+    check("pd_diagnosis: a curve shorter than 20 min reports no TTE",
+          env_of(short, "outdoor")["windows"]["90d"]["tte"] is None
+          and env_of(short, "outdoor")["windows"]["1y"] is None)
+    low_ftp = env_of(pdx.analyze(pd_data(curve, ftp=200)), "outdoor")["windows"]["90d"]["tte"]
+    equal("pd_diagnosis: curve above FTP to its end is 'at least'",
+          (low_ftp["secs"], low_ftp["kind"]), (2400, "at_least"))
+    high = pdx.analyze(pd_data(curve, ftp=1000))
+    check("pd_diagnosis: FTP above the whole curve is 'below', levels 'not reached'",
+          env_of(high, "outdoor")["windows"]["90d"]["tte"]["kind"] == "below"
+          and "not reached" in pdx.render(high))
+    both = pdx.analyze(pd_data(curve, ftp=250, indoor=curve, indoor_ftp=230))
+    check("pd_diagnosis: indoor is judged against indoor_ftp, outdoor against ftp",
+          env_of(both, "indoor")["ftp"] == 230 and env_of(both, "outdoor")["ftp"] == 250
+          and env_of(both, "indoor")["windows"]["90d"]["ref_pct_ftp"] == 113)
+    only_in = pdx.analyze(pd_data(curve, env="indoor"))
+    check("pd_diagnosis: indoor without indoor_ftp falls back to ftp and says so",
+          [e["key"] for e in only_in["environments"]] == ["indoor"]
+          and env_of(only_in, "indoor")["ftp_fallback"]
+          and "no indoor FTP set" in pdx.render(only_in))
+    md_pd = pdx.render(full)
+    check("pd_diagnosis: render shows the table, W' setting and the ramp band",
+          "## POWER-DURATION DIAGNOSIS" in md_pd and "| TTE at FTP |" in md_pd
+          and "### Outdoor — FTP 250 W" in md_pd and "Indoor" not in md_pd.split("###", 1)[1].split("\n")[0]
+          and "18.0 kJ" in md_pd and "5–8 TSS/day" in md_pd, md_pd)
+    check("pd_diagnosis: render says when training age is not declared",
+          "training age not declared" in pdx.render(pdx.analyze(pd_data(curve))))
+
     # ── load targets: weekly TSS and hours from the coach's own inputs ──
     import load_targets as lt
 

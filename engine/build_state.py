@@ -43,6 +43,7 @@ import architecture  # noqa: E402
 import heads_up  # noqa: E402
 import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
+import pd_diagnosis  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -102,6 +103,20 @@ def load_declared_goals(aid):
     if not isinstance(declared, dict):
         return []
     return declared.get("goals") or []
+
+
+def load_declared(aid):
+    """The whole declared profile (config/athletes/<aid>.yaml), or {} when it
+    is missing or unreadable -- the same tolerance as load_declared_goals."""
+    path = os.path.join(CONFIG, "athletes", f"{aid}.yaml")
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            declared = yaml.safe_load(f)
+    except yaml.YAMLError:
+        return {}
+    return declared if isinstance(declared, dict) else {}
 
 
 def d(s):
@@ -704,6 +719,9 @@ def build(aid, thresholds, quiet=False):
         if pts:
             pp = power_profile.analyze(pts, data.get("profile") or {}, ppcfg)
 
+    # Cycling Doctrine numbers (Cusick / Coggan). None without a dense power curve.
+    pdx = pd_diagnosis.analyze(data, load_declared(aid), (pmc or {}).get("ctl"))
+
     heads = None
     if thresholds.get("heads_up"):
         heads = heads_up.analyze(data, aid, thresholds["heads_up"],
@@ -727,6 +745,7 @@ def build(aid, thresholds, quiet=False):
         "taper": taper,
         "longitudinal": longit,
         "power_profile": pp,
+        **({"pd_diagnosis": pdx} if pdx else {}),
         "recent_architectures": recent_arch,
     }
 
@@ -739,6 +758,8 @@ def build(aid, thresholds, quiet=False):
         md = md.rstrip() + "\n\n" + durability_watts.render(dur_watts)
     if pp:
         md = md.rstrip() + "\n\n" + power_profile.render(pp)
+    if pdx:
+        md = md.rstrip() + "\n\n" + pd_diagnosis.render(pdx)
     md = md.rstrip() + "\n\n" + architecture.render(recent_arch)
     with open(os.path.join(dest, "state.md"), "w", encoding="utf-8") as f:
         f.write(md)
