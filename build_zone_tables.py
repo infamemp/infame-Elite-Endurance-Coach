@@ -304,6 +304,7 @@ LIVES_IN_LABELS = {
     "mode": "Only when its mode is active",
 }
 _ENTRY_ID = re.compile(r"^### \[([A-Z]+-C\d{2}-\d{3})\]", re.M)
+_SECTION = re.compile(r"^## (\d{1,2})\. ", re.M)
 
 
 def load_doctrines():
@@ -340,7 +341,13 @@ def check_doctrine(data, stem, validator):
             entry_ids[s["id"]] = None
             continue
         with open(path, encoding="utf-8") as f:
-            entry_ids[s["id"]] = set(_ENTRY_ID.findall(f.read()))
+            text = f.read()
+        if s.get("ref_style", "entry_ids") == "sections":
+            entry_ids[s["id"]] = {f"§{n}" for n in _SECTION.findall(text)}
+        else:
+            if not s.get("id_prefix"):
+                errors.append(f"source '{s['id']}': id_prefix is required for entry_ids sources")
+            entry_ids[s["id"]] = set(_ENTRY_ID.findall(text))
 
     modes = {m["key"] for m in data.get("modes", [])}
     n_refs = 0
@@ -352,10 +359,13 @@ def check_doctrine(data, stem, validator):
             errors.append(f"{where}: unknown source '{sid}'")
             return
         known = entry_ids.get(sid)
-        prefix = sources[sid]["id_prefix"] + "-"
+        by_section = sources[sid].get("ref_style", "entry_ids") == "sections"
+        prefix = (sources[sid].get("id_prefix") or "") + "-"
         for ref in st["refs"]:
             n_refs += 1
-            if not ref.startswith(prefix):
+            if by_section and not ref.startswith("§"):
+                errors.append(f"{where}: {ref}: '{sid}' is cited by section (§N), not entry ID")
+            elif not by_section and not ref.startswith(prefix):
                 errors.append(f"{where}: {ref} does not carry the prefix of '{sid}' ({prefix})")
             elif known is not None and ref not in known:
                 errors.append(f"{where}: {ref} not found in {sources[sid]['knowledge_file']}")
@@ -425,12 +435,15 @@ def render_doctrine(data):
          "**How to read it.** Each decision has one **governing** source: its rule decides. "
          "**Refines** entries add precision inside that rule and never override it. The codes "
          "in brackets are KB entry IDs: search the Project for the code to open the exact "
-         "passage.", "",
+         "passage. A code written §N is section N of that source's file (its `## N.` "
+         "heading).", "",
          "## Sources", "", "| Key | Author | Work | Knowledge file | Entry IDs |",
          "| :--- | :--- | :--- | :--- | :--- |"]
     for s in data["sources"]:
         L.append(f"| `{s['id']}` | {s['author']} | {s['title']} | "
-                 f"`{os.path.basename(s['knowledge_file'])}` | `{s['id_prefix']}-…` |")
+                 f"`{os.path.basename(s['knowledge_file'])}` | "
+                 + ("sections `§N`" if s.get("ref_style") == "sections" else f"`{s['id_prefix']}-…`")
+                 + " |")
     L += ["", "## The matrix at a glance", "",
           "| Decision | Governs | Refines | Executed in |", "| :--- | :--- | :--- | :--- |"]
     for d in data["decisions"]:
@@ -452,7 +465,7 @@ def render_doctrine(data):
         L += [f"## Mode: {m['name']}", "",
               f"*Activation: on request only — the head coach asks for it or the athlete "
               f"declares it, and you confirm before applying it. Recorded as "
-              f"`{m['profile_field']}` in the declared profile.*", "",
+              f"`{m['profile_field']}`.*", "",
               f"**Structure from {who(m['source'])}.** Zones: "
               f"{_flat(m.get('zones_from', 'the active methodology'))}.", ""]
         for st in m["frame"]:

@@ -4,7 +4,7 @@
 
 How the three cycling sources work as one system. Coggan and Allen give the language (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume, limiters), and Cusick gives the diagnosis and the fine control of training (the power-duration model, time to exhaustion, optimized intervals, intensity distribution). Use this file to decide which source answers a question; open the cited entries when you need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged. The zone table of the athlete's declared methodology always governs zone boundaries.
 
-**How to read it.** Each decision has one **governing** source: its rule decides. **Refines** entries add precision inside that rule and never override it. The codes in brackets are KB entry IDs: search the Project for the code to open the exact passage.
+**How to read it.** Each decision has one **governing** source: its rule decides. **Refines** entries add precision inside that rule and never override it. The codes in brackets are KB entry IDs: search the Project for the code to open the exact passage. A code written §N is section N of that source's file (its `## N.` heading).
 
 ## Sources
 

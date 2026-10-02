@@ -1830,7 +1830,11 @@ def architecture_tests():
           "Open `Session_Architectures.md` before filling the table" in _pr)
     check("prompt: architecture count matches the library",
           f"{len(lib)} pre-vetted session shapes" in _pr, len(lib))
-    check("prompt: trail defaults to trail/ultra methodologies", "choose `koop` or `olbrich`" in _pr)
+    check("prompt: trail defaults to Koop, Palladino with power, Olbrich for flat road ultras",
+          "`trail_run` — `koop` by default; `palladino` with a run power meter; "
+          "`olbrich` only for flat road ultras" in _pr)
+    check("prompt: the goal event picks the Hansons book",
+          "the goal event picks the Hansons book" in _pr)
     run_hills = _y.safe_load(open(os.path.join(ROOT, "config", "architectures", "climb_simulation.yaml"), encoding="utf-8"))
     check("library: hill repeats are available for running",
           {"road_run", "trail_run", "treadmill"} <= set(run_hills["disciplines"]))

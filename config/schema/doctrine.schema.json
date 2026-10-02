@@ -1,15 +1,25 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "doctrine.schema.json",
-  "title": "Infame Doctrine — one sport's governing matrix (v1)",
+  "title": "Infame Doctrine — one sport's governing matrix (v1.1)",
   "description": "Schema for config/doctrine/<sport>.yaml. A doctrine is the only authorised synthesis between authors: for each coaching decision it names exactly ONE governing source and any sources that refine it, and every statement cites KB entry IDs that must exist in the named Knowledge file. Generated into generated/<Sport>_Doctrine.md by build_zone_tables.py; the generated file is never edited by hand.",
   "type": "object",
-  "required": ["sport", "version", "title", "purpose", "sources", "decisions"],
+  "required": [
+    "sport",
+    "version",
+    "title",
+    "purpose",
+    "sources",
+    "decisions"
+  ],
   "additionalProperties": false,
   "properties": {
     "sport": {
       "type": "string",
-      "enum": ["cycling", "running"],
+      "enum": [
+        "cycling",
+        "running"
+      ],
       "description": "Must match the filename stem (cycling.yaml, running.yaml)."
     },
     "version": {
@@ -31,7 +41,12 @@
       "description": "Registry of every source the doctrine may cite.",
       "items": {
         "type": "object",
-        "required": ["id", "author", "title", "knowledge_file", "id_prefix"],
+        "required": [
+          "id",
+          "author",
+          "title",
+          "knowledge_file"
+        ],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -54,7 +69,16 @@
           "id_prefix": {
             "type": "string",
             "pattern": "^[A-Z]+$",
-            "description": "Prefix of the entry IDs in that file, e.g. 'TRPM', 'CTB', 'HPC', 'WKOC'."
+            "description": "Prefix of the entry IDs in that file, e.g. 'TRPM', 'CTB', 'HPC', 'WKOC'. Required when ref_style is 'entry_ids'."
+          },
+          "ref_style": {
+            "type": "string",
+            "enum": [
+              "entry_ids",
+              "sections"
+            ],
+            "default": "entry_ids",
+            "description": "How statements cite this source. 'entry_ids' (default): KB entry IDs such as TRPM-C06-001, for files in the C01-C18 tagged format; id_prefix is then required. 'sections': numbered sections written §N (the file's '## N.' headings), for files in the older numbered format."
           }
         }
       }
@@ -65,7 +89,12 @@
       "description": "One row per coaching decision. Order = the order the coach meets them when building a plan.",
       "items": {
         "type": "object",
-        "required": ["key", "decision", "governs", "lives_in"],
+        "required": [
+          "key",
+          "decision",
+          "governs",
+          "lives_in"
+        ],
         "additionalProperties": false,
         "properties": {
           "key": {
@@ -84,11 +113,19 @@
           "refines": {
             "type": "array",
             "description": "Sources that add precision inside the governing rule. They never override it.",
-            "items": { "$ref": "#/definitions/statement" }
+            "items": {
+              "$ref": "#/definitions/statement"
+            }
           },
           "lives_in": {
             "type": "string",
-            "enum": ["zone_tables", "engine", "doctrine", "config", "mode"],
+            "enum": [
+              "zone_tables",
+              "engine",
+              "doctrine",
+              "config",
+              "mode"
+            ],
             "description": "Where the decision is executed: zone_tables (generated tables), engine (a number in #STATE), doctrine (the coach applies this text), config (decision_thresholds.yaml), mode (only when a mode below is active)."
           },
           "mode": {
@@ -104,7 +141,14 @@
       "description": "Situational frameworks layered on top of the active methodology (e.g. time-crunched). Never switched on automatically.",
       "items": {
         "type": "object",
-        "required": ["key", "name", "activation", "profile_field", "source", "frame"],
+        "required": [
+          "key",
+          "name",
+          "activation",
+          "profile_field",
+          "source",
+          "frame"
+        ],
         "additionalProperties": false,
         "properties": {
           "key": {
@@ -116,7 +160,9 @@
           },
           "activation": {
             "type": "string",
-            "enum": ["on_request"],
+            "enum": [
+              "on_request"
+            ],
             "description": "Only 'on_request': the head coach asks for it or the athlete declares it, and the coach confirms before applying it."
           },
           "profile_field": {
@@ -136,7 +182,9 @@
             "type": "array",
             "minItems": 1,
             "description": "The mode's operating rules, each citing its entries.",
-            "items": { "$ref": "#/definitions/statement" }
+            "items": {
+              "$ref": "#/definitions/statement"
+            }
           }
         }
       }
@@ -145,7 +193,11 @@
   "definitions": {
     "statement": {
       "type": "object",
-      "required": ["source", "rule", "refs"],
+      "required": [
+        "source",
+        "rule",
+        "refs"
+      ],
       "additionalProperties": false,
       "properties": {
         "source": {
@@ -160,10 +212,10 @@
         "refs": {
           "type": "array",
           "minItems": 1,
-          "description": "KB entry IDs that back the rule. The build checks each one exists in that source's file and carries that source's prefix.",
+          "description": "Where the rule comes from: KB entry IDs (TRPM-C06-001) for an entry_ids source, or numbered sections (§7) for a sections source. The build checks each one exists in that source's file.",
           "items": {
             "type": "string",
-            "pattern": "^[A-Z]+-C[0-9]{2}-[0-9]{3}$"
+            "pattern": "^([A-Z]+-C[0-9]{2}-[0-9]{3}|§[0-9]{1,2})$"
           }
         }
       }

@@ -1,0 +1,306 @@
+# Running Doctrine — the governing matrix for the running sources.
+# Conforms to config/schema/doctrine.schema.json (v1.1: tagged files cited by entry ID,
+# older numbered files cited by section, §N).
+# Generated into generated/Running_Doctrine.md by build_zone_tables.py; never edit the generated file.
+#
+# Rule of use: every decision has ONE governing source. Refinements add precision inside it and
+# never override it. Every statement cites references that the build checks exist.
+
+sport: running
+version: "1.0"
+title: Running Doctrine
+purpose: >-
+  How the running sources work as one system. Palladino is the spine: the intensity
+  language, the load guardrails and the testing logic, anchored to tested fitness and usable
+  with power, pace or heart rate. Daniels governs road training structure and session doses,
+  Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical,
+  muscular-endurance and strength work. Hansons, Hudson, Rosario and Olbrich refine inside
+  those rules; Run Less, Run Faster is a mode used only on request. The methodology the
+  athlete declared still supplies the zone table; this file decides which source answers each
+  question. Statements here are Infame doctrine: attribute them to Infame doctrine and name
+  the source behind each one. Outside this file the one-author attribution rule applies
+  unchanged.
+
+sources:
+  - id: palladino
+    author: Steve Palladino
+    title: Running with Power (coaching knowledge base)
+    knowledge_file: Steve_Palladino_Running_with_Power.md
+    ref_style: sections
+  - id: daniels
+    author: Jack Daniels
+    title: Daniels' Running Formula (4th ed., 2022)
+    knowledge_file: Principles/Jack_Daniels_Running_Formula.md
+    id_prefix: DRF
+  - id: koop
+    author: Jason Koop, Jim Rutberg & Corrine Malcolm
+    title: Training Essentials for Ultrarunning (2nd ed., 2021)
+    knowledge_file: Principles/Jason_Koop_Training_essentials_ultrarunning.md
+    id_prefix: TEU
+  - id: uphill
+    author: Steve House, Scott Johnston & Kilian Jornet
+    title: Training for the Uphill Athlete (2019)
+    knowledge_file: Principles/House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md
+    id_prefix: TUA
+  - id: hansons_marathon
+    author: Luke Humphrey with Keith and Kevin Hanson
+    title: Hansons Marathon Method
+    knowledge_file: Principles/Hansons_Marathon_Method.md
+    ref_style: sections
+  - id: hansons_half
+    author: Luke Humphrey with Keith and Kevin Hanson
+    title: Hansons Half-Marathon Method
+    knowledge_file: Principles/Hansons_Half_Marathon_Method.md
+    ref_style: sections
+  - id: hudson
+    author: Brad Hudson & Matt Fitzgerald
+    title: Run Faster from the 5K to the Marathon
+    knowledge_file: Principles/Hudson_Run_Faster_From_5K_to_Marathon.md
+    ref_style: sections
+  - id: rosario
+    author: Matt Fitzgerald & Ben Rosario
+    title: Run Like a Pro (Even If You're Slow)
+    knowledge_file: Principles/Rosario_Run_Like_a_Pro.md
+    ref_style: sections
+  - id: olbrich
+    author: Wolfgang Olbrich
+    title: Ultramarathon Training
+    knowledge_file: Principles/Wolfgang_Olbrich_Ultramarathon_Training.md
+    ref_style: sections
+  - id: rlrf
+    author: Bill Pierce, Scott Murr & Ray Moss
+    title: Run Less, Run Faster (3rd ed.)
+    knowledge_file: Principles/Run_Less_Run_Faster.md
+    ref_style: sections
+
+decisions:
+  - key: intensity_language
+    decision: Intensity language — zones across power, pace and heart rate
+    lives_in: zone_tables
+    governs:
+      source: palladino
+      rule: >-
+        Intensity is anchored to the athlete's tested threshold (CP/FTP for power, the
+        threshold-pace or LTHR equivalent otherwise) and read through Palladino's zones and
+        intensity domains, whatever metric the athlete's device gives.
+      refs: ["§1", "§2"]
+    refines:
+      - source: daniels
+        rule: >-
+          On the road, E, M, T, I and R are the named training types, each with its purpose
+          and its pace from the current VDOT.
+        refs: [DRF-C06-003, DRF-C06-009]
+      - source: koop
+        rule: >-
+          On trail and in ultras, RPE and the talk test govern effort; heart rate is a poor
+          intensity tool on its own there.
+        refs: [TEU-C06-011, TEU-C04-019]
+
+  - key: threshold_and_testing
+    decision: Threshold, testing and fitness markers
+    lives_in: engine
+    governs:
+      source: palladino
+      rule: >-
+        Prescribe only from a valid, recent tested threshold; targets rise only after a
+        retest shows the threshold rose ("let the fitness come to you").
+      refs: ["§1", "§9", "§17"]
+    refines:
+      - source: daniels
+        rule: A recent race sets the VDOT, and the VDOT sets the training paces.
+        refs: [DRF-C02-015, DRF-C06-008]
+      - source: uphill
+        rule: >-
+          For trail and mountain athletes, test the aerobic threshold too: a gap of more than
+          about 10% between AeT and LT marks an aerobic deficiency to fix first.
+        refs: [TUA-C07-001, TUA-C05-005]
+
+  - key: load_progression
+    decision: Load progression — ramp rate and weekly volume
+    lives_in: doctrine
+    governs:
+      source: palladino
+      rule: >-
+        Load is duration times relative intensity (RSS), not mileage alone. Keep the weekly
+        CTL ramp at about 1-5 for most runners; above 7 is unsustainable. Watch trends, not
+        single days, and never chase a CTL number.
+      refs: ["§1", "§4"]
+    refines:
+      - source: daniels
+        rule: >-
+          Raise weekly amount in steps and hold each new level before the next increase.
+        refs: [DRF-C08-004]
+      - source: koop
+        rule: >-
+          On trail, load uses graded pace (NGP/GAP) so climbing and descending count.
+        refs: [TEU-C05-028, TEU-C06-009]
+
+  - key: intensity_distribution
+    decision: Intensity distribution
+    lives_in: doctrine
+    governs:
+      source: palladino
+      rule: >-
+        Pyramidal in general preparation: most time easy, a minority near threshold, a touch
+        of short hill sprints; the middle zones above threshold are used deliberately, not by
+        drift.
+      refs: ["§5", "§6"]
+    refines:
+      - source: rosario
+        rule: Keep easy running genuinely easy (the 80/20 balance of the pros).
+        refs: ["§3", "§5"]
+      - source: uphill
+        rule: >-
+          Base for mountain athletes: 80-85% (up to 90% when building base) at or below the
+          aerobic threshold.
+        refs: [TUA-C02-011, TUA-C08-010]
+
+  - key: session_dose
+    decision: Dose per session for each intensity
+    lives_in: doctrine
+    governs:
+      source: daniels
+      rule: >-
+        Per-session ceilings by type: long run, M, T, I and R each limited by a share of
+        weekly volume and by time per bout.
+      refs: [DRF-C06-004, DRF-C06-007]
+    refines:
+      - source: palladino
+        rule: Workout protocols and execution rules by zone.
+        refs: ["§7"]
+
+  - key: road_season_structure
+    decision: Road season structure (5K to marathon)
+    lives_in: doctrine
+    governs:
+      source: daniels
+      rule: >-
+        Four phases — foundation and injury prevention, early quality, transition quality,
+        final quality — with lengths adapted to the time available; each stress level is held
+        6-8 weeks before it is raised.
+      refs: [DRF-C08-015, DRF-C08-016, DRF-C08-017, DRF-C08-001]
+    refines:
+      - source: hansons_marathon
+        rule: >-
+          Marathon goal with 5-6 run days: cumulative fatigue, SOS days, long run capped at
+          16 miles. The goal event chooses the Hansons book: marathon here, half marathon below.
+        refs: ["§2", "§7"]
+      - source: hansons_half
+        rule: The same structure aimed at the half marathon, with its own paces.
+        refs: ["§2", "§10"]
+      - source: hudson
+        rule: Adapt the plan to how the athlete is responding, week to week.
+        refs: ["§2", "§7"]
+
+  - key: trail_ultra_structure
+    decision: Trail and ultra season structure
+    lives_in: doctrine
+    governs:
+      source: koop
+      rule: >-
+        Build from the event's demands (course, grade, duration) and Koop's hierarchy of
+        needs; train weaknesses early and strengths late, become specific close to the event,
+        and visit every intensity even for slow races.
+      refs: [TEU-C02-026, TEU-C08-019, TEU-C09-021, TEU-C09-022, TEU-C08-020]
+    refines:
+      - source: uphill
+        rule: Periods (transition, base, precompetition, competition) and gradual annual volume growth.
+        refs: [TUA-C08-009, TUA-C08-005]
+      - source: olbrich
+        rule: Flat road ultras (100 km, 24 h) follow Olbrich's periodization.
+        refs: ["§7"]
+
+  - key: vertical_and_strength
+    decision: Vertical, muscular endurance and strength
+    lives_in: doctrine
+    governs:
+      source: uphill
+      rule: >-
+        Muscular endurance is its own quality, built after a strength base and with care;
+        strength work for the legs and core progresses in stages through the season.
+      refs: [TUA-C04-020, TUA-C08-016, TUA-C08-014, TUA-C08-017]
+    refines:
+      - source: koop
+        rule: >-
+          Match training grade to the race's grades, decide when to hike by grade and speed,
+          and use eccentric work against downhill muscle damage.
+        refs: [TEU-C08-005, TEU-C04-017, TEU-C09-007]
+      - source: koop
+        rule: Organize strength training across the season and the week.
+        refs: [TEU-C08-024, TEU-C08-025]
+
+  - key: metric_on_grade
+    decision: Which metric on hills and trail
+    lives_in: doctrine
+    governs:
+      source: palladino
+      rule: >-
+        With a run power meter, power is the metric on grade: it accounts for hills that pace
+        cannot; compare running economy only on comparable terrain.
+      refs: ["§4", "§7"]
+    refines:
+      - source: koop
+        rule: Without power, use graded pace or RPE on trail, never raw pace.
+        refs: [TEU-C05-028, TEU-C06-011]
+
+  - key: treadmill
+    decision: Treadmill running
+    lives_in: doctrine
+    governs:
+      source: palladino
+      rule: Treadmill running with power and how it compares with outdoor running.
+      refs: ["§12"]
+    refines:
+      - source: daniels
+        rule: Grade and speed combinations that give equivalent effort on the treadmill.
+        refs: [DRF-C06-017, DRF-C04-006]
+
+  - key: breaks_and_returns
+    decision: Returning after a break
+    lives_in: doctrine
+    governs:
+      source: daniels
+      rule: >-
+        After a planned or unplanned break, reduce VDOT and training load by the length of the
+        break before resuming.
+      refs: [DRF-C08-012, DRF-C08-013, DRF-C06-019]
+    refines:
+      - source: palladino
+        rule: Recovery, injury prevention and longevity rules.
+        refs: ["§11"]
+
+  - key: peak_and_race
+    decision: Peaking, taper and race pacing
+    lives_in: config
+    governs:
+      source: palladino
+      rule: >-
+        Peak and race by power or effort plans built from tested fitness; the taper numbers
+        live in config/decision_thresholds.yaml (taper section).
+      refs: ["§8"]
+    refines:
+      - source: daniels
+        rule: How marathon pace is estimated and practised.
+        refs: [DRF-C06-005]
+      - source: koop
+        rule: Ultra taper by variable, and effort-based race-day strategy calibrated by RPE.
+        refs: [TEU-C08-032, TEU-C08-033, TEU-C08-040]
+
+modes:
+  - key: time_crunched_runner
+    name: Time-crunched runner
+    activation: on_request
+    profile_field: "#SESSION Notes — Time-crunched: on"
+    source: rlrf
+    zones_from: >-
+      the paces Run Less, Run Faster prescribes for its three key runs, read from its own
+      knowledge file; easy cross-training stays in the active methodology's zones
+    frame:
+      - source: rlrf
+        rule: >-
+          Three quality runs a week — track repeats, a tempo run and a long run — plus
+          cross-training on the other days; no easy junk miles.
+        refs: ["§2", "§7"]
+      - source: rlrf
+        rule: Paces and progressions come from the athlete's current race performance.
+        refs: ["§5", "§15"]
