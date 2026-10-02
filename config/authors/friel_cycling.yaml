@@ -11,6 +11,10 @@ knowledge_file: Principles/Friel_Cyclists_Training_Bible.md
 # two differ on a zone boundary, this file's zone table governs.
 supplementary_knowledge_files:
   - Principles/Friel_High_Performance_Cyclist.md
+# Different author, complementary material (WKO webinars, 2016-2021): attributed to Cusick.
+companion_knowledge_files:
+  - file: Principles/Cusick_WKO_Coaching_Webinars.md
+    author: Tim Cusick
 sport: cycling
 
 zone_identifier_style: Zone N (with sub-zone letters, e.g. "Zone 5 / 5a")

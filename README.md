@@ -86,7 +86,7 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.11.md` (older ones in `archive/`,
+and open items in `RESTORE_POINT_v7.12.md` (older ones in `archive/`,
 whichever is most recent). Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
@@ -155,6 +155,16 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 ---
 
 ## 🔄 Changelog
+
+**v7.12 — Tim Cusick's WKO webinars join Coggan and Friel cycling (2026-10-02)**
+
+New `Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md` (+ Catalogs companion),
+extracted with the book pipeline (254 entries, verified). Cusick is a different
+author, so the YAML gets a new field, `companion_knowledge_files` (file + author):
+`coggan.yaml` and `friel_cycling.yaml` list it, the zone-table header and
+`profile.md` show a `Companion Knowledge` line, and the prompt says to attribute
+its content to Cusick, never to Coggan or Friel, and that it never overrides a
+zone table or the author's own books.
 
 **v7.11 — Friel cycling reads two books (2026-09-30)**
 

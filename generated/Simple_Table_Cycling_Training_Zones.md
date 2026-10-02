@@ -9,7 +9,7 @@
 - `RPE` is the author's own scale (emit it as published). `~` RPE is the standard CR-10 reference for the class, used only where the author publishes none.
 - Notation: ranges use `X–Y%` (en dash), open lower bound `< X%`, open upper bound `> X%`, undefined value `N/A`. Zones with an open lower bound are rendered from the prescription floor for that metric (see below), not from zero.
 
-**GENERATED FILE — DO NOT EDIT.** Built 2026-10-01 by `build_zone_tables.py`.
+**GENERATED FILE — DO NOT EDIT.** Built 2026-10-02 by `build_zone_tables.py`.
 If this date is older than your last change to `config/`, this file is stale —
 run `python build_zone_tables.py build` and re-upload it to the Claude Project.
 To change a zone, edit the YAML and rebuild. To add a methodology, copy
@@ -80,6 +80,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Native Metrics (author's own numbers):** % FTP, % LTHR
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
 * **Knowledge Base (Project file):** `Allen - Coggan_Training_and_Racing_With_a_Powermeter.md` (`Knowledge/Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md`)
+* **Companion Knowledge (different author — Tim Cusick, Project file):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 
@@ -103,6 +104,7 @@ The moderate/heavy boundary (LT1) is individual: on % FTP it lies between 70% an
 * **Primary Metrics:** Power, Functional Threshold Heart Rate (LTHR)
 * **Knowledge Base (Project file):** `Friel_Cyclists_Training_Bible.md` (`Knowledge/Principles/Friel_Cyclists_Training_Bible.md`)
 * **Supplementary Knowledge (same author, Project file):** `Friel_High_Performance_Cyclist.md` (`Knowledge/Principles/Friel_High_Performance_Cyclist.md`) — read it together with the Knowledge Base above; where the two differ on a zone boundary, this zone table governs.
+* **Companion Knowledge (different author — Tim Cusick, Project file):** `Cusick_WKO_Coaching_Webinars.md` (`Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md`) — a complement to this methodology, not part of it: attribute what it says to Tim Cusick, never to this methodology's author; it never overrides this zone table or the Knowledge Base above; where it differs, say which source says what.
 * **Dual-Layer Required:** No
 * **Note:** FTHR = LTHR. Output as % LTHR in all Intervals.icu syntax.
 

@@ -1,6 +1,6 @@
 # Language Guide — Mexican Spanish (athlete-facing text)
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. Built 2026-10-01 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. Built 2026-10-02 by `python build_zone_tables.py build`.
 
 Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code block when the athlete's language is Spanish. The vocabulary and phrases are the head coach's own. Tempo, strides, VO2max and neuromuscular are universal and stay as written. Register: professional, direct, *tú*. `verify/validate_block.py` warns on the patterns in **Never write**.
 

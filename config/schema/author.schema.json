@@ -42,6 +42,19 @@
       "items": {"type": "string"},
       "description": "Optional. Further book KBs by the SAME author (paths relative to Knowledge/, each must exist). The coach reads them together with knowledge_file; where they differ on a zone boundary, this methodology's zone table governs."
     },
+    "companion_knowledge_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "author"],
+        "additionalProperties": false,
+        "properties": {
+          "file": {"type": "string", "description": "Path relative to Knowledge/; must exist."},
+          "author": {"type": "string", "description": "Name of the book's own author (not this methodology's)."}
+        }
+      },
+      "description": "Optional. Book KBs by a DIFFERENT author that complement this methodology (e.g. a coach who builds on its zones). The coach reads them together with knowledge_file but always attributes their content to their own author; they never override this methodology's zone table or its own books."
+    },
     "knowledge_note": {
       "type": "string",
       "description": "Required when knowledge_file is `none`: where the zones come from and why there is no KB."

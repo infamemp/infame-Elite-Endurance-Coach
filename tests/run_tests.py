@@ -638,6 +638,7 @@ def unit_tests():
     claimed = {zm.load_author_raw(a).get("knowledge_file") for a in on_disk}
     for a in on_disk:   # further books by the same author are claimed too
         claimed |= set(zm.load_author_raw(a).get("supplementary_knowledge_files") or [])
+        claimed |= {c["file"] for c in zm.load_author_raw(a).get("companion_knowledge_files") or []}
     check("authors: every author declares an existing knowledge_file (or `none`)",
           all(k == "none" or (k and os.path.isfile(os.path.join(ROOT, "Knowledge", k)))
               for k in claimed), claimed)
@@ -666,6 +667,13 @@ def unit_tests():
           all(os.path.isfile(os.path.join(ROOT, "Knowledge", k)) for k in [_fc["knowledge_file"]] + _fsup)
           and all(os.path.isfile(os.path.join(ROOT, "Knowledge", "Catalogs", os.path.basename(k)))
                   for k in [_fc["knowledge_file"]] + _fsup))
+    for _a in ("coggan", "friel_cycling"):
+        _cc = zm.load_author_raw(_a).get("companion_knowledge_files") or []
+        equal(f"cusick: {_a} lists the WKO webinars as a different-author companion",
+              [(c["file"], c["author"]) for c in _cc],
+              [("Principles/Cusick_WKO_Coaching_Webinars.md", "Tim Cusick")])
+    check("cusick: the book has a Catalogs companion",
+          os.path.isfile(os.path.join(ROOT, "Knowledge", "Catalogs", "Cusick_WKO_Coaching_Webinars.md")))
     check("friel: the old single-file KB is gone from Knowledge/",
           not os.path.exists(os.path.join(ROOT, "Knowledge", "Joe_Friel_cyclists_training_bible_knowledge_base.md")))
     kb_disk = {os.path.relpath(f, os.path.join(ROOT, "Knowledge")).replace(os.sep, "/")

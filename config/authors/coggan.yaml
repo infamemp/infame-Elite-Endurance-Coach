@@ -7,6 +7,11 @@ name: Coggan Cycling Levels
 
 # Knowledge base the coach reads for this methodology (path relative to Knowledge/).
 knowledge_file: Principles/Allen - Coggan_Training_and_Racing_With_a_Powermeter.md
+# Tim Cusick (TrainingPeaks/WKO) builds his webinars on Coggan's levels, iLevels and
+# power-duration model. Different author: the coach must attribute it to Cusick.
+companion_knowledge_files:
+  - file: Principles/Cusick_WKO_Coaching_Webinars.md
+    author: Tim Cusick
 sport: cycling
 
 zone_identifier_style: Level N

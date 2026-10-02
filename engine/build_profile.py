@@ -478,6 +478,10 @@ def knowledge_lines(declared):
             for skf in (cfg.get("supplementary_knowledge_files") or []):
                 L.append(f"  - plus, same author: `{os.path.basename(skf)}` "
                          f"(`Knowledge/{skf}`)")
+            for ck in (cfg.get("companion_knowledge_files") or []):
+                L.append(f"  - plus, different author ({ck['author']}): "
+                         f"`{os.path.basename(ck['file'])}` (`Knowledge/{ck['file']}`) "
+                         f"— attribute it to {ck['author']}, not to this methodology")
     if not L:
         return []
     return ["**Knowledge files to read for the declared methodologies** "
