@@ -17,19 +17,23 @@ Usage:
 Commands:
     validate   Check every author file against the schema, resolve it (class,
                domain, estimates), report conflicts, RPE warnings and the
-               crosswalk residuals. Exit code 1 on any error.
-    build      Regenerate the Markdown zone tables into generated/.
+               crosswalk residuals. Also checks every doctrine file under
+               config/doctrine/ (schema, sources, and that each cited KB entry
+               ID exists in its Knowledge file). Exit code 1 on any error.
+    build      Regenerate the Markdown zone tables, the session architectures,
+               the language guide and the doctrines into generated/.
     diff       Compare generated output against a reference file (migration check).
 
 Paths are resolved relative to the repository root.
 
-Version: 2.0 (v7.2 — native values + crosswalk + computed class/domain)
+Version: 2.1 (v7.13 — adds doctrine validation and generation)
 """
 
 import argparse
 import datetime as _dt
 import difflib
 import os
+import re
 import sys
 
 try:
@@ -278,7 +282,207 @@ def validate_all():
     if mean_d > tol["mean"] or max_d > tol["max"]:
         print("        FAIL  the model no longer reproduces the published race anchors")
         failures += 1
+
+    print()
+    failures += validate_doctrines()
     return failures
+
+
+# ──────────────────────────────────────────────────────────────────
+# Doctrine (config/doctrine/*.yaml)
+# ──────────────────────────────────────────────────────────────────
+
+DOCTRINE_DIR = os.path.join(ROOT, "config", "doctrine")
+DOCTRINE_SCHEMA_PATH = os.path.join(ROOT, "config", "schema", "doctrine.schema.json")
+KNOWLEDGE_DIR = os.path.join(ROOT, "Knowledge")
+DOCTRINE_FILES = {"cycling": "Cycling_Doctrine.md", "running": "Running_Doctrine.md"}
+LIVES_IN_LABELS = {
+    "zone_tables": "Zone tables",
+    "engine": "Engine → #STATE",
+    "doctrine": "This doctrine",
+    "config": "Config (decision_thresholds.yaml)",
+    "mode": "Only when its mode is active",
+}
+_ENTRY_ID = re.compile(r"^### \[([A-Z]+-C\d{2}-\d{3})\]", re.M)
+
+
+def load_doctrines():
+    """Return [(filename, data)] for every config/doctrine/*.yaml, sorted."""
+    if not os.path.isdir(DOCTRINE_DIR):
+        return []
+    out = []
+    for fn in sorted(os.listdir(DOCTRINE_DIR)):
+        if fn.endswith(".yaml") and not fn.startswith("_"):
+            with open(os.path.join(DOCTRINE_DIR, fn), encoding="utf-8") as f:
+                out.append((fn, yaml.safe_load(f)))
+    return out
+
+
+def check_doctrine(data, stem, validator):
+    """All errors for one doctrine file: schema, then cross-references."""
+    errors = []
+    for e in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
+        loc = " → ".join(str(p) for p in e.path) or "(root)"
+        errors.append(f"[{loc}] {e.message}")
+    if errors:
+        return errors, 0
+    if data["sport"] != stem:
+        errors.append(f"sport '{data['sport']}' does not match the filename '{stem}.yaml'")
+
+    sources, entry_ids = {}, {}
+    for s in data["sources"]:
+        if s["id"] in sources:
+            errors.append(f"source id '{s['id']}' is declared twice")
+        sources[s["id"]] = s
+        path = os.path.join(KNOWLEDGE_DIR, s["knowledge_file"])
+        if not os.path.exists(path):
+            errors.append(f"source '{s['id']}': Knowledge file not found: {s['knowledge_file']}")
+            entry_ids[s["id"]] = None
+            continue
+        with open(path, encoding="utf-8") as f:
+            entry_ids[s["id"]] = set(_ENTRY_ID.findall(f.read()))
+
+    modes = {m["key"] for m in data.get("modes", [])}
+    n_refs = 0
+
+    def check_statement(where, st):
+        nonlocal n_refs
+        sid = st["source"]
+        if sid not in sources:
+            errors.append(f"{where}: unknown source '{sid}'")
+            return
+        known = entry_ids.get(sid)
+        prefix = sources[sid]["id_prefix"] + "-"
+        for ref in st["refs"]:
+            n_refs += 1
+            if not ref.startswith(prefix):
+                errors.append(f"{where}: {ref} does not carry the prefix of '{sid}' ({prefix})")
+            elif known is not None and ref not in known:
+                errors.append(f"{where}: {ref} not found in {sources[sid]['knowledge_file']}")
+
+    keys = set()
+    for d in data["decisions"]:
+        if d["key"] in keys:
+            errors.append(f"decision key '{d['key']}' is used twice")
+        keys.add(d["key"])
+        if d["lives_in"] == "mode" and d.get("mode") not in modes:
+            errors.append(f"decision '{d['key']}': lives_in is 'mode' but names no declared mode")
+        check_statement(f"{d['key']} (governs)", d["governs"])
+        for i, st in enumerate(d.get("refines", [])):
+            if st["source"] == d["governs"]["source"] and st["refs"] == d["governs"]["refs"]:
+                errors.append(f"{d['key']}: refinement {i + 1} repeats the governing statement")
+            check_statement(f"{d['key']} (refines {i + 1})", st)
+    for m in data.get("modes", []):
+        if m["source"] not in sources:
+            errors.append(f"mode '{m['key']}': unknown source '{m['source']}'")
+        for i, st in enumerate(m["frame"]):
+            check_statement(f"mode {m['key']} (frame {i + 1})", st)
+    return errors, n_refs
+
+
+def validate_doctrines():
+    """Check every doctrine file. Returns the number of failing files."""
+    doctrines = load_doctrines()
+    if not doctrines:
+        print("No doctrine files found (config/doctrine/).")
+        return 0
+    with open(DOCTRINE_SCHEMA_PATH, encoding="utf-8") as f:
+        validator = Draft7Validator(json.load(f))
+    failures = 0
+    print("Doctrines:")
+    for fn, data in doctrines:
+        errors, n_refs = check_doctrine(data, os.path.splitext(fn)[0], validator)
+        if errors:
+            failures += 1
+            print(f"FAIL  {fn}")
+            for e in errors:
+                print(f"        {e}")
+        else:
+            print(f"OK    {fn}  ({len(data['decisions'])} decisions, "
+                  f"{len(data['sources'])} sources, {n_refs} KB references checked)")
+    return failures
+
+
+def _flat(v):
+    return " ".join(str(v).split()) if v is not None else ""
+
+
+def render_doctrine(data):
+    """One doctrine as Markdown: purpose, sources, the matrix at a glance, then
+    each decision with its governing rule and refinements."""
+    src = {s["id"]: s for s in data["sources"]}
+
+    def who(sid):
+        return src[sid]["author"]
+
+    def refs(st):
+        return ", ".join(f"`{r}`" for r in st["refs"])
+
+    L = [f"# {data['title']} — v{data['version']}", "",
+         f"> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/{data['sport']}.yaml`. "
+         f"Built {_dt.date.today().isoformat()} by `python build_zone_tables.py build`.", "",
+         _flat(data["purpose"]), "",
+         "**How to read it.** Each decision has one **governing** source: its rule decides. "
+         "**Refines** entries add precision inside that rule and never override it. The codes "
+         "in brackets are KB entry IDs: search the Project for the code to open the exact "
+         "passage.", "",
+         "## Sources", "", "| Key | Author | Work | Knowledge file | Entry IDs |",
+         "| :--- | :--- | :--- | :--- | :--- |"]
+    for s in data["sources"]:
+        L.append(f"| `{s['id']}` | {s['author']} | {s['title']} | "
+                 f"`{os.path.basename(s['knowledge_file'])}` | `{s['id_prefix']}-…` |")
+    L += ["", "## The matrix at a glance", "",
+          "| Decision | Governs | Refines | Executed in |", "| :--- | :--- | :--- | :--- |"]
+    for d in data["decisions"]:
+        ref_keys = ", ".join(f"`{k}`" for k in dict.fromkeys(st["source"] for st in d.get("refines", []))) or "—"
+        L.append(f"| {d['decision']} | `{d['governs']['source']}` | {ref_keys} | "
+                 f"{LIVES_IN_LABELS[d['lives_in']]} |")
+    L += ["", "---", ""]
+    for d in data["decisions"]:
+        g = d["governs"]
+        L += [f"## {d['decision']}", "",
+              f"*Executed in: {LIVES_IN_LABELS[d['lives_in']]}"
+              + (f" (`{d['mode']}`)" if d.get("mode") else "") + "*", "",
+              f"**Governs — {who(g['source'])}.** {_flat(g['rule'])} [{refs(g)}]", ""]
+        for st in d.get("refines", []):
+            L.append(f"- **Refines — {who(st['source'])}.** {_flat(st['rule'])} [{refs(st)}]")
+        if d.get("refines"):
+            L.append("")
+    for m in data.get("modes", []):
+        L += [f"## Mode: {m['name']}", "",
+              f"*Activation: on request only — the head coach asks for it or the athlete "
+              f"declares it, and you confirm before applying it. Recorded as "
+              f"`{m['profile_field']}` in the declared profile.*", "",
+              f"**Structure from {who(m['source'])}.** Zones: "
+              f"{_flat(m.get('zones_from', 'the active methodology'))}.", ""]
+        for st in m["frame"]:
+            L.append(f"- {_flat(st['rule'])} [{refs(st)}]")
+        L.append("")
+    return "\n".join(L).rstrip() + "\n"
+
+
+def build_doctrines():
+    """Validate, then write generated/<Sport>_Doctrine.md for each doctrine.
+    Returns (written [(path, n_decisions)], failed: bool)."""
+    doctrines = load_doctrines()
+    if not doctrines:
+        return [], False
+    with open(DOCTRINE_SCHEMA_PATH, encoding="utf-8") as f:
+        validator = Draft7Validator(json.load(f))
+    written = []
+    for fn, data in doctrines:
+        errors, _ = check_doctrine(data, os.path.splitext(fn)[0], validator)
+        if errors:
+            print(f"FAIL  {fn}")
+            for e in errors:
+                print(f"        {e}")
+            print("\nDoctrine not written. Run `python build_zone_tables.py validate` for details.")
+            return written, True
+        path = os.path.join(OUTPUT_DIR, DOCTRINE_FILES[data["sport"]])
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(render_doctrine(data))
+        written.append((path, len(data["decisions"])))
+    return written, False
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -734,13 +938,16 @@ def build():
 
     arch_path, n_arch = build_architectures()
     lang_path = build_language_guide()
+    doctrines, doctrine_failed = build_doctrines()
     for path, n in written:
         print(f"Wrote {os.path.relpath(path, ROOT)}  ({n} methodologies)")
     print(f"Wrote {os.path.relpath(arch_path, ROOT)}  ({n_arch} architectures)")
     print(f"Wrote {os.path.relpath(lang_path, ROOT)}")
+    for path, n in doctrines:
+        print(f"Wrote {os.path.relpath(path, ROOT)}  ({n} decisions)")
     if not written:
         print("Nothing to build — no author files found.")
-    return 0
+    return 1 if doctrine_failed else 0
 
 
 def diff(reference):
