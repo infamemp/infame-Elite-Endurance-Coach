@@ -7,15 +7,15 @@
 # never override it. Every statement cites references that the build checks exist.
 
 sport: running
-version: "1.0"
+version: "1.1"
 title: Running Doctrine
 purpose: >-
   How the running sources work as one system. Palladino is the spine: the intensity
   language, the load guardrails and the testing logic, anchored to tested fitness and usable
   with power, pace or heart rate. Daniels governs road training structure and session doses,
   Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical,
-  muscular-endurance and strength work. Hansons, Hudson, Rosario and Olbrich refine inside
-  those rules; Run Less, Run Faster is a mode used only on request. The methodology the
+  muscular-endurance and strength work. Mujika governs the taper; Hansons, Hudson, Rosario and Olbrich
+  refine inside those rules; Run Less, Run Faster is a mode used only on request. The methodology the
   athlete declared still supplies the zone table; this file decides which source answers each
   question. Statements here are Infame doctrine: attribute them to Infame doctrine and name
   the source behind each one. Outside this file the one-author attribution rule applies
@@ -42,6 +42,11 @@ sources:
     title: Training for the Uphill Athlete (2019)
     knowledge_file: Principles/House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md
     id_prefix: TUA
+  - id: mujika
+    author: Iñigo Mujika
+    title: Tapering and Peaking for Optimal Performance (2009)
+    knowledge_file: Principles/Mujika_Tapering_Peaking_Extraction.md
+    id_prefix: TPOP
   - id: hansons_marathon
     author: Luke Humphrey with Keith and Kevin Hanson
     title: Hansons Marathon Method
@@ -273,12 +278,17 @@ decisions:
     decision: Peaking, taper and race pacing
     lives_in: config
     governs:
-      source: palladino
+      source: mujika
       rule: >-
-        Peak and race by power or effort plans built from tested fitness; the taper numbers
-        live in config/decision_thresholds.yaml (taper section).
-      refs: ["§8"]
+        Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or
+        above about 80%, with a progressive (non-linear) reduction; two weeks is the default
+        when the athlete's own response is unknown, and the taper is individualized. The
+        numbers live in config/decision_thresholds.yaml (taper section).
+      refs: [TPOP-C06-008, TPOP-C04-042, TPOP-C06-009, TPOP-C08-002, TPOP-C06-010]
     refines:
+      - source: palladino
+        rule: Peak and race by power or effort plans built from tested fitness.
+        refs: ["§8"]
       - source: daniels
         rule: How marathon pace is estimated and practised.
         refs: [DRF-C06-005]

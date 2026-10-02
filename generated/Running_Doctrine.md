@@ -1,8 +1,8 @@
-# Running Doctrine — v1.0
+# Running Doctrine — v1.1
 
 > GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/running.yaml`. Built 2026-10-02 by `python build_zone_tables.py build`.
 
-How the running sources work as one system. Palladino is the spine: the intensity language, the load guardrails and the testing logic, anchored to tested fitness and usable with power, pace or heart rate. Daniels governs road training structure and session doses, Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical, muscular-endurance and strength work. Hansons, Hudson, Rosario and Olbrich refine inside those rules; Run Less, Run Faster is a mode used only on request. The methodology the athlete declared still supplies the zone table; this file decides which source answers each question. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged.
+How the running sources work as one system. Palladino is the spine: the intensity language, the load guardrails and the testing logic, anchored to tested fitness and usable with power, pace or heart rate. Daniels governs road training structure and session doses, Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical, muscular-endurance and strength work. Mujika governs the taper; Hansons, Hudson, Rosario and Olbrich refine inside those rules; Run Less, Run Faster is a mode used only on request. The methodology the athlete declared still supplies the zone table; this file decides which source answers each question. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged.
 
 **How to read it.** Each decision has one **governing** source: its rule decides. **Refines** entries add precision inside that rule and never override it. The codes in brackets are KB entry IDs: search the Project for the code to open the exact passage. A code written §N is section N of that source's file (its `## N.` heading).
 
@@ -14,6 +14,7 @@ How the running sources work as one system. Palladino is the spine: the intensit
 | `daniels` | Jack Daniels | Daniels' Running Formula (4th ed., 2022) | `Jack_Daniels_Running_Formula.md` | `DRF-…` |
 | `koop` | Jason Koop, Jim Rutberg & Corrine Malcolm | Training Essentials for Ultrarunning (2nd ed., 2021) | `Jason_Koop_Training_essentials_ultrarunning.md` | `TEU-…` |
 | `uphill` | Steve House, Scott Johnston & Kilian Jornet | Training for the Uphill Athlete (2019) | `House_Johnston_Jornet_Training_for_the_Uphill_Athlete.md` | `TUA-…` |
+| `mujika` | Iñigo Mujika | Tapering and Peaking for Optimal Performance (2009) | `Mujika_Tapering_Peaking_Extraction.md` | `TPOP-…` |
 | `hansons_marathon` | Luke Humphrey with Keith and Kevin Hanson | Hansons Marathon Method | `Hansons_Marathon_Method.md` | sections `§N` |
 | `hansons_half` | Luke Humphrey with Keith and Kevin Hanson | Hansons Half-Marathon Method | `Hansons_Half_Marathon_Method.md` | sections `§N` |
 | `hudson` | Brad Hudson & Matt Fitzgerald | Run Faster from the 5K to the Marathon | `Hudson_Run_Faster_From_5K_to_Marathon.md` | sections `§N` |
@@ -36,7 +37,7 @@ How the running sources work as one system. Palladino is the spine: the intensit
 | Which metric on hills and trail | `palladino` | `koop` | This doctrine |
 | Treadmill running | `palladino` | `daniels` | This doctrine |
 | Returning after a break | `daniels` | `palladino` | This doctrine |
-| Peaking, taper and race pacing | `palladino` | `daniels`, `koop` | Config (decision_thresholds.yaml) |
+| Peaking, taper and race pacing | `mujika` | `palladino`, `daniels`, `koop` | Config (decision_thresholds.yaml) |
 
 ---
 
@@ -140,8 +141,9 @@ How the running sources work as one system. Palladino is the spine: the intensit
 
 *Executed in: Config (decision_thresholds.yaml)*
 
-**Governs — Steve Palladino.** Peak and race by power or effort plans built from tested fitness; the taper numbers live in config/decision_thresholds.yaml (taper section). [`§8`]
+**Governs — Iñigo Mujika.** Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or above about 80%, with a progressive (non-linear) reduction; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
 
+- **Refines — Steve Palladino.** Peak and race by power or effort plans built from tested fitness. [`§8`]
 - **Refines — Jack Daniels.** How marathon pace is estimated and practised. [`DRF-C06-005`]
 - **Refines — Jason Koop, Jim Rutberg & Corrine Malcolm.** Ultra taper by variable, and effort-based race-day strategy calibrated by RPE. [`TEU-C08-032`, `TEU-C08-033`, `TEU-C08-040`]
 

@@ -1,8 +1,8 @@
-# Cycling Doctrine — v1.0
+# Cycling Doctrine — v1.1
 
 > GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/cycling.yaml`. Built 2026-10-02 by `python build_zone_tables.py build`.
 
-How the three cycling sources work as one system. Coggan and Allen give the language (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume, limiters), and Cusick gives the diagnosis and the fine control of training (the power-duration model, time to exhaustion, optimized intervals, intensity distribution). Use this file to decide which source answers a question; open the cited entries when you need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged. The zone table of the athlete's declared methodology always governs zone boundaries.
+How the three cycling sources work as one system. Coggan and Allen give the language (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume, limiters), Mujika gives the taper, and Cusick gives the diagnosis and the fine control of training (the power-duration model, time to exhaustion, optimized intervals, intensity distribution). Use this file to decide which source answers a question; open the cited entries when you need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged. The zone table of the athlete's declared methodology always governs zone boundaries.
 
 **How to read it.** Each decision has one **governing** source: its rule decides. **Refines** entries add precision inside that rule and never override it. The codes in brackets are KB entry IDs: search the Project for the code to open the exact passage. A code written §N is section N of that source's file (its `## N.` heading).
 
@@ -14,6 +14,7 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 | `friel_tb` | Joe Friel | The Cyclist's Training Bible | `Friel_Cyclists_Training_Bible.md` | `CTB-…` |
 | `friel_hpc` | Joe Friel | The High-Performance Cyclist | `Friel_High_Performance_Cyclist.md` | `HPC-…` |
 | `cusick` | Tim Cusick | WKO Coaching Webinars (2016-2021) | `Cusick_WKO_Coaching_Webinars.md` | `WKOC-…` |
+| `mujika` | Iñigo Mujika | Tapering and Peaking for Optimal Performance (2009) | `Mujika_Tapering_Peaking_Extraction.md` | `TPOP-…` |
 
 ## The matrix at a glance
 
@@ -29,7 +30,7 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 | Intensity distribution across the season | `cusick` | `coggan`, `friel_tb` | This doctrine |
 | Testing — protocol and cadence | `coggan` | `cusick`, `friel_tb` | Engine → #STATE |
 | Cost and benefit of a training emphasis | `cusick` | `friel_tb` | This doctrine |
-| Peak phase and taper | `friel_tb` | `cusick`, `coggan` | Config (decision_thresholds.yaml) |
+| Peak phase and taper | `mujika` | `friel_tb`, `cusick`, `coggan` | Config (decision_thresholds.yaml) |
 | Race power and pacing | `cusick` | `coggan`, `friel_tb` | This doctrine |
 | Weekly hours below what the plan needs | `friel_tb` | `cusick` | This doctrine |
 
@@ -126,8 +127,9 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 
 *Executed in: Config (decision_thresholds.yaml)*
 
-**Governs — Joe Friel.** Taper by cutting duration while keeping race-like intensity, with frequent recovery. The numbers live in config/decision_thresholds.yaml (taper section). [`CTB-C08-048`, `CTB-C08-049`, `CTB-C08-050`]
+**Governs — Iñigo Mujika.** Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or above about 80%, with a progressive (non-linear) reduction; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
 
+- **Refines — Joe Friel.** Taper workouts stay race-like, with frequent recovery; the Peak period sets its place in the season. [`CTB-C08-048`, `CTB-C08-049`, `CTB-C08-050`]
 - **Refines — Tim Cusick.** The intensive peak block lasts 3-6 weeks and must progress (+1 each hard day); it only works on a solid aerobic foundation. [`WKOC-C08-040`, `WKOC-C08-041`]
 - **Refines — Hunter Allen, Andrew Coggan & Stephen McGregor.** Target TSB for racing and how to time it for single or multiple peaks. [`TRPM-C06-020`, `TRPM-C08-007`, `TRPM-C08-006`]
 
