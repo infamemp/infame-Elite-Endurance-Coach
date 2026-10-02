@@ -61,6 +61,18 @@ if not API_KEY:
 # 5s neuromuscular · 1m anaerobic · 5m VO2max · 20m threshold · 60m durability
 CURVE_SECONDS = [5, 60, 300, 1200, 3600]
 
+# Dense power-duration points for the Cusick diagnosis (engine/pd_diagnosis.py):
+# how long the athlete holds FTP (TTE) and where the curve crosses each level
+# above threshold. Measured values only, read straight off the curve -- no
+# fitted model. Kept apart from CURVE_SECONDS so the longitudinal anchors,
+# their config and their golden tests stay exactly as they are.
+PD_CURVE_SECONDS = (
+    [1, 5, 10, 15, 20, 30, 45]
+    + list(range(60, 600, 30))        # 1:00 - 9:30 every 30 s
+    + list(range(600, 3600, 60))      # 10:00 - 59:00 every minute
+    + list(range(3600, 7201, 300))    # 60:00 - 120:00 every 5 min
+)
+
 # Pace curve anchors, in metres. The pace endpoint is indexed by distance and
 # returns elapsed time, not speed — a different shape from the power curve.
 CURVE_METRES = [400, 1000, 5000, 10000, 21097]
@@ -195,8 +207,16 @@ def extract_power_curve(entry):
             }
     if not points:
         return None
+    # {seconds: watts}, only where the curve has a value within 2% of the
+    # wanted duration (tighter than the anchors: these feed exact crossings).
+    pd_points = {}
+    for want in PD_CURVE_SECONDS:
+        i = nearest(secs, vals, want, max(1, want * 0.02))
+        if i is not None:
+            pd_points[str(want)] = vals[i]
     return {
         "points": points,
+        "pd_points": pd_points,
         "models": entry.get("powerModels"),
         "vo2max_5m": entry.get("vo2max_5m"),
         "compound_score_5m": entry.get("compound_score_5m"),
