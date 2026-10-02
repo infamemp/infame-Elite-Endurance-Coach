@@ -2,7 +2,7 @@
 
 **Date frozen:** 2026-10-02
 **Previous:** `archive/RESTORE_POINT_v7.13.md` (older ones in `archive/`)
-**Tests:** `python tests/run_tests.py` → 648/648 · `python tests/test_mcp_server.py` (needs `mcp`)
+**Tests:** `python tests/run_tests.py` → 651/651 · `python tests/test_mcp_server.py` → 156/156 (needs `mcp`)
 
 ## What changed in v7.14
 
@@ -15,6 +15,9 @@
   (not in the published API docs; verified 2026-10-02).
 - **Declared profile:** `history.training_age_years` (template + intake 6.0) sets the ramp band.
 - **Prompt:** Engine Contract row for the diagnosis.
+- **New MCP tool `save_training_age(athlete_id, years)`:** the coach asks the training age once
+  when the block says it is missing and saves it to `data/<id>/facts.json`; the engine reads it
+  (a value in the declared profile still wins). No file editing by the head coach.
 
 ## Earlier: v7.13
 

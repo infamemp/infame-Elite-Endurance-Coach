@@ -119,6 +119,26 @@ def load_declared(aid):
     return declared if isinstance(declared, dict) else {}
 
 
+def load_facts(aid):
+    """data/<aid>/facts.json — facts the head coach stated in conversation and
+    the coach saved through a tool (save_training_age). {} when absent."""
+    path = os.path.join(DATA, str(aid), "facts.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            facts = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return facts if isinstance(facts, dict) else {}
+
+
+def training_age(declared, facts):
+    """Declared profile first (history.training_age_years), then facts.json."""
+    v = ((declared or {}).get("history") or {}).get("training_age_years")
+    return v if v is not None else (facts or {}).get("training_age_years")
+
+
 def d(s):
     return datetime.strptime(s[:10], "%Y-%m-%d").date()
 
@@ -720,7 +740,10 @@ def build(aid, thresholds, quiet=False):
             pp = power_profile.analyze(pts, data.get("profile") or {}, ppcfg)
 
     # Cycling Doctrine numbers (Cusick / Coggan). None without a dense power curve.
-    pdx = pd_diagnosis.analyze(data, load_declared(aid), (pmc or {}).get("ctl"))
+    declared = load_declared(aid)
+    declared = {**declared, "history": {**(declared.get("history") or {}),
+                "training_age_years": training_age(declared, load_facts(aid))}}
+    pdx = pd_diagnosis.analyze(data, declared, (pmc or {}).get("ctl"))
 
     heads = None
     if thresholds.get("heads_up"):

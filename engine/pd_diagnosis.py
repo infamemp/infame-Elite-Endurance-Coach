@@ -260,6 +260,6 @@ def render(dx):
                  f"days; short term {rb['short_term'][0]}–{rb['short_term'][1]} TSS/day, "
                  "then a rest week.")
     else:
-        L.append("- CTL ramp band: training age not declared (`history.training_age_years`), "
-                 "so no band is shown.")
+        L.append("- CTL ramp band: training age not declared, so no band is shown "
+                 "(ask the head coach once and save it with `save_training_age`).")
     return "\n".join(L).rstrip() + "\n"

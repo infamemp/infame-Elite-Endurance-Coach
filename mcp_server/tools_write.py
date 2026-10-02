@@ -19,7 +19,8 @@ import os
 import re
 from datetime import date, datetime
 
-from .common import OUT, safe_out_dir, block_file_name
+from .common import DATA, OUT, safe_out_dir, block_file_name
+import json
 from .guard import ToolError, guarded
 
 # Mirrors coach.py's read_race_notes() patterns exactly (those are inline in
@@ -49,6 +50,41 @@ def save_availability(athlete_id: str, text: str, athlete_name: str | None = Non
     with open(path, "w", encoding="utf-8") as f:
         f.write(body.rstrip() + "\n")
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
+
+
+@guarded
+def save_training_age(athlete_id: str, years: float) -> dict:
+    """Record the athlete's training age — years of consistent endurance
+    training, as the head coach stated it — in data/<athlete_id>/facts.json.
+    It sets the CTL ramp band in #STATE (Coggan Table 9.2). Asked once and
+    never again: the next get_athlete_state(force_refresh=true) shows the band.
+    A value in the declared profile (history.training_age_years) wins over
+    this one. It never judges the number."""
+    try:
+        value = float(years)
+    except (TypeError, ValueError):
+        raise ToolError("years must be a number (0 for a beginner). Nothing was written.")
+    if not 0 <= value <= 80:
+        raise ToolError("years must be between 0 and 80. Nothing was written.")
+    value = int(value) if value == int(value) else round(value, 1)
+    dest = os.path.join(DATA, str(athlete_id))
+    if not os.path.isdir(dest):
+        raise ToolError(f"No local data for {athlete_id}: call get_athlete_state first. "
+                        "Nothing was written.")
+    path = os.path.join(dest, "facts.json")
+    facts = {}
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                facts = json.load(f) or {}
+        except (OSError, ValueError):
+            facts = {}
+    facts["training_age_years"] = value
+    facts["training_age_stated_on"] = date.today().isoformat()
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(facts, f, indent=2, ensure_ascii=False)
+    return {"ok": True, "training_age_years": value,
+            "path": os.path.relpath(path, os.path.dirname(DATA))}
 
 
 @guarded

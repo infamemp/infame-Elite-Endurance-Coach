@@ -1494,6 +1494,12 @@ def unit_tests():
           "## POWER-DURATION DIAGNOSIS" in md_pd and "| TTE at FTP |" in md_pd
           and "### Outdoor — FTP 250 W" in md_pd and "Indoor" not in md_pd.split("###", 1)[1].split("\n")[0]
           and "18.0 kJ" in md_pd and "5–8 TSS/day" in md_pd, md_pd)
+    import build_state as bs_ta
+    equal("training age: declared profile wins over facts.json",
+          bs_ta.training_age({"history": {"training_age_years": 6}}, {"training_age_years": 2}), 6)
+    equal("training age: facts.json is used when the profile has none",
+          bs_ta.training_age({"history": {}}, {"training_age_years": 2}), 2)
+    equal("training age: absent everywhere is None", bs_ta.training_age({}, {}), None)
     check("pd_diagnosis: render says when training age is not declared",
           "training age not declared" in pdx.render(pdx.analyze(pd_data(curve))))
 

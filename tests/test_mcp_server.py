@@ -921,6 +921,21 @@ def test_mcp_first_workflow():
     check("workflow: get_athlete_state returns the saved `availability`",
           "tue: 90" in (r.get("availability") or ""), r.get("availability"))
 
+    # 1c — training age is asked once, saved by the coach, read by the engine
+    from mcp_server.tools_write import save_training_age
+    rt = save_training_age(AID, "ten")
+    equal("workflow: save_training_age rejects a non-number", rt.get("ok"), False)
+    rt = save_training_age(AID, 120)
+    equal("workflow: save_training_age rejects an impossible value", rt.get("ok"), False)
+    rt = save_training_age(AID, 7)
+    equal("workflow: save_training_age saves a valid number", (rt.get("ok"), rt.get("training_age_years")), (True, 7))
+    import importlib
+    sys.path.insert(0, os.path.join(ROOT, "engine"))
+    bs_t = importlib.import_module("build_state")
+    equal("workflow: the engine reads the saved training age",
+          bs_t.training_age(bs_t.load_declared(AID), bs_t.load_facts(AID)), 7)
+    os.remove(os.path.join(ROOT, "data", AID, "facts.json"))
+
     # 2 — one file per week, newest is the default target
     good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
     with open(good, encoding="utf-8") as f:

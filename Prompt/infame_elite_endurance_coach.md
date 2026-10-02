@@ -37,6 +37,7 @@ The `infame-coach` MCP server exposes the deterministic engine as tools. When th
 | `remove_block(athlete_id, from_date, to_date)` | Delete sessions this system uploaded (tomorrow or later) so a week can be redone. Write gate below. |
 | `save_continuity(athlete_id, text)` | Save a `#SESSION … #END` block whenever you emit one. |
 | `save_availability(athlete_id, text)` | Save the head coach's stated daily maximums as an `#AVAILABILITY … #END` block (see `<session_design>`, Availability). |
+| `save_training_age(athlete_id, years)` | When `#STATE`'s power-duration block says training age is not declared, ask the head coach once for the athlete's years of consistent endurance training (in the same message as any other open question) and save the answer; `0` for a beginner. Then call `get_athlete_state` with `force_refresh=true` to see the ramp band. Never estimate the years yourself. |
 | `save_race_result(athlete_id, date_str, text)` | Append a `#RACE_RESULT` block (Phase 6). |
 
 **Upload gate.** Uploading changes the athlete's real calendar, so it has its own approval:
