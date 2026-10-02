@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "doctrine.schema.json",
+  "title": "Infame Doctrine — one sport's governing matrix (v1)",
+  "description": "Schema for config/doctrine/<sport>.yaml. A doctrine is the only authorised synthesis between authors: for each coaching decision it names exactly ONE governing source and any sources that refine it, and every statement cites KB entry IDs that must exist in the named Knowledge file. Generated into generated/<Sport>_Doctrine.md by build_zone_tables.py; the generated file is never edited by hand.",
+  "type": "object",
+  "required": ["sport", "version", "title", "purpose", "sources", "decisions"],
+  "additionalProperties": false,
+  "properties": {
+    "sport": {
+      "type": "string",
+      "enum": ["cycling", "running"],
+      "description": "Must match the filename stem (cycling.yaml, running.yaml)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Doctrine version, e.g. '1.0'. Raise it on every content change."
+    },
+    "title": {
+      "type": "string",
+      "description": "Heading of the generated file, e.g. 'Cycling Doctrine'."
+    },
+    "purpose": {
+      "type": "string",
+      "description": "One paragraph telling the coach what this doctrine is and how to use it."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Registry of every source the doctrine may cite.",
+      "items": {
+        "type": "object",
+        "required": ["id", "author", "title", "knowledge_file", "id_prefix"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Short key used inside decisions, e.g. 'coggan', 'friel_tb', 'cusick'."
+          },
+          "author": {
+            "type": "string",
+            "description": "Author name(s) as the coach must attribute them, e.g. 'Hunter Allen & Andrew Coggan'."
+          },
+          "title": {
+            "type": "string",
+            "description": "Book or work title."
+          },
+          "knowledge_file": {
+            "type": "string",
+            "description": "Path relative to Knowledge/, e.g. 'Principles/Cusick_WKO_Coaching_Webinars.md'. The build checks it exists."
+          },
+          "id_prefix": {
+            "type": "string",
+            "pattern": "^[A-Z]+$",
+            "description": "Prefix of the entry IDs in that file, e.g. 'TRPM', 'CTB', 'HPC', 'WKOC'."
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One row per coaching decision. Order = the order the coach meets them when building a plan.",
+      "items": {
+        "type": "object",
+        "required": ["key", "decision", "governs", "lives_in"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Stable identifier of the decision, e.g. 'season_structure'."
+          },
+          "decision": {
+            "type": "string",
+            "description": "The decision in plain words, e.g. 'Season structure: periods and annual hours'."
+          },
+          "governs": {
+            "$ref": "#/definitions/statement",
+            "description": "The ONE source whose rule decides. Where refinements disagree with it, this one wins."
+          },
+          "refines": {
+            "type": "array",
+            "description": "Sources that add precision inside the governing rule. They never override it.",
+            "items": { "$ref": "#/definitions/statement" }
+          },
+          "lives_in": {
+            "type": "string",
+            "enum": ["zone_tables", "engine", "doctrine", "config", "mode"],
+            "description": "Where the decision is executed: zone_tables (generated tables), engine (a number in #STATE), doctrine (the coach applies this text), config (decision_thresholds.yaml), mode (only when a mode below is active)."
+          },
+          "mode": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Required when lives_in is 'mode': the key of the mode that activates this decision."
+          }
+        }
+      }
+    },
+    "modes": {
+      "type": "array",
+      "description": "Situational frameworks layered on top of the active methodology (e.g. time-crunched). Never switched on automatically.",
+      "items": {
+        "type": "object",
+        "required": ["key", "name", "activation", "profile_field", "source", "frame"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "activation": {
+            "type": "string",
+            "enum": ["on_request"],
+            "description": "Only 'on_request': the head coach asks for it or the athlete declares it, and the coach confirms before applying it."
+          },
+          "profile_field": {
+            "type": "string",
+            "description": "The boolean in config/athletes/<id>.yaml that records it, default false."
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Source id (from sources) that governs the mode's structure."
+          },
+          "zones_from": {
+            "type": "string",
+            "description": "Which zone language prescriptions keep using while the mode is on, e.g. 'the active methodology (Coggan or Friel)'."
+          },
+          "frame": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The mode's operating rules, each citing its entries.",
+            "items": { "$ref": "#/definitions/statement" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "statement": {
+      "type": "object",
+      "required": ["source", "rule", "refs"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "A source id from the registry."
+        },
+        "rule": {
+          "type": "string",
+          "description": "What this source says for this decision, in the doctrine's own words."
+        },
+        "refs": {
+          "type": "array",
+          "minItems": 1,
+          "description": "KB entry IDs that back the rule. The build checks each one exists in that source's file and carries that source's prefix.",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]+-C[0-9]{2}-[0-9]{3}$"
+          }
+        }
+      }
+    }
+  }
+}
