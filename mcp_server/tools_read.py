@@ -222,7 +222,8 @@ def what_if_targets(athlete_id: str, week_targets: dict[str, float],
 
 @guarded
 def get_knowledge(source: str | None = None, refs: list[str] | None = None,
-                  query: str | None = None, max_entries: int = 6) -> dict:
+                  query: str | None = None, max_entries: int = 6,
+                  catalog: bool = False) -> dict:
     """Read the book knowledge bases, which are not in the Claude Project.
 
     - source: who to read — an author or doctrine source id (coggan, friel_cycling,
@@ -233,14 +234,17 @@ def get_knowledge(source: str | None = None, refs: list[str] | None = None,
       entry IDs ("TRPM-C06-019") or sections ("§7"). Needs a source.
     - query: keywords, searched inside the source (or across every source when
       source is omitted); returns the best `max_entries` entries (max 15).
+    - catalog: true reads the author's catalog — the sessions, workouts and plans
+      the author actually prescribes (IDs like TRPM-L2-014) — instead of the
+      principles. The source of session ideas: take the idea, rebuild the numbers.
     - neither: the source's table of contents; with no source either, the list of
-      sources. Principles only — Catalogs are never served.
+      sources.
     Answers are capped in size and say when they were cut."""
     ensure_import_paths()
     import knowledge
 
     try:
         return {"ok": True, **knowledge.get(source=source, refs=refs, query=query,
-                                            max_entries=max_entries)}
+                                            max_entries=max_entries, catalog=catalog)}
     except ValueError as e:
         raise ToolError(str(e))

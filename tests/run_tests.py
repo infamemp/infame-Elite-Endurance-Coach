@@ -1428,8 +1428,14 @@ def unit_tests():
     check("knowledge: answers are capped in size",
           sum(len(e["text"]) for e in kn.get(query="threshold", max_entries=15)["entries"])
           <= kn.DEFAULT_MAX_CHARS + 20)
-    check("knowledge: catalogs are never served",
+    check("knowledge: principles by default, never a catalog",
           not any("Catalogs" in f for f in kn.registry().values()))
+    r_cat = kn.get("coggan", query="endurance bursts", catalog=True, max_entries=3)
+    check("knowledge: catalog=True reads the author's catalog (L-entries)",
+          r_cat["file"].startswith("Catalogs/") and r_cat["entries"]
+          and "-L" in r_cat["entries"][0]["ref"])
+    r_cat = kn.get("carmichael", query="endurance", catalog=True, max_entries=2)
+    check("knowledge: older-format catalogs are searchable too", len(r_cat["entries"]) > 0)
     for bad in ({"source": "nobody", "refs": ["X"]}, {"refs": ["TRPM-C06-019"]}):
         try:
             kn.get(**bad)
@@ -1860,8 +1866,9 @@ def architecture_tests():
         check("generated: Session_Architectures.md is current with the YAML (run build)", True)
     _pr = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
     check("prompt: lists Session_Architectures.md as a Project file", "`Session_Architectures.md` (the shape library" in _pr)
-    check("prompt: Pass 1 opens the library and names a slug per session",
-          "Open `Session_Architectures.md` before filling the table" in _pr)
+    check("prompt: Pass 1 gathers ideas from the catalogs and the library",
+          "**Gather ideas before filling the table**" in _pr and "`catalog=true`" in _pr
+          and "`Session_Architectures.md`" in _pr)
     check("prompt: architecture count matches the library",
           f"{len(lib)} pre-vetted session shapes" in _pr, len(lib))
     check("prompt: trail defaults to Koop, Palladino with power, Olbrich for flat road ultras",

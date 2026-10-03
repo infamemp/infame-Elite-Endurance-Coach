@@ -15,8 +15,9 @@ Two file formats:
 
 Sources are found by name: an author id from config/authors (coggan,
 friel_cycling, daniels…), a doctrine source id (cusick, friel_tb, uphill,
-mujika…), or a file stem (Jack_Daniels_Running_Formula). Catalogs/ files are
-never served: they hold worked examples for calibration, not principles.
+mujika…), or a file stem (Jack_Daniels_Running_Formula). With catalog=True
+the same source's Catalogs/ file is read instead: the author's own worked
+sessions, workouts and plans — the coach's source of session ideas.
 
 Three ways to read:
   * refs   — exact entries or sections: ["TRPM-C06-019", "§7"].
@@ -36,7 +37,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KNOWLEDGE = os.path.join(ROOT, "Knowledge")
 CONFIG = os.path.join(ROOT, "config")
 
-_ENTRY = re.compile(r"^### \[([A-Z]+-C\d{2}-\d{3})\]\s*(.*)$")
+_ENTRY = re.compile(r"^### \[([A-Z]+-[CL]\d{1,2}-\d{3})\]\s*(.*)$")
 _SECTION = re.compile(r"^## (\d{1,2})\.\s+(.*)$")
 _SUB = re.compile(r"^### (.+)$")
 _WORD = re.compile(r"[a-z0-9áéíóúñü'/-]{3,}")
@@ -162,15 +163,16 @@ def parse(rel):
         if sec_buf is not None:
             sec_buf.append(line)
         m = _ENTRY.match(line) if tagged else None
-        s = _SUB.match(line) if not tagged and cur_sec else None
+        s = _SUB.match(line) if not tagged else None
         if m or s:
             close_entry()
             if m:
                 cur = {"id": m.group(1), "title": m.group(2).strip(), "section": None,
                        "lines": [line]}
             else:
-                cur = {"id": f"{cur_sec['ref']} › {s.group(1).strip()}",
-                       "title": s.group(1).strip(), "section": cur_sec["ref"], "lines": [line]}
+                ref = cur_sec["ref"] if cur_sec else None
+                cur = {"id": f"{ref} › {s.group(1).strip()}" if ref else s.group(1).strip(),
+                       "title": s.group(1).strip(), "section": ref, "lines": [line]}
             continue
         if cur:
             cur["lines"].append(line)
@@ -225,19 +227,34 @@ def toc(rel):
     return [{"ref": c, "title": titles.get(c, ""), "entries": n} for c, n in counts.items()]
 
 
-def get(source=None, refs=None, query=None, max_entries=6, max_chars=DEFAULT_MAX_CHARS):
+def catalog_of(rel):
+    """Catalogs/<same file name> for a Principles file, or None."""
+    path = os.path.join("Catalogs", os.path.basename(rel))
+    return path if os.path.exists(os.path.join(KNOWLEDGE, path)) else None
+
+
+def get(source=None, refs=None, query=None, max_entries=6, max_chars=DEFAULT_MAX_CHARS,
+        catalog=False):
     """The answer for get_knowledge. Raises ValueError with a plain message
-    when the source or a reference cannot be found."""
+    when the source or a reference cannot be found. catalog=True reads the
+    author's catalog (worked sessions, workouts, plans) instead of the
+    principles: the source of session ideas, adapted to the athlete."""
     max_entries = max(1, min(int(max_entries or 6), 15))
     if source:
         rel = resolve(source)
         if not rel:
             raise ValueError(f"Unknown source '{source}'. Known: " + ", ".join(source_names()))
+        if catalog:
+            rel = catalog_of(rel)
+            if not rel:
+                raise ValueError(f"'{source}' has no catalog file.")
         files = [rel]
     else:
         if refs:
             raise ValueError("refs need a source (e.g. source='coggan').")
         files = sorted(set(registry().values()))
+        if catalog:
+            files = [c for c in (catalog_of(f) for f in files) if c]
 
     if refs:
         fmt, entries, sections = parse(files[0])
