@@ -18,6 +18,9 @@
   idea and the structure, and rebuilds every number for the athlete. Until v7.18 the catalogs
   were unreachable ("never loaded, never a menu").
 - **A correction is checked before it is announced.**
+- **Stored designs are a record, not a lock:** session designs saved in `#SESSION` Notes are
+  re-read against current criteria before each week is written, and redesigned when they no
+  longer fit.
 
 ## Earlier: v7.18
 
