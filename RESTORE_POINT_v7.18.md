@@ -11,6 +11,9 @@
   the write gate (dry run with a diff, plain-words summary, approval, save). It checks the
   YAML, the template's sections and the names the system recognizes, and keeps the previous
   version in `data/<id>/profile_history/`. The head coach no longer saves a yaml by hand.
+- **Prompt (same version):** a preference about degree ("not too much X") means rebalancing,
+  never removing X; cadence work stays a legitimate modifier — variety comes from adding
+  variables, not from dropping cadence.
 
 ## Earlier: v7.17
 
