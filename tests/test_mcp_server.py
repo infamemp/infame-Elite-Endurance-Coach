@@ -936,6 +936,38 @@ def test_mcp_first_workflow():
           bs_t.training_age(bs_t.load_declared(AID), bs_t.load_facts(AID)), 7)
     os.remove(os.path.join(ROOT, "data", AID, "facts.json"))
 
+    # 1d — the declared profile is written by the coach, behind a dry-run gate
+    import shutil as _sh
+    from mcp_server.tools_write import save_declared_profile
+    _tpl = open(os.path.join(ROOT, "config", "athletes", "_template.yaml"), encoding="utf-8").read()
+    _pid = "TESTPROFILE"
+    _ppath = os.path.join(ROOT, "config", "athletes", _pid + ".yaml")
+    try:
+        r = save_declared_profile(_pid, "goals: [unclosed")
+        equal("profile: invalid YAML is refused", r.get("ok"), False)
+        r = save_declared_profile(_pid, "goals: []\n")
+        check("profile: missing template sections are refused",
+              r.get("ok") is False and "Missing sections" in r.get("error", ""), r)
+        r = save_declared_profile(_pid, _tpl)
+        check("profile: the default call is a dry run and writes nothing",
+              r.get("dry_run") is True and not os.path.exists(_ppath), r)
+        r = save_declared_profile(_pid, _tpl, dry_run=False, confirm=True)
+        check("profile: confirmed call writes the new profile",
+              r.get("dry_run") is False and os.path.exists(_ppath), r)
+        r = save_declared_profile(_pid, _tpl.replace("units: km", "units: mi"))
+        check("profile: a change shows up in the dry-run diff",
+              "+units: mi" in (r.get("changes") or ""), r.get("changes"))
+        save_declared_profile(_pid, _tpl.replace("units: km", "units: mi"), dry_run=False, confirm=True)
+        hist = os.path.join(ROOT, "data", _pid, "profile_history")
+        check("profile: the previous file is kept in profile_history",
+              os.path.isdir(hist) and len(os.listdir(hist)) == 1)
+        r = save_declared_profile("TESTRAMP", _tpl)
+        equal("profile: the committed test fixture cannot be overwritten", r.get("ok"), False)
+    finally:
+        if os.path.exists(_ppath):
+            os.remove(_ppath)
+        _sh.rmtree(os.path.join(ROOT, "data", _pid), ignore_errors=True)
+
     # 2 — one file per week, newest is the default target
     good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
     with open(good, encoding="utf-8") as f:

@@ -26,7 +26,7 @@ from .tools_read import (get_athlete_state, get_athlete_profile, get_execution,
                          what_if_targets, get_knowledge)
 from .tools_validate import validate_block
 from .tools_write import (save_availability, save_block, save_continuity, save_race_result,
-                          save_training_age)
+                          save_training_age, save_declared_profile)
 
 logger = logging.getLogger("mcp_server")
 
@@ -79,6 +79,7 @@ def build_app():
     app.tool()(save_race_result)
     app.tool()(save_availability)
     app.tool()(save_training_age)
+    app.tool()(save_declared_profile)
     app.tool()(save_block)
 
     # validate_block — runs the existing gate as a subprocess.

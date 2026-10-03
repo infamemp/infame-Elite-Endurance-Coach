@@ -211,3 +211,76 @@ def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
     with open(path, "w", encoding="utf-8") as f:
         f.write(body.rstrip() + "\n")
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
+
+
+@guarded
+def save_declared_profile(athlete_id: str, yaml_text: str, dry_run: bool = True,
+                          confirm: bool = False) -> dict:
+    """Write the athlete's declared profile, config/athletes/<athlete_id>.yaml —
+    after an intake, or to change goals, equipment, limitations, methodology or
+    any other declared field. Same gate as an upload:
+
+    1. Call with the defaults (a dry run): the text is checked — valid YAML,
+       every top-level section of config/athletes/_template.yaml present, names
+       the system recognizes — and the answer shows what would change (a diff
+       against the current file, or "new profile").
+    2. Show the head coach the changes in plain words and wait for approval.
+    3. Call again with dry_run=False, confirm=True. The previous file is kept in
+       data/<athlete_id>/profile_history/ before it is replaced.
+    Then call get_athlete_profile with force_refresh=true."""
+    import difflib
+    import shutil
+    import yaml as _yaml
+
+    from .common import ROOT, ensure_import_paths
+
+    aid = str(athlete_id).strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", aid) or aid.startswith("_") or aid == "TESTRAMP":
+        raise ToolError(f"'{athlete_id}' is not a valid athlete id. Nothing was written.")
+    body = (yaml_text or "").strip()
+    if body.startswith("```"):
+        body = re.sub(r"^```[a-zA-Z]*\n|\n```$", "", body).strip()
+    try:
+        data = _yaml.safe_load(body)
+    except _yaml.YAMLError as e:
+        raise ToolError(f"The text is not valid YAML ({str(e).splitlines()[0]}). Nothing was written.")
+    if not isinstance(data, dict):
+        raise ToolError("The profile must be a YAML mapping like _template.yaml. Nothing was written.")
+
+    cfg_dir = os.path.join(ROOT, "config", "athletes")
+    with open(os.path.join(cfg_dir, "_template.yaml"), encoding="utf-8") as f:
+        template = _yaml.safe_load(f) or {}
+    missing = [k for k in template if k not in data]
+    if missing:
+        raise ToolError("Missing sections compared with _template.yaml: " + ", ".join(missing)
+                        + ". Nothing was written.")
+
+    ensure_import_paths()
+    import build_profile
+    warnings = build_profile.profile_warnings(data)
+
+    path = os.path.join(cfg_dir, f"{aid}.yaml")
+    exists = os.path.exists(path)
+    old = open(path, encoding="utf-8").read() if exists else ""
+    new = body.rstrip() + "\n"
+    diff = "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True),
+                                        f"{aid}.yaml (current)", f"{aid}.yaml (new)", n=1))
+    if exists and not diff:
+        return {"ok": True, "dry_run": dry_run, "changed": False,
+                "message": "The new text is identical to the current profile. Nothing to do."}
+    report = {"ok": True, "exists": exists, "warnings": warnings,
+              "changes": (diff[:6000] + "\n[…diff cut]") if len(diff) > 6000 else diff}
+    if dry_run or not confirm:
+        return {**report, "dry_run": True,
+                "message": "Dry run: nothing was written. Show the head coach what changes, wait "
+                           "for approval, then call again with dry_run=False, confirm=True."}
+
+    if exists:
+        hist = os.path.join(DATA, aid, "profile_history")
+        os.makedirs(hist, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        shutil.copy2(path, os.path.join(hist, f"{aid}_{stamp}.yaml"))
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(new)
+    return {**report, "dry_run": False, "path": os.path.relpath(path, ROOT),
+            "message": "Saved. Now call get_athlete_profile with force_refresh=true."}
