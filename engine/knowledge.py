@@ -229,7 +229,9 @@ def toc(rel):
 
 def catalog_of(rel):
     """Catalogs/<same file name> for a Principles file, or None."""
-    path = os.path.join("Catalogs", os.path.basename(rel))
+    # Always "/" — os.path.join would give "Catalogs\\..." on Windows, and the
+    # path is reported to the coach and compared as text.
+    path = "Catalogs/" + os.path.basename(rel)
     return path if os.path.exists(os.path.join(KNOWLEDGE, path)) else None
 
 

@@ -944,11 +944,17 @@ def check_header(header):
 # ══════════════════════════════════════════════════════════════════
 
 def compute_tss(steps, author, th, tssc):
-    """Recompute session TSS. Rules come from tss_rules; multipliers from
-    tss_classes; classification from the author's zones."""
+    """Recompute session TSS. Rules come from tss_rules. Default method is
+    if_squared (hours x IF^2 x 100 per step), the definition Intervals.icu
+    applies to the planned workout, so the number written in the header is
+    the load the athlete's calendar and PMC will show. The legacy method
+    `class_multiplier` (flat tss_per_min per class) overestimated low
+    endurance by up to ~65% because it costs 56% and 74% FTP the same.
+    The class is still resolved for every step and shown in the detail."""
     rules = th["tss_rules"]
     mults = {k: v["tss_per_min"] for k, v in tssc["classes"].items()}
     point = rules.get("range_cost_point", "midpoint")
+    method = rules.get("method", "if_squared")
 
     total, detail, skipped = 0.0, [], []
     for s in steps:
@@ -967,7 +973,14 @@ def compute_tss(steps, author, th, tssc):
             continue
         mult = s["mult"] if rules.get("repeats_multiply", True) else 1
         minutes = s["secs"] / 60 * mult
-        cost = minutes * mults[cls]
+        if method == "if_squared":
+            # Same definition Intervals.icu uses for planned load:
+            # TSS = hours x IF^2 x 100, IF = target as a fraction of threshold.
+            # A block target is always on the threshold scale (anchored authors
+            # are converted only for classification), so IF = mid / 100.
+            cost = minutes / 60 * (mid / 100) ** 2 * 100
+        else:
+            cost = minutes * mults[cls]
         total += cost
         detail.append((s, mid, metric, cls, src, minutes, cost))
 
@@ -1302,8 +1315,15 @@ def main():
                 div = abs(computed - declared) / declared * 100 if declared else 0
                 ok = div <= tol
                 print(f" · declared {declared:g} · divergence {div:.1f}% "
-                      f"{'OK' if ok else 'EXCEEDS TOLERANCE'}")
-                if not ok:
+                      f"{'OK' if ok else 'EXCEEDS TOLERANCE'}"
+                      + (" — will be overwritten" if not ok and args.fill_tss else ""))
+                if not ok and args.fill_tss:
+                    # The engine is about to write its own number: a stale
+                    # declared value (e.g. costed by an older TSS method) is
+                    # replaced, never a reason to block the refresh.
+                    warns.append(("CHK-TSS-REFRESH", "-",
+                                  f"Declared {declared:g} replaced by computed {computed}"))
+                elif not ok:
                     errors.append(("TSS-DIV", "-",
                                    f"Computed {computed} vs declared {declared:g} "
                                    f"({div:.1f}% > {tol}%)"))

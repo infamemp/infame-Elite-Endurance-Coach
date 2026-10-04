@@ -218,5 +218,7 @@ universal_anchor:
     100% FTP (power) = 100% LTHR (heart rate) = 100% threshold pace
     = Daniels T-Pace = Friel LT (Z4/Z5a threshold).
   note: >
-    Session TSS is the sum of each interval's physiological cost.
-    Do not use IF-squared formulas.
+    Session TSS is computed per step as hours x IF^2 x 100 (tss_rules.method
+    in decision_thresholds.yaml), matching Intervals.icu planned load. The
+    tss_per_min values above are reference costs per class (and the input
+    for load_targets' hours estimate); they no longer price a session.

@@ -4,7 +4,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Easy spin
-[Duration] pending | [Estimated TSS] pending
+[Duration] 00:20:00 | [Estimated TSS] 14
 [Execution]: Very easy, legs only.
 [Nutrition]: Water only.
 
@@ -18,7 +18,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Endurance
-[Duration] pending | [Estimated TSS] pending
+[Duration] 01:00:00 | [Estimated TSS] 42
 [Execution]: Steady aerobic ride.
 [Nutrition]: Water only.
 
@@ -32,7 +32,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Short recovery spin
-[Duration] pending | [Estimated TSS] pending
+[Duration] 00:10:00 | [Estimated TSS] 7
 [Execution]: Recovery only, legs loose.
 [Nutrition]: Water only.
 
@@ -46,7 +46,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Long endurance
-[Duration] pending | [Estimated TSS] pending
+[Duration] 01:10:00 | [Estimated TSS] 49
 [Execution]: Long steady aerobic ride.
 [Nutrition]: 40g CHO/hour after the first hour.
 
@@ -60,7 +60,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Moderate endurance
-[Duration] pending | [Estimated TSS] pending
+[Duration] 00:30:00 | [Estimated TSS] 21
 [Execution]: Steady aerobic ride.
 [Nutrition]: Water only.
 
@@ -74,7 +74,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Long endurance
-[Duration] pending | [Estimated TSS] pending
+[Duration] 01:20:00 | [Estimated TSS] 56
 [Execution]: Longest ride of the week, steady effort.
 [Nutrition]: 60g CHO/hour after the first hour.
 

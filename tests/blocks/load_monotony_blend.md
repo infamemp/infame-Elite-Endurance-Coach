@@ -4,7 +4,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Endurance maintenance
-[Duration] 00:50:00| [Estimated TSS] 50
+[Duration] 00:50:00 | [Estimated TSS] 35
 [Execution]: Steady aerobic ride, no intensity.
 [Nutrition]: Water only.
 
@@ -18,7 +18,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Endurance maintenance
-[Duration] 00:50:00| [Estimated TSS] 50
+[Duration] 00:50:00 | [Estimated TSS] 35
 [Execution]: Steady aerobic ride, no intensity.
 [Nutrition]: Water only.
 
@@ -32,7 +32,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Endurance maintenance
-[Duration] 00:50:00| [Estimated TSS] 50
+[Duration] 00:50:00 | [Estimated TSS] 35
 [Execution]: Steady aerobic ride, no intensity.
 [Nutrition]: Water only.
 
@@ -46,7 +46,7 @@
 [Methodology]: coggan
 [Discipline]: trainer
 [Focus]: Endurance maintenance
-[Duration] 00:50:00| [Estimated TSS] 50
+[Duration] 00:50:00 | [Estimated TSS] 35
 [Execution]: Steady aerobic ride, no intensity.
 [Nutrition]: Water only.
 
