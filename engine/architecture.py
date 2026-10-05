@@ -55,8 +55,17 @@ they matter):
     extra rule.
 """
 
+import os
 import re
-import validate_block  # noqa: E402 -- sibling module; caller puts verify/ on sys.path
+import sys
+
+# The parser lives in verify/validate_block.py. Callers usually put verify/ on
+# sys.path already; adding it here as well lets `python engine/build_state.py`
+# run on its own, as its usage line says.
+_VERIFY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verify")
+if _VERIFY not in sys.path:
+    sys.path.append(_VERIFY)
+import validate_block  # noqa: E402
 
 parse_block = validate_block.parse_block
 SUFFIX_TO_METRIC = validate_block.SUFFIX_TO_METRIC

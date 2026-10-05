@@ -17,11 +17,14 @@ from .guard import ToolError, guarded
 
 
 @guarded
-def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 180) -> dict:
+def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 180,
+                      include_json: bool = False) -> dict:
     """Fetch (if the local cache is stale or force_refresh is set), resolve,
-    and return #STATE — the exact content of state.md, plus its structured
-    state.json, plus whether this call hit the cache or refetched, plus the
+    and return #STATE — the exact content of state.md, plus whether this
+    call hit the cache or refetched, plus the
     athlete's saved #SESSION (continuity.md) and race notes when they exist.
+    include_json=true also returns the structured state.json (`state`); the
+    markdown carries the same figures, so it is off by default.
 
     A stale answer is never served silently: `cache_hit` and `resolved_at`
     are always present, so a caller (or the coach reading this response)
@@ -45,14 +48,13 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         os.path.join(DATA, str(athlete_id), "state.json"),
         f"state.json was not produced for '{athlete_id}' — check the server log.",
     )
-    return {
+    result = {
         "ok": True,
         "athlete_id": athlete_id,
         "name": info["name"],
         "cache_hit": info["cache_hit"],
         "resolved_at": state_json.get("resolved_at"),
         "markdown": state_md,
-        "state": state_json,
         # #SESSION and race history travel with #STATE, so one call gives
         # the coach everything a conversation starts from. None = no file
         # yet (new macrocycle / no race logged), never an error.
@@ -66,6 +68,11 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         # (engine/ledger.py, v7.26). None when nothing is recorded yet.
         "ledger": ledger.render(athlete_id, led) if led["events"] else None,
     }
+    # The structured state.json repeats what the markdown already says and
+    # roughly doubles the size of every call, so it is sent only on request.
+    if include_json:
+        result["state"] = state_json
+    return result
 
 
 def _optional_text(path: str) -> str | None:

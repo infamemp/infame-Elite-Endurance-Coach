@@ -299,7 +299,7 @@ def unit_tests():
     import shutil, tempfile
     with tempfile.TemporaryDirectory() as tmp:
         blk = os.path.join(tmp, "partial.md")
-        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "vianey_bloque1.md"), blk)
+        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "road_taper_block.md"), blk)
         script = os.path.join(ROOT, "verify", "validate_block.py")
         # Same guard as block_tests(): on Windows a captured child inherits the
         # locale encoding (cp1252) and crashes printing "—" or "─".
@@ -1769,6 +1769,12 @@ def unit_tests():
     r_kn = kn.get("palladino", refs=["§12"])
     check("knowledge: a section reference returns that numbered section",
           r_kn["format"] == "numbered" and r_kn["entries"][0]["title"].startswith("Treadmill"))
+    r_kn = kn.get("coggan", query="sweet spot intervals")
+    check("knowledge: search skips the 'Contents of the library file' index entry",
+          r_kn["entries"] and all("contents of the library" not in e["title"].lower()
+                                  for e in r_kn["entries"]))
+    check("knowledge: the index entry is still reachable by its ID",
+          kn.get("coggan", refs=["TRPM-C18-001"])["entries"][0]["ref"] == "TRPM-C18-001")
     r_kn = kn.get("cusick", query="optimized intervals", max_entries=3)
     check("knowledge: query returns at most max_entries, best match first",
           0 < len(r_kn["entries"]) <= 3 and "ptimized" in r_kn["entries"][0]["title"])
@@ -2319,7 +2325,7 @@ BLOCK_CASES = [
     # code fences, a Duration with "(estimado)" and a leading ~, a Rest day with
     # "--" as methodology, and a race session titled with a bare distance line.
     # None of this should require manual cleanup before validating.
-    ("vianey_raw_unfixed.md", 0, []),
+    ("road_taper_raw_unfixed.md", 0, []),
     # Foster monotony & strain on the planned week (CHK-LOAD-MONOTONY) --
     # never blocks, so want_code stays 0 in every case below.
     # A full 7-day week, identical load every day: the zero-variance case,

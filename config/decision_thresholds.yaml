@@ -203,7 +203,7 @@ class_resolution:
     Fall back to classification_cutpoints only when no declared zone contains it.
 
 # ══════════════════════════════════════════════════════════════════
-# ATHLETE STATE RESOLUTION  (Stage 4 — not yet consumed)
+# ATHLETE STATE RESOLUTION
 # ══════════════════════════════════════════════════════════════════
 # TSB is the primary governor. HRV is secondary and applies only where TSB is
 # absent. ACWR acts as a validation gate that can downgrade a severe reading.
@@ -228,7 +228,7 @@ state_resolution:
   operational_states: [recovery_priority, load_accepting]
 
 # ══════════════════════════════════════════════════════════════════
-# TAPER GOVERNANCE  (Stage 4 — not yet consumed)
+# TAPER GOVERNANCE
 # ══════════════════════════════════════════════════════════════════
 
 taper:

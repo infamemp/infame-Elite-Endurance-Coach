@@ -192,7 +192,7 @@ python coach.py prep i123456
 
 **Expected console output:**
 ```
-Ready — drag out/elias_caballero/ (state.md, profile.md) into the Claude Project
+Ready — drag out/jane_doe/ (state.md, profile.md) into the Claude Project
 continuity.md last updated 3 day(s) ago
 ```
 

@@ -190,8 +190,16 @@ def _words(text):
     return [w for w in _WORD.findall(text.lower()) if w not in STOP]
 
 
+# The index entry each tagged KB closes with ("Contents of the library file")
+# lists every catalog title, so it matches almost any query and, at ~9 KB, ate
+# most of an answer's room. It is still reachable by its ID; search skips it.
+_INDEX_TITLES = {"contents of the library file"}
+
+
 def _score(entry, terms):
     title = entry["title"].lower()
+    if title.strip() in _INDEX_TITLES:
+        return 0
     tags = " ".join(l for l in entry["text"].splitlines() if l.startswith("tags:")).lower()
     body = entry["text"].lower()
     score = 0

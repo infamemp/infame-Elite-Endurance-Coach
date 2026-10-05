@@ -22,6 +22,7 @@ being retried blindly forever.
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import os
 import sys
 import traceback
@@ -43,7 +44,10 @@ def _configure_logging() -> logging.Logger:
     stderr_handler.setFormatter(fmt)
     logger.addHandler(stderr_handler)
 
-    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    # Rotating: at most 5 MB per file and 3 old files kept, so the log never
+    # grows without limit (it can hold profile and block text in a traceback).
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
     file_handler.setFormatter(fmt)
     logger.addHandler(file_handler)
 

@@ -116,6 +116,8 @@ def post_activity_comment(
     resp = _check(fad.SESSION.post(f"{fad.BASE_URL}/activity/{aid_txt}/messages",
                                    json={"content": body}, timeout=45),
                   "posting the comment")
+    ledger_record(athlete_id, "comment_posted", activity_id=aid_txt,
+                  activity_date=target["date"], chars=len(body))
     return {"ok": True, "dry_run": False, "sent": True, "activity": target,
             "comment": body, "status_code": resp.status_code}
 

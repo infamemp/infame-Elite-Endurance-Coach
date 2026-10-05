@@ -53,7 +53,7 @@ Claude Project using that file as the script — it will produce a filled profil
 ```
 copy config\athletes\_template.yaml config\athletes\<athlete_id>.yaml
 ```
-The `<athlete_id>` must match their Intervals.icu id exactly, e.g. `i347129`.
+The `<athlete_id>` must match their Intervals.icu id exactly, e.g. `i123456`.
 Find it with:
 ```
 python engine\fetch_athlete_data.py --list

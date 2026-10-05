@@ -233,6 +233,11 @@ def test_tools_read():
     equal("tools_read: get_athlete_state reports the cache hit", r.get("cache_hit"), True)
     check("tools_read: get_athlete_state's markdown is the real state.md content",
           "STATE" in (r.get("markdown") or "").upper())
+    check("tools_read: get_athlete_state leaves out the duplicated state.json by default",
+          "state" not in r)
+    r_json = get_athlete_state(AID, include_json=True)
+    check("tools_read: get_athlete_state returns state.json when include_json=true",
+          isinstance(r_json.get("state"), dict) and r_json["state"].get("resolved_at"))
 
     r2 = get_athlete_profile(AID)
     equal("tools_read: get_athlete_profile succeeds on the same fixture", r2.get("ok"), True)
@@ -389,6 +394,10 @@ def test_tools_coach():
               [(c[0], c[1], c[2].get("json")) for c in fake.writes()],
               [("POST", "/activity/i55/messages", {"content": "Buen trabajo hoy."})])
         equal("comment: live call reports it was sent", r.get("sent"), True)
+        import ledger
+        _ev = [e for e in ledger.read(AID) if e.get("event") == "comment_posted"]
+        check("ledger: a posted comment is recorded with its activity",
+              bool(_ev) and _ev[-1].get("activity_id") == "i55", _ev[-1:] if _ev else None)
         equal("comment: an empty comment is refused",
               post_activity_comment(AID, "i55", "   ").get("ok"), False)
         equal("comment: an over-long comment is refused",

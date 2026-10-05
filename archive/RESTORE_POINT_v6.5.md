@@ -77,10 +77,10 @@ instead.
 **A classification bug: `[Discipline]: road` is genuinely ambiguous, not a
 typo.** First evidence (`bad_road.md`, `coggan` + `road`) looked like
 confirmation that `road` meant cycling only. A contradicting fixture
-(`vianey_bloque1.md`, `daniels` + `road`) was initially dismissed as an
+(`road_taper_block.md`, `daniels` + `road`) was initially dismissed as an
 error in that file rather than treated as evidence — caught and corrected
 only because it was independently re-checked and a *second* fixture
-(`vianey_raw_unfixed.md`) turned up with the same `daniels` + `road`
+(`road_taper_raw_unfixed.md`) turned up with the same `daniels` + `road`
 pairing. `road` is shared between cycling and running, disambiguated by
 the athlete's active methodology. `push_block` now resolves the
 Intervals.icu activity `type` by reading the author's own `sport:` field

@@ -1,4 +1,4 @@
-"""server.py — the 16 tools, wired to a stdio MCP server
+"""server.py — the 19 tools, wired to a stdio MCP server
 ==========================================================
 Not what Claude Desktop should actually be configured to launch — see
 `run_server.py` for that. This module only builds the tool surface and
@@ -40,7 +40,7 @@ def _configure_logging() -> None:
 
 
 def build_app():
-    """Construct the FastMCP app and register all 16 tools. Deferred inside
+    """Construct the FastMCP app and register all 19 tools. Deferred inside
     a function (rather than at import time) so importing this module for
     introspection or testing never requires the `mcp` package to already be
     on the path — only actually building or running the server does."""
@@ -86,7 +86,7 @@ def build_app():
     app.tool()(validate_block)
 
     # push_block — see tools_push.py's own module docstring for why this
-    # one is treated differently from the other seven.
+    # one is treated differently from the read and save tools.
     app.tool()(push_block)
 
     # post_activity_comment / update_threshold / remove_block — the other

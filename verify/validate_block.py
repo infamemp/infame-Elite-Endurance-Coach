@@ -42,6 +42,9 @@ Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 Version: 3.1 (v7.26 — every run recorded in the athlete's ledger)
 """
 
+VERSION = "3.1"   # keep equal to the "Version:" line above
+
+
 import argparse
 import json
 import os
@@ -1326,7 +1329,7 @@ def main():
     tol = args.tolerance if args.tolerance is not None else \
         th["tss_rules"].get("divergence_tolerance_pct", 10)
 
-    print(f"validate_block v2.5 — {os.path.basename(args.file)}")
+    print(f"validate_block v{VERSION} — {os.path.basename(args.file)}")
     if fixes:
         print("Auto-corrected before validating (file updated on disk):")
         for note in fixes:

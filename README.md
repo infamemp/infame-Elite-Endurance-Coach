@@ -58,8 +58,8 @@ authoritative. The model prescribes on top of it and never recalculates it.
   split into `Principles/` (binding zone definitions, ratios, ceilings — loaded in
   the Project) and `Catalogs/` (the author's own named worked examples, for
   calibration only, never loaded by default). Palladino has no worked-plan content
-  to split out and stays as a single file. Originals before the split (and the
-  old single-file Friel) are in `archive/Knowledge_legacy/`.
+  to split out and stays as a single file. The originals before the split are in
+  the git history.
 
 ### Daily use
 
@@ -86,8 +86,8 @@ curve progression between two dates, folding in `race_notes.md` if present.
 Full step-by-step in `manual/OPERATIONS_MANUAL.md` (day-to-day athlete
 workflow). Historical design docs (`ARCHITECTURE_v6.md`, `WORKFLOW_CHECKLIST.md`,
 `WORKFLOW_ACTUAL.md`, `AUTOMATION_OPTIONS.md`) are in `archive/`. Current state
-and open items in `RESTORE_POINT_v7.12.md` (older ones in `archive/`,
-whichever is most recent). Where the project could go next:
+and open items in the `RESTORE_POINT_v*.md` at the root; every version in
+`CHANGELOG.md`. Where the project could go next:
 `IMPROVEMENT_BACKLOG.md`.
 
 ---
@@ -143,8 +143,7 @@ Knowledge/       13 book-derived KBs — 11 split into Principles/ (loaded
                  to split)
 Syntax/          Intervals.icu workout builder reference
 manual/          OPERATIONS_MANUAL.md + QUICK_GUIDE.md
-legacy/          retired scripts (pre-coach.py Excel pipeline), kept for reference
-archive/         older RESTORE_POINT_*.md and Prompt versions
+archive/         historical design docs and the v6.5 MCP incident record
 ```
 
 Not in version control: `data/` and `out/` (athlete data pulled from
@@ -156,294 +155,7 @@ lives in the `ICU_API_KEY` environment variable, never in code.
 
 ## 🔄 Changelog
 
-**v7.12 — Tim Cusick's WKO webinars join Coggan and Friel cycling (2026-10-02)**
-
-New `Knowledge/Principles/Cusick_WKO_Coaching_Webinars.md` (+ Catalogs companion),
-extracted with the book pipeline (254 entries, verified). Cusick is a different
-author, so the YAML gets a new field, `companion_knowledge_files` (file + author):
-`coggan.yaml` and `friel_cycling.yaml` list it, the zone-table header and
-`profile.md` show a `Companion Knowledge` line, and the prompt says to attribute
-its content to Cusick, never to Coggan or Friel, and that it never overrides a
-zone table or the author's own books.
-
-**v7.11 — Friel cycling reads two books (2026-09-30)**
-
-The 2018 *Cyclist's Training Bible* was re-extracted with the book pipeline
-(411 entries, numbers checked against the source) and split into `Principles/` and
-`Catalogs/` like the other authors; the old single file moved to
-`archive/Knowledge_legacy/`. The 2025 *High-Performance Cyclist* joins it as a second
-file by the same author: `friel_cycling.yaml` gets `supplementary_knowledge_files`,
-the zone-table header and `profile.md` list both, and the prompt says that where
-the two differ on a zone boundary the zone table governs.
-
-**v7.10 — the language guide uses the head coach's own vocabulary (2026-09-27)**
-
-v7.9 imposed word choices nobody had asked for. Now: Tempo, strides, VO2max and
-neuromuscular stay as written; the class is *resistencia aeróbica* (*fondo
-aeróbico* on the long day, *trote aeróbico* on any other run), *umbral*,
-*sub-umbral*; the cue bank is the head coach's own phrases and may repeat; prose
-fields use `10 min` / `30 s` while the code block keeps `10m` / `30s`;
-*zancada fluida*. Author codes (Friel Zona 3, Daniels E) never reach the athlete:
-they live in a new coach-only header line, `[Zone]`, which `push_block` does not
-upload. The validator only warns (`CHK-LANG`), and the repeated-cue check is gone.
-
-**v7.9 — nutrition reaches Intervals.icu; Spanish text is controlled (2026-09-27)**
-
-- `push_block` sent only the code block, so `[Execution]` and `[Nutrition]` never
-  left the session card. The Intervals.icu description is now the Execution and
-  Nutrition notes (in the athlete's language, from the declared profile), a blank
-  line, then the steps. `include_notes=false` restores the old behaviour.
-- `config/language/es_mx.yaml` (glossary, cue bank, failure-condition sentences,
-  patterns to avoid) builds `generated/Language_Guide_es-MX.md`, a Project file.
-  The validator warns (never blocks) with `CHK-LANG` on calques, English class
-  names, `10m` in prose, anglicisms and gender slips, and with `CHK-LANG-REPEAT`
-  when one cue is pasted into three sessions.
-- `[Execution]` is three short sentences and no longer re-lists the structure.
-- `fill_tss` keeps a space before `|` after `[Duration]`.
-
-**v7.8 — provisional thresholds, done properly (2026-09-26)**
-
-When `#STATE` contradicts a threshold, Endurance steps stay in the lower half of
-the zone (they are a percentage of a threshold that is probably too high), at
-most one test is scheduled per week (the sport the block needs first goes in
-week 1), and the declared profile's notes never override the weekly pattern the
-head coach saved.
-
-**v7.7 — decisions survive the chat (2026-09-26)**
-
-Every new chat started from zero: the coach re-chose the methodologies
-(Friel/Daniels one time, Coggan/Palladino the next), reverted the approved
-weekly pattern (Tue/Thu treadmill instead of Tue/Thu trainer) and planned Tempo
-before the FTP test, because `#SESSION` was only saved at block end. Now
-`#SESSION` (methodologies, Metric Map, weekly pattern, strategy figures) is
-saved at every phase gate and holds phases 1-6; the weekly pattern is stated by
-the head coach, never inferred; and a threshold that `#STATE`'s own signals
-contradict is provisional: Endurance only until the test result is in.
-
-**v7.6 — the architecture library reaches the coach (2026-09-26)**
-
-The 16 session shapes distilled from ~1,700 MyWhoosh / Whatsonzwift workouts
-and the running catalogs lived only in `config/architectures/*.yaml`, which
-never reached the Project: the coach saw their names in `#STATE`, never what
-each is for or how it progresses. And the engine only read the shape inside
-one rep, so 6 of the 16 (pyramid, progressive_intervals, duration_ladder,
-progression_run, climb_simulation, cadence_contrast) were never detected and
-were reported "unused" forever.
-
-- `build` now also writes `generated/Session_Architectures.md` (a Project file).
-- The classifier reads shapes across reps; all 16 are detectable, and a test
-  fails if the engine and the library ever disagree again.
-- Hill repeats (`climb_simulation`) now apply to running and trail.
-- Prompt: Pass 1 opens the library and names a slug per session; trail
-  defaults to Koop or Olbrich.
-
-**v7.5 — the coach stops asking for what it can read (2026-09-26)**
-
-Three failures seen in real sessions, fixed in the prompt and tested:
-the coach asked the head coach to confirm that Project files were present
-(it has the search); it left the Metric Map's anchor and dual-layer fields
-"to be confirmed" for a later phase (they are in the zone-table header); and
-it proposed its own daily time ceilings, lower than the ones the head coach
-had stated. Availability is now only ever a stated number; the new
-`save_availability` tool stores it once and `get_athlete_state` returns it,
-so it is not asked or invented again. `friel_running` is zones-only (v7.4).
-
-**v7.3 — MCP is the primary path (2026-09-26)**
-
-The server was rebuilt in v6.7, but the prompt never got its tool
-instructions back after the v6.6 removal, so the coach kept asking for
-dragged files. v7.3 closes that gap and fixes what the first real use
-exposed:
-
-- **Prompt:** new `<tools>` section. The coach opens every conversation
-  with `get_athlete_state`/`get_athlete_profile`, and saves, validates and
-  uploads each week itself. Uploads go through a gate: dry-run → the head
-  coach approves → live push. The manual path is kept only as a fallback.
-- **`push_block` date fix:** session headers carry `[Date]` as DD-MM-YYYY
-  and were sent as-is; Intervals.icu answered HTTP 500 on the first real
-  push (21-sep-2026). Dates are now converted to ISO. Race days are
-  skipped with a stated reason (the race event already lives in
-  Intervals.icu).
-- **`get_athlete_state` returns `continuity` and `race_notes`**, so no
-  file is pasted at the start of a conversation.
-- **`save_block(week=N)`** writes `<date>_bloque_w<N>.md`, so two weeks
-  saved the same day no longer overwrite each other; `validate_block` and
-  `push_block` default to the most recently saved week.
-- **Repo:** `snapshot_E.txt` removed (it listed athlete names and ids);
-  superseded root docs moved to `archive/`.
-
-**v6.7 — MCP server rebuilt**
-
-`mcp_server/` is back, with the root cause of the v6.6 removal fixed
-structurally rather than patched around. The removal postmortem
-(`archive/RESTORE_POINT_v6.5.md`) named a monkeypatch of a private SDK
-class as the actual cause of the earlier instability; this rebuild
-replaces that guesswork with a confirmed diagnosis and a version-pinned
-fix:
-
-- **Root cause, confirmed against upstream, not re-guessed.** The v6.5
-  instability traced to `modelcontextprotocol/python-sdk#2610` — cancelling
-  an in-flight request over stdio makes `RequestResponder.__exit__` let a
-  `CancelledError` escape after the responder had already completed;
-  because that task is a sibling of the stdio receive loop's own task
-  group, one cancelled tool call took the whole server down. Confirmed
-  still present in `mcp` 1.30.0 by reading its source directly, and
-  confirmed a correct no-op against `mcp` 2.x, where `RequestResponder` no
-  longer exists.
-- **The fix:** a pinned SDK version plus `mcp_server/cancel_patch.py`, a
-  self-detecting workaround — it constructs a real `RequestResponder` and
-  empirically probes whether the installed SDK still exhibits the bug
-  before patching anything, so it becomes a deliberate no-op the day the
-  upstream fix (`python-sdk#2624`) ships in whatever version is installed,
-  with nothing else to remember to change.
-- **The 8 tools are back**, unchanged in shape from v6.5:
-  `get_athlete_state`, `get_athlete_profile`, `list_roster` (reads),
-  `save_continuity`, `save_race_result`, `save_block` (writes),
-  `validate_block` (wraps the existing verifier as a subprocess), and
-  `push_block` (uploads to Intervals.icu, dry-run by default).
-- **Three real bugs found and fixed during manual end-to-end testing on
-  Windows** — none caught by the test suite beforehand, since it runs on
-  Linux:
-  - `validate_block` crashed with an uncaught `UnicodeEncodeError` on
-    Windows: `subprocess.run`'s `encoding="utf-8"` only controls how the
-    *parent* decodes output, not what encoding the *child* uses to
-    encode it, and a Windows child piped (not console) stdout defaults to
-    cp1252, which can't encode the box-drawing characters
-    `validate_block.py` prints on every run. The crash surfaced as
-    `passed: False`, indistinguishable from a real hard-constraint
-    failure. Fixed by forcing `PYTHONIOENCODING=utf-8`/`PYTHONUTF8=1` in
-    the child's environment.
-  - `validate_block` and `push_block` both resolved a relative
-    `file_path` against the current process's working directory instead
-    of the server's own `ROOT` — worked when called from a fresh
-    interpreter launched at `ROOT`, failed with a spurious "File not
-    found" through the live server process launched by Claude Desktop,
-    whose actual working directory didn't match `ROOT` despite
-    `claude_desktop_config.json`'s `cwd` field. Fixed by resolving a
-    relative path against `ROOT` explicitly in both tools.
-  - `validate_block` hung for several minutes over Desktop's live stdio
-    connection while returning in 0.2s called directly: its
-    `subprocess.run()` never redirected the child's stdin, so the child
-    inherited the server's own stdin — the live JSON-RPC pipe Desktop
-    uses under stdio transport, which a standalone CLI call never has.
-    Fixed with an explicit `stdin=DEVNULL`.
-- **One design gap closed, not a bug in the strict sense:** `push_block`
-  never checked `validate_block`'s own result before sending. The
-  original two-command CLI made "BLOCKED" and "upload" a full
-  conversation turn apart, so a human seeing BLOCKED simply wouldn't run
-  the next command; inside one MCP conversation they're a single tool
-  call apart, and that protective friction doesn't exist by default.
-  Confirmed directly during testing: a block with real HC-METRIC failures
-  was assembled and would have been sent to Intervals.icu with both
-  `dry_run=False` and `confirm=True`, rejected only because the test used
-  invalid credentials, not because the tool stopped it. `push_block` now
-  runs the same validation check internally before its live send and
-  refuses a BLOCKED block unless `override_validation=True` is also
-  passed explicitly.
-
-**v6.6 — MCP server removed**
-
-`mcp_server/server.py` caused enough production instability that it was
-removed entirely — code, prompt references, and the `mcp:` config block in
-`decision_thresholds.yaml`. The daily workflow is back to dragging
-`out/<athlete_name>/` into the Claude Project, as described in Daily Use
-above. There is currently no automated upload path to Intervals.icu; a
-verified block is pasted into its Workout Builder by hand. The full
-incident history — what the server did, the two real bugs it surfaced, and
-why it was reverted — is kept in `archive/RESTORE_POINT_v6.5.md` rather
-than deleted, specifically so a future attempt does not start from zero.
-
-**v6.5 — MCP server (built, then removed — see v6.6 above)**
-
-The daily workflow required dragging files into the Claude Project for
-every new chat. What changed:
-
-- **`mcp_server/server.py`** exposed the engine itself as 8 tools a local
-  Claude Desktop connection could call mid-conversation — never a wrapper
-  around the raw Intervals.icu API, so `#STATE`'s determinism guarantee
-  carried over unchanged: `get_athlete_state`, `get_athlete_profile`,
-  `list_roster` (reads), `save_continuity`, `save_race_result`,
-  `save_block` (writes), `validate_block` (wrapped the existing verifier as
-  a subprocess), and `push_block` (uploaded to Intervals.icu via
-  `POST /events/bulk?upsert=true`, defaulting to a dry run).
-- **The prompt called these tools itself** — `save_block`, `save_continuity`,
-  `save_race_result`, and `validate_block` — when available, falling back
-  to the manual copy-paste flow otherwise (e.g. the browser Project,
-  where the server could never connect). `push_block` was deliberately
-  never called automatically.
-- **A real classification bug found and fixed in the process:**
-  `[Discipline]: road` is ambiguous — confirmed real for both cycling
-  (Coggan) and running (Daniels) methodologies in the repo's own test
-  fixtures. The fix read the author's own `sport:` field from
-  `config/authors/<methodology>.yaml` instead of a flat lookup table,
-  which would have silently classified a marathon as a bike ride. This
-  fix lived only inside the now-removed code — see `IMPROVEMENT_BACKLOG.md`
-  §5 for why the underlying lesson still matters.
-
-**v6.4 — results module**
-
-The system could generate and verify plans but never measured whether they
-worked. What changed:
-
-- **`coach.py review`** compares an athlete's signals between any past date
-  and today: CTL/ATL/TSB and ACWR (both fully reconstructable from the
-  180-day pull already fetched — no new data needed), durability, and curve
-  progression (needs a dated snapshot — see next point).
-- **Curve snapshots** are captured on every `coach.py prep`, since
-  Intervals.icu's curves endpoint only ever returns the best value as of
-  today, never a historical one. Progression tracking is only as old as the
-  first snapshot captured after this shipped.
-- **`#RACE_RESULT`** — Phase 6 of the prompt now emits a small saveable block
-  after a race debrief, appended to `out/<athlete>/race_notes.md`, which
-  `review` reads automatically for any race inside the requested window.
-- **A dormant regression-suite bug was found and fixed:** the golden tests'
-  synthetic fixtures are dated relative to whenever `make_fixtures.py` was
-  last run, not to the calendar — so a fixture generated once and left on
-  disk silently drifts out of its own rolling windows as real time passes,
-  failing for reasons unrelated to any code change. `run_tests.py` now
-  regenerates every fixture immediately before comparing, closing the gap
-  for good.
-
-**v6.3 — unified daily workflow**
-
-- **`coach.py`** gained `prep` (fetch + resolve + render in one call,
-  delivered to a named `out/<athlete>/` folder instead of `data/<id>/`),
-  `new` (athlete onboarding), and a live `continuity.md` staleness check.
-  `out/roster.md` gives a name-to-id index across the whole account.
-- **`build_profile.py`** replaced the Excel-based `intervals_export.py` +
-  `convert.py` pipeline for the athlete-facing context document, recovering
-  data the old pipeline silently dropped (Avg Power on every activity).
-- **`#SESSION` can be requested on demand mid-block**, not only at
-  block-end, so an off-calendar consult in a fresh chat has a continuity
-  artifact to resume from.
-
-**v6 — deterministic engine architecture**
-
-Rebuilt around four layers so that computation and judgement stop competing for
-the same pass. What changed:
-
-- **Configuration became data.** 13 methodologies as schema-validated YAML; zone
-  tables generated from them and never hand-edited. Adding an author is a file,
-  not a code change.
-- **TSS left the prompt.** Computed by the verification engine from the zone
-  tables, removing a class of silent arithmetic error.
-- **A deterministic engine** resolves training state, projects the PMC, and reads
-  curve progression, durability and anaerobic repeatability across rolling
-  windows, emitting an authoritative `#STATE` block with the source of every
-  figure.
-- **A verification gate** checks every generated block against the hard
-  constraints before it can reach an athlete.
-- **A regression suite** of 409 tests over synthetic athletes with frozen expected
-  outputs.
-- **Non-threshold anchors** declared per author, keeping zones interchangeable
-  across methodologies without altering any author's published numbers.
-
-**v5.1 and earlier**
-- TSS assigned by the KB zone's physiological class instead of the raw % number.
-- Special Output Rule generalized, replacing the hardcoded Olbrich exception.
-- Two-class rule hierarchy: inviolable output-format constraints vs. overridable
-  coaching defaults.
-- Self-sufficient `#SESSION` continuation header; terminal Phase 6.
+Every version, newest first, is in `CHANGELOG.md`.
 
 ---
 
@@ -454,7 +166,7 @@ Any change to `config/` or `engine/` follows the same sequence:
 ```bash
 python build_zone_tables.py validate    # schema-check the authors
 python build_zone_tables.py build       # regenerate the zone tables
-python tests/run_tests.py               # 409 regression tests
+python tests/run_tests.py               # regression tests (all must pass)
 ```
 
 A failing golden test does not automatically mean a bug — it means output

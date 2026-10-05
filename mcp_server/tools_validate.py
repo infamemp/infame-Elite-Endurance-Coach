@@ -114,12 +114,6 @@ def _run_validation(
     # tests/run_tests.py's own subprocess calls into this same script
     # already carry this exact guard, for the exact same reason.
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
-    # TEMP DIAGNOSTIC (remove once the validate_block stdio hang is
-    # root-caused): checkpoints around the one call in this tool that can
-    # actually block — subprocess.run() — to see whether the hang is inside
-    # the subprocess itself or somewhere else in the tool/guard/transport
-    # stack.
-    logger.info("CHECKPOINT validate_block: about to subprocess.run cmd=%r cwd=%r", cmd, ROOT)
     # stdin=DEVNULL is deliberate, not a default: without it, the child
     # inherits this process's own stdin — which, under the stdio MCP
     # transport, is the live pipe Desktop writes JSON-RPC requests into.
@@ -132,10 +126,7 @@ def _run_validation(
         cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
         cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
     )
-    logger.info("CHECKPOINT validate_block: subprocess.run returned exit_code=%r",
-                result.returncode)
     report = (result.stdout or "") + (result.stderr or "")
-    logger.info("CHECKPOINT validate_block: about to build return dict")
     try:
         # On Windows, file_path and ROOT can sit on different drives (a
         # block saved on Downloads' drive validated against a repo checked
