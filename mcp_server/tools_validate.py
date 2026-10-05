@@ -151,6 +151,26 @@ def _run_validation(
     }
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Validate a block. Pass file_path explicitly (save_block returns it), or
+# athlete_id alone to validate the most recently saved block in
+# out/<athlete>/blocks/.
+#
+# week_targets maps the Monday of a week (YYYY-MM-DD) to its TSS target from
+# load_targets, e.g. {"2026-10-05": 330}. The report then says how far that
+# week's written TSS sits from the target and warns (CHK-LOAD-TARGET) outside
+# max(5, 3%). It only warns, never blocks, and only judges a week written in
+# full in this file.
+#
+# Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
+# tool never repairs or interprets the result, only reports it.
+#
+# push_block calls this same check internally before actually sending
+# anything (dry_run=False + confirm=True) and refuses to push a block
+# this reports as blocked, unless push_block's own override_validation=True
+# is passed explicitly — so uploading is still a deliberately separate,
+# human-gated action, but it is no longer possible to push a block that
+# was just reported BLOCKED without a conscious, visible override.
 @guarded
 def validate_block(
     athlete_id: str | None = None,
@@ -164,25 +184,13 @@ def validate_block(
     athlete_name: str | None = None,
     week_targets: dict[str, float] | None = None,
 ) -> dict:
-    """Validate a block. Pass file_path explicitly (save_block returns it), or
-    athlete_id alone to validate the most recently saved block in
-    out/<athlete>/blocks/.
-
-    week_targets maps the Monday of a week (YYYY-MM-DD) to its TSS target from
-    load_targets, e.g. {"2026-10-05": 330}. The report then says how far that
-    week's written TSS sits from the target and warns (CHK-LOAD-TARGET) outside
-    max(5, 3%). It only warns, never blocks, and only judges a week written in
-    full in this file.
-
-    Exit code 0 = upload-safe, 1 = blocked, matching the CLI exactly — this
-    tool never repairs or interprets the result, only reports it.
-
-    push_block calls this same check internally before actually sending
-    anything (dry_run=False + confirm=True) and refuses to push a block
-    this reports as blocked, unless push_block's own override_validation=True
-    is passed explicitly — so uploading is still a deliberately separate,
-    human-gated action, but it is no longer possible to push a block that
-    was just reported BLOCKED without a conscious, visible override."""
+    """The verification gate. Validates a saved week (file_path from save_block, or
+    athlete_id alone for the latest saved week) and reports PASS (exit 0:
+    upload-safe) or BLOCKED (exit 1), with the full report. Pass athlete_id: every
+    session must belong to an athlete with a declared profile (HC-ATHLETE).
+    fill_tss=true writes Duration and TSS into the headers. week_targets
+    {'YYYY-MM-DD' Monday: TSS} adds a CHK-LOAD-TARGET warning outside max(5, 3%).
+    Warnings never block."""
     return _run_validation(
         athlete_id=athlete_id, file_path=file_path, fill_tss=fill_tss,
         methodology=methodology, discipline=discipline,

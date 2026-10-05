@@ -16,23 +16,31 @@ from .common import (DATA, OUT, ensure_import_paths, load_athlete_data, read_jso
 from .guard import ToolError, guarded
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Fetch (if the local cache is stale or force_refresh is set), resolve,
+# and return #STATE — the exact content of state.md, plus whether this
+# call hit the cache or refetched, plus the
+# athlete's saved #SESSION (continuity.md) and race notes when they exist.
+# include_json=true also returns the structured state.json (`state`); the
+# markdown carries the same figures, so it is off by default.
+#
+# A stale answer is never served silently: `cache_hit` and `resolved_at`
+# are always present, so a caller (or the coach reading this response)
+# can see for itself how current the numbers are, rather than trusting an
+# internal cache blindly — the same "#STATE more than 7 days old" judgement
+# the prompt already asks a human to make from a file's date, just made
+# visible here as data instead of requiring a human to open the file.
 @guarded
 def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 180,
                       include_json: bool = False) -> dict:
-    """Fetch (if the local cache is stale or force_refresh is set), resolve,
-    and return #STATE — the exact content of state.md, plus whether this
-    call hit the cache or refetched, plus the
-    athlete's saved #SESSION (continuity.md) and race notes when they exist.
-    include_json=true also returns the structured state.json (`state`); the
-    markdown carries the same figures, so it is off by default.
-
-    A stale answer is never served silently: `cache_hit` and `resolved_at`
-    are always present, so a caller (or the coach reading this response)
-    can see for itself how current the numbers are, rather than trusting an
-    internal cache blindly — the same "#STATE more than 7 days old" judgement
-    the prompt already asks a human to make from a file's date, just made
-    visible here as data instead of requiring a human to open the file.
-    """
+    """Open every conversation with this. Returns #STATE (`markdown`): every measured
+    figure for the athlete, authoritative — never recompute it. Also returns the
+    saved #SESSION (`continuity`), race history (`race_notes`), saved daily maximums
+    (`availability`), `review_due` (the block's falsifier once its review date has
+    passed) and `ledger` (last 30 days of changes and validator results); each is
+    null when absent. Intervals.icu is re-read when the cached data is over 60
+    minutes old; force_refresh=true re-reads now. `cache_hit` and `resolved_at` say
+    how current it is. include_json=true adds the structured state.json."""
     info = resolve_and_prep(athlete_id, days=days, force_refresh=force_refresh)
     continuity = _optional_text(os.path.join(info["out_dir"], "continuity.md"))
     ensure_import_paths()
@@ -83,12 +91,18 @@ def _optional_text(path: str) -> str | None:
     return text if text.strip() else None
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Same fetch/cache pattern as get_athlete_state, sharing the same
+# underlying data — asking for both back to back never double-fetches,
+# since resolve_and_prep's cache check is keyed on the same
+# athlete_data.json both tools read from.
 @guarded
 def get_athlete_profile(athlete_id: str, force_refresh: bool = False, days: int = 180) -> dict:
-    """Same fetch/cache pattern as get_athlete_state, sharing the same
-    underlying data — asking for both back to back never double-fetches,
-    since resolve_and_prep's cache check is keyed on the same
-    athlete_data.json both tools read from."""
+    """Returns profile.md (`markdown`): the athlete's declared profile (goals,
+    availability, equipment, limitations, methodology, preferences), rendered and
+    checked, then Intervals.icu settings, scheduled races, planned workouts and
+    activity history. Call it right after get_athlete_state (same cache, no second
+    download)."""
     info = resolve_and_prep(athlete_id, days=days, force_refresh=force_refresh)
     profile_md = read_text(
         os.path.join(DATA, str(athlete_id), "profile.md"),
@@ -105,11 +119,15 @@ def get_athlete_profile(athlete_id: str, force_refresh: bool = False, days: int 
     }
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Reads out/roster.md — no network call of its own. Matches
+# coach.py's own write_roster() output exactly; this tool never
+# regenerates it, only reports what the last prep run wrote.
 @guarded
 def list_roster() -> dict:
-    """Reads out/roster.md — no network call of its own. Matches
-    coach.py's own write_roster() output exactly; this tool never
-    regenerates it, only reports what the last prep run wrote."""
+    """The roster (`markdown`): every athlete on the account by name and Intervals.icu
+    id, as of the last full prep. Use it to find an athlete's id from the name the
+    head coach used."""
     ensure_import_paths()
     path = os.path.join(OUT, "roster.md")
     if not os.path.exists(path):
@@ -122,16 +140,21 @@ def list_roster() -> dict:
         return {"ok": True, "markdown": f.read()}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Every athlete in one table, from what is already on disk: each
+# athlete's saved #STATE (data/<id>/state.json) plus out/roster.md for the
+# athletes on the account that were never prepared. No network call, and no
+# figure computed here that state.json does not already carry — the only
+# arithmetic is days-to-race against today and idle days counted to the
+# date of the last prep. Each row says how old its
+# numbers are (`state_age_days`, `data_age_hours`); an athlete's row is only
+# as current as the last time get_athlete_state ran for them.
 @guarded
 def roster_overview() -> dict:
-    """Every athlete in one table, from what is already on disk: each
-    athlete's saved #STATE (data/<id>/state.json) plus out/roster.md for the
-    athletes on the account that were never prepared. No network call, and no
-    figure computed here that state.json does not already carry — the only
-    arithmetic is days-to-race against today and idle days counted to the
-    date of the last prep. Each row says how old its
-    numbers are (`state_age_days`, `data_age_hours`); an athlete's row is only
-    as current as the last time get_athlete_state ran for them."""
+    """All athletes in one table: load/recovery state, TSB, days since the last
+    activity, next A race and what the engine flagged — from each athlete's last
+    get_athlete_state, with no new download (each row says how old it is). Use it
+    only when the head coach asks for an overview of the roster."""
     ensure_import_paths()
     import roster
 
@@ -148,19 +171,25 @@ def roster_overview() -> dict:
     }
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Planned versus done for the last `days` days (at most 56, the history
+# the engine fetches): which planned sessions have an activity paired to
+# them in Intervals.icu, planned vs actual load and minutes, and the
+# compliance, RPE and feel Intervals.icu recorded. Reports only.
+#
+# Pairing is Intervals.icu's own (`paired_event_id`); nothing is matched by
+# guessing. A planned session with no paired activity is "unpaired", not
+# "missed" — the athlete may have skipped it or done it without pairing.
+#
+# Uses the same cache as get_athlete_state. If the cached data was fetched
+# before pairing was recorded, it is refreshed once, automatically.
 @guarded
 def get_execution(athlete_id: str, days: int = 28, force_refresh: bool = False) -> dict:
-    """Planned versus done for the last `days` days (at most 56, the history
-    the engine fetches): which planned sessions have an activity paired to
-    them in Intervals.icu, planned vs actual load and minutes, and the
-    compliance, RPE and feel Intervals.icu recorded. Reports only.
-
-    Pairing is Intervals.icu's own (`paired_event_id`); nothing is matched by
-    guessing. A planned session with no paired activity is "unpaired", not
-    "missed" — the athlete may have skipped it or done it without pairing.
-
-    Uses the same cache as get_athlete_state. If the cached data was fetched
-    before pairing was recorded, it is refreshed once, automatically."""
+    """Planned versus done over the last `days` days (up to 56): each planned session
+    with the activity Intervals.icu paired to it, planned vs actual load and
+    minutes, compliance, RPE and feel, labelled as_planned or done_differently with
+    the reasons. 'Unpaired' is not 'missed'. Each row's activity_id is what
+    post_activity_comment needs. Reports only."""
     ensure_import_paths()
     import execution
 
@@ -182,19 +211,26 @@ def get_execution(athlete_id: str, days: int = 28, force_refresh: bool = False) 
     }
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Weekly TSS (and hours) targets for a block, from the coach's own
+# choices: the cycle ("3:1" = three build weeks then one recovery week),
+# the TSS of the first week, the growth from one build week to the next, and
+# how far a recovery week drops. Pure arithmetic: no athlete data is read
+# and nothing is sent anywhere. Compare the result with #STATE (CTL, ramp
+# rate, ACWR) before using it; the engine does not say a target is right.
+# Each week also carries its tolerance, max(5, 3% of the target): how far
+# the summed TSS of the written sessions may sit from the target.
 @guarded
 def load_targets(start_weekly_tss: float, weeks: int, cycle: str = "3:1",
                  growth_pct: float | list[float] = 5, recovery_pct: float = 30,
                  tss_per_hour: float | None = None,
                  start_date: str | None = None) -> dict:
-    """Weekly TSS (and hours) targets for a block, from the coach's own
-    choices: the cycle ("3:1" = three build weeks then one recovery week),
-    the TSS of the first week, the growth from one build week to the next, and
-    how far a recovery week drops. Pure arithmetic: no athlete data is read
-    and nothing is sent anywhere. Compare the result with #STATE (CTL, ramp
-    rate, ACWR) before using it; the engine does not say a target is right.
-    Each week also carries its tolerance, max(5, 3% of the target): how far
-    the summed TSS of the written sessions may sit from the target."""
+    """Weekly TSS (and hours) targets from your inputs: start_weekly_tss (first week),
+    weeks, cycle ('3:1' = three build weeks, one recovery week), growth_pct per
+    build week (a number or one per week), recovery_pct drop, optional tss_per_hour
+    and start_date (a Monday). Pure arithmetic: each week carries its tolerance,
+    max(5, 3% of the target). The engine never says a target is right — choose the
+    inputs from #STATE and the athlete's availability."""
     ensure_import_paths()
     import load_targets as lt
 
@@ -207,20 +243,27 @@ def load_targets(start_weekly_tss: float, weeks: int, cycle: str = "3:1",
     return {"ok": True, "markdown": lt.render(result), **result}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# What if these weekly TSS targets are followed? Feeds them into the same
+# projection #STATE uses and returns CTL and TSB on race morning with and
+# without the targets, before any session is written. week_targets maps the
+# Monday of each whole future week (YYYY-MM-DD) to its TSS target, normally
+# the numbers load_targets gave. A target is spread over the week by the
+# athlete's own weekday pattern; that week's planned Intervals.icu events
+# are set aside. The race is the athlete's next declared A goal unless
+# race_date (and event_type, for the target TSB range) are given.
+# Reports only: the verdict shown is taper_check's own, and the head coach
+# decides.
 @guarded
 def what_if_targets(athlete_id: str, week_targets: dict[str, float],
                     race_date: str | None = None, event_type: str | None = None,
                     force_refresh: bool = False) -> dict:
-    """What if these weekly TSS targets are followed? Feeds them into the same
-    projection #STATE uses and returns CTL and TSB on race morning with and
-    without the targets, before any session is written. week_targets maps the
-    Monday of each whole future week (YYYY-MM-DD) to its TSS target, normally
-    the numbers load_targets gave. A target is spread over the week by the
-    athlete's own weekday pattern; that week's planned Intervals.icu events
-    are set aside. The race is the athlete's next declared A goal unless
-    race_date (and event_type, for the target TSB range) are given.
-    Reports only: the verdict shown is taper_check's own, and the head coach
-    decides."""
+    """Race-morning CTL and TSB with and without proposed weekly targets, before any
+    session is written. week_targets: {'YYYY-MM-DD' (the Monday of a whole future
+    week): TSS}, usually the numbers load_targets gave. The race is the athlete's
+    next declared A goal unless race_date (and event_type, for the target TSB range)
+    is given. Returns both projections and the engine's verdict against the target
+    range; the head coach decides."""
     ensure_import_paths()
     import build_state as bs
     import what_if
@@ -239,31 +282,64 @@ def what_if_targets(athlete_id: str, week_targets: dict[str, float],
     return {"ok": True, "athlete_id": athlete_id, "markdown": what_if.render(result), **result}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Read the book knowledge bases, which are not in the Claude Project.
+#
+# - source: who to read — an author or doctrine source id (coggan, friel_cycling,
+#   friel_tb, friel_hpc, cusick, carmichael, daniels, palladino, koop, uphill,
+#   hansons_marathon, hansons_half, hudson, rosario, olbrich, run_less_run_faster
+#   / rlrf, mujika).
+# - refs: exact references, as the doctrines and zone tables cite them —
+#   entry IDs ("TRPM-C06-019") or sections ("§7"). Needs a source.
+# - query: keywords, searched inside the source (or across every source when
+#   source is omitted); returns the best `max_entries` entries (max 15).
+# - catalog: true reads the author's catalog — the sessions, workouts and plans
+#   the author actually prescribes (IDs like TRPM-L2-014) — instead of the
+#   principles. The source of session ideas: take the idea, rebuild the numbers.
+# - neither: the source's table of contents; with no source either, the list of
+#   sources.
+# Answers are capped in size and say when they were cut.
 @guarded
 def get_knowledge(source: str | None = None, refs: list[str] | None = None,
                   query: str | None = None, max_entries: int = 6,
-                  catalog: bool = False) -> dict:
-    """Read the book knowledge bases, which are not in the Claude Project.
-
-    - source: who to read — an author or doctrine source id (coggan, friel_cycling,
-      friel_tb, friel_hpc, cusick, carmichael, daniels, palladino, koop, uphill,
-      hansons_marathon, hansons_half, hudson, rosario, olbrich, run_less_run_faster
-      / rlrf, mujika).
-    - refs: exact references, as the doctrines and zone tables cite them —
-      entry IDs ("TRPM-C06-019") or sections ("§7"). Needs a source.
-    - query: keywords, searched inside the source (or across every source when
-      source is omitted); returns the best `max_entries` entries (max 15).
-    - catalog: true reads the author's catalog — the sessions, workouts and plans
-      the author actually prescribes (IDs like TRPM-L2-014) — instead of the
-      principles. The source of session ideas: take the idea, rebuild the numbers.
-    - neither: the source's table of contents; with no source either, the list of
-      sources.
-    Answers are capped in size and say when they were cut."""
+                  catalog: bool = False, max_chars: int = 6000) -> dict:
+    """Read the book knowledge bases (they are not in the Project). source: a
+    methodology id (coggan, daniels, koop…) or a doctrine source id (cusick,
+    friel_hpc, uphill, mujika…). refs: exact entry IDs ('TRPM-C06-019') or sections
+    ('§7') as the doctrines and zone tables cite them; needs a source. query:
+    keywords, inside one source or across all; returns the best max_entries (up to
+    15). catalog=true reads the author's catalog — worked sessions, workouts, plans
+    — instead of the principles. Only a source: its table of contents; nothing: the
+    list of sources. Answers are capped at max_chars (default 6000, up to 12000) and
+    say when they were cut."""
     ensure_import_paths()
     import knowledge
 
     try:
         return {"ok": True, **knowledge.get(source=source, refs=refs, query=query,
-                                            max_entries=max_entries, catalog=catalog)}
+                                            max_entries=max_entries, catalog=catalog,
+                                            max_chars=max_chars)}
+    except ValueError as e:
+        raise ToolError(str(e))
+
+
+@guarded
+def get_reference(topic: str, methodology: str | None = None,
+                  session_class: str | None = None, discipline: str | None = None) -> dict:
+    """Reference files that are not in the Project. topic='zones' with methodology:
+    that methodology's zone table — zone boundaries per metric, RPE, class, domain,
+    Knowledge Base line, default metric, dual layer, anchors — with its sport's
+    reading guide (output format, floors, standard classes); without methodology,
+    the list of methodologies. topic='architectures' (optional session_class,
+    discipline): the session-shape library, only the shapes whose Classes and
+    Disciplines include them, plus how to combine shapes. topic='intake': the Phase
+    1 intake script. topic='profile_template': the declared-profile template to
+    build save_declared_profile's yaml from."""
+    ensure_import_paths()
+    import reference
+
+    try:
+        return {"ok": True, **reference.get(topic, methodology=methodology,
+                                            session_class=session_class, discipline=discipline)}
     except ValueError as e:
         raise ToolError(str(e))

@@ -44,7 +44,8 @@ _WORD = re.compile(r"[a-z0-9áéíóúñü'/-]{3,}")
 STOP = {"the", "and", "for", "with", "how", "what", "when", "that", "this", "from",
         "are", "does", "into", "per", "vs", "versus", "not", "its", "his", "her"}
 
-DEFAULT_MAX_CHARS = 12000
+DEFAULT_MAX_CHARS = 6000     # per answer (v7.31: was 12000); a caller may ask up to MAX_CHARS
+MAX_CHARS = 12000
 SECTION_MAX_CHARS = 6000
 
 
@@ -250,6 +251,7 @@ def get(source=None, refs=None, query=None, max_entries=6, max_chars=DEFAULT_MAX
     author's catalog (worked sessions, workouts, plans) instead of the
     principles: the source of session ideas, adapted to the athlete."""
     max_entries = max(1, min(int(max_entries or 6), 15))
+    max_chars = max(1000, min(int(max_chars or DEFAULT_MAX_CHARS), MAX_CHARS))
     if source:
         rel = resolve(source)
         if not rel:

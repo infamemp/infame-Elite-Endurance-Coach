@@ -1822,6 +1822,30 @@ def unit_tests():
                   and "Durability in watts" not in md_state)
     shutil.rmtree(dir_dw, ignore_errors=True)
 
+    # ── reference files on demand (get_reference, v7.31) ──
+    import reference as rf
+    _z = rf.get("zones", "coggan")["markdown"]
+    check("reference: a zone table comes with its sport's reading guide and nothing else",
+          "## Methodology: Coggan Cycling Levels" in _z and "Prescription floors" in _z
+          and "## Methodology: Friel Cycling Zones" not in _z and "DO NOT EDIT" not in _z)
+    check("reference: every author file has its zone table",
+          all(rf.get("zones", m)["markdown"].count("## Methodology:") == 1 for m in rf.methodologies()))
+    try:
+        rf.get("zones", "nobody")
+        check("reference: an unknown methodology is refused", False)
+    except ValueError as e:
+        check("reference: an unknown methodology is refused", "Known:" in str(e))
+    _a = rf.get("architectures", session_class="neuromuscular", discipline="track_run")
+    check("reference: architectures are filtered by their own Classes and Disciplines",
+          _a["architectures"] == ["classic_intervals", "sprints"] and "## Combining architectures" in _a["markdown"]
+          and "## `pyramid`" not in _a["markdown"], _a["architectures"])
+    check("reference: the whole library without filters",
+          len(rf.get("architectures")["architectures"]) == len(glob.glob(os.path.join(
+              ROOT, "config", "architectures", "[!_]*.yaml"))))
+    check("reference: intake script and profile template",
+          rf.get("intake")["markdown"].startswith("# Athlete Intake")
+          and "availability:" in rf.get("profile_template")["yaml"])
+
     # ── book knowledge on demand (get_knowledge) ──
     import knowledge as kn
     check("knowledge: every author's knowledge_file resolves by its id",
@@ -1845,9 +1869,12 @@ def unit_tests():
     r_kn = kn.get("cusick", query="optimized intervals", max_entries=3)
     check("knowledge: query returns at most max_entries, best match first",
           0 < len(r_kn["entries"]) <= 3 and "ptimized" in r_kn["entries"][0]["title"])
-    r_kn = kn.get(query="taper volume reduction", max_entries=4)
+    r_kn = kn.get(query="taper volume reduction", max_entries=4, max_chars=12000)
     check("knowledge: query without a source searches every book and names the file",
           all("file" in e for e in r_kn["entries"]) and len(r_kn["entries"]) == 4)
+    check("knowledge: the default answer is capped at 6 KB (v7.31)",
+          kn.DEFAULT_MAX_CHARS == 6000
+          and sum(len(e["text"]) for e in kn.get(query="taper volume reduction")["entries"]) <= 6000)
     check("knowledge: answers are capped in size",
           sum(len(e["text"]) for e in kn.get(query="threshold", max_entries=15)["entries"])
           <= kn.DEFAULT_MAX_CHARS + 20)
@@ -2288,10 +2315,11 @@ def architecture_tests():
     else:
         check("generated: Session_Architectures.md is current with the YAML (run build)", True)
     _pr = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
-    check("prompt: lists Session_Architectures.md as a Project file", "`Session_Architectures.md` (the shape library" in _pr)
+    check("prompt: the architecture library is read with get_reference (v7.31)",
+          "the shape library for every session design (`'architectures'`)" in _pr)
     check("prompt: Pass 1 gathers ideas from the catalogs and the library",
           "**Gather ideas before filling the table**" in _pr and "`catalog=true`" in _pr
-          and "`Session_Architectures.md`" in _pr)
+          and "`topic='architectures'`" in _pr)
     check("prompt: architecture count matches the library",
           f"{len(lib)} pre-vetted session shapes" in _pr, len(lib))
     check("prompt: trail defaults to Koop, Palladino with power, Olbrich for flat road ultras",

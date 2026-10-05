@@ -4,6 +4,32 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.31 (2026-10-05)
+
+Batch 4 of the 2026-10-05 audit: fewer tokens per conversation, no rule removed.
+`python tests/context_budget.py` measures what a conversation loads before any design
+work: **~57,400 tokens in v7.30 → ~33,100 in v7.31 (−42%)**.
+
+| Part | v7.30 | v7.31 |
+| :--- | ---: | ---: |
+| Project instructions (prompt) | ~19,300 | ~18,800 |
+| Project knowledge files | ~31,400 (9 files) | ~8,700 (4 files) |
+| MCP tool definitions | ~5,400 (19 tools) | ~4,400 (20 tools) |
+| `get_athlete_state` (test athlete) | ~1,200 | ~1,200 |
+
+- **New tool `get_reference`** (`engine/reference.py`): the zone tables, the architecture
+  library, the intake script and the profile template leave the Project. The coach asks
+  for one methodology's zone table (~1,500 tokens instead of ~13,000 for both tables),
+  and for the architectures that fit a session's class and discipline.
+- **Tool descriptions written for the model.** Each says what the tool does, when to use
+  it and what it returns; the development history moved to code comments.
+- **`get_knowledge` answers default to 6 KB** (`max_chars` up to 12 KB when needed).
+- **Prompt:** the tools table is one line per tool (the details live in each tool's
+  description); the validator section says once that `HC-`/`SYN-` codes block and
+  `CHK-` codes warn, instead of listing every check; every reference to the files that
+  left the Project points to `get_reference`, with a fallback for when the tools are down.
+- **`tests/context_budget.py`** (new) for before/after measurements.
+
 ## v7.30 (2026-10-05)
 
 Batch 3 of the 2026-10-05 audit: the prompt no longer contradicts the engine or itself.

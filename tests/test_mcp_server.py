@@ -263,6 +263,13 @@ def test_tools_read():
     equal("tools_read: an unknown, uncached athlete_id fails cleanly rather than crashing",
           r3.get("ok"), False)
 
+    from mcp_server.tools_read import get_reference
+    rz = get_reference("zones", methodology="daniels")
+    check("tools_read: get_reference returns one methodology's zone table",
+          rz.get("ok") is True and "## Methodology: Daniels Running Zones" in (rz.get("markdown") or ""))
+    equal("tools_read: get_reference refuses an unknown topic cleanly",
+          get_reference("weather").get("ok"), False)
+
     r4 = list_roster()
     check("tools_read: list_roster returns something (either roster.md content, "
           "or a clean 'not found yet' error, never a crash)",

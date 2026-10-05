@@ -68,6 +68,15 @@ def _iso(s: str, label: str) -> date:
 # post_activity_comment
 # ══════════════════════════════════════════════════════════════════
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Post the coach's feedback as a comment on one of the athlete's
+# activities (POST /activity/{id}/messages). `activity_id` comes from
+# `get_execution` (`activity_id` on each session and extra activity).
+#
+# The activity is read first and refused unless it belongs to
+# `athlete_id`, so a comment can never land on another athlete's ride. The
+# text is posted exactly as given: write it in the athlete's language
+# (`language` in the declared profile) before calling.
 @guarded
 def post_activity_comment(
     athlete_id: str,
@@ -76,14 +85,11 @@ def post_activity_comment(
     dry_run: bool = True,
     confirm: bool = False,
 ) -> dict:
-    """Post the coach's feedback as a comment on one of the athlete's
-    activities (POST /activity/{id}/messages). `activity_id` comes from
-    `get_execution` (`activity_id` on each session and extra activity).
-
-    The activity is read first and refused unless it belongs to
-    `athlete_id`, so a comment can never land on another athlete's ride. The
-    text is posted exactly as given: write it in the athlete's language
-    (`language` in the declared profile) before calling."""
+    """Post your feedback as a comment on one of the athlete's activities, written in
+    the athlete's language. activity_id comes from get_execution. The default is a
+    dry run showing the activity it would land on; it posts only with dry_run=false
+    AND confirm=true, after approval. Refused when the activity belongs to another
+    athlete."""
     body = str(text or "").strip()
     if not body:
         raise ToolError("The comment is empty — nothing to post.")
@@ -161,6 +167,18 @@ def _fmt_pace(ms, pace_units) -> str | None:
     return f"{secs // 60}:{secs % 60:02d}" + (" /km" if pace_units == "MINS_KM" else " /mi")
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Set one threshold in the athlete's Intervals.icu sport settings after
+# a test: `field` is ftp, lthr, max_hr or threshold_pace; `sport_type` is an
+# Intervals.icu activity type (Ride, Run, VirtualRide...). Always shows old
+# -> new. A threshold pace may be given as 'M:SS' in the athlete's own pace
+# unit (min/km or min/mile) or as a speed in m/s.
+#
+# The head coach's decision, never the engine's: call it only with a value
+# the head coach has confirmed. Changing lthr or max_hr recalculates the HR
+# zones, as editing them in Intervals.icu does. After a live change the
+# local cache is marked stale, so the next get_athlete_state re-fetches and
+# #STATE carries the new threshold.
 @guarded
 def update_threshold(
     athlete_id: str,
@@ -170,17 +188,12 @@ def update_threshold(
     dry_run: bool = True,
     confirm: bool = False,
 ) -> dict:
-    """Set one threshold in the athlete's Intervals.icu sport settings after
-    a test: `field` is ftp, lthr, max_hr or threshold_pace; `sport_type` is an
-    Intervals.icu activity type (Ride, Run, VirtualRide...). Always shows old
-    -> new. A threshold pace may be given as 'M:SS' in the athlete's own pace
-    unit (min/km or min/mile) or as a speed in m/s.
-
-    The head coach's decision, never the engine's: call it only with a value
-    the head coach has confirmed. Changing lthr or max_hr recalculates the HR
-    zones, as editing them in Intervals.icu does. After a live change the
-    local cache is marked stale, so the next get_athlete_state re-fetches and
-    #STATE carries the new threshold."""
+    """Set one threshold in the athlete's Intervals.icu sport settings after a test the
+    head coach confirmed. field: ftp, lthr, max_hr or threshold_pace; sport_type: an
+    Intervals.icu activity type (Ride, Run, VirtualRide…). threshold_pace as 'M:SS'
+    in the athlete's pace unit, or m/s. The default is a dry run showing old → new;
+    it changes only with dry_run=false AND confirm=true. lthr and max_hr recalculate
+    the HR zones. Never call it with a value the head coach did not confirm."""
     field = str(field or "").strip().lower()
     if field not in (*_INT_FIELDS, "threshold_pace"):
         raise ToolError(f"'{field}' cannot be set here. Allowed: "
@@ -263,6 +276,17 @@ def update_threshold(
 # remove_block
 # ══════════════════════════════════════════════════════════════════
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Delete sessions this system uploaded, so a week can be redone.
+#
+# Only events whose `external_id` starts with `infame-<athlete_id>-` (the
+# id `push_block` gives every session) and whose category is WORKOUT are
+# ever touched, and only from tomorrow onward: today and the past are never
+# removed, and anything else on the calendar — the athlete's own workouts,
+# races, notes — is left alone and only counted. Narrow the range with
+# `from_date` / `to_date` (YYYY-MM-DD); by default it covers every uploaded
+# session from tomorrow on. After a live delete the calendar is re-read and
+# anything that survived is reported.
 @guarded
 def remove_block(
     athlete_id: str,
@@ -271,16 +295,11 @@ def remove_block(
     dry_run: bool = True,
     confirm: bool = False,
 ) -> dict:
-    """Delete sessions this system uploaded, so a week can be redone.
-
-    Only events whose `external_id` starts with `infame-<athlete_id>-` (the
-    id `push_block` gives every session) and whose category is WORKOUT are
-    ever touched, and only from tomorrow onward: today and the past are never
-    removed, and anything else on the calendar — the athlete's own workouts,
-    races, notes — is left alone and only counted. Narrow the range with
-    `from_date` / `to_date` (YYYY-MM-DD); by default it covers every uploaded
-    session from tomorrow on. After a live delete the calendar is re-read and
-    anything that survived is reported."""
+    """Delete sessions this system uploaded, from tomorrow on, so a week can be redone;
+    from_date / to_date (YYYY-MM-DD) narrow the range. Only events this system
+    created are touched; everything else on the calendar is only counted. The
+    default is a dry run listing what it would delete; it deletes only with
+    dry_run=false AND confirm=true."""
     tomorrow = date.today() + timedelta(days=1)
     start = _iso(from_date, "from_date") if from_date else tomorrow
     if start < tomorrow:

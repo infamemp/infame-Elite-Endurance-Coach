@@ -154,6 +154,30 @@ def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
     return fallback, True
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Build the Intervals.icu bulk-events payload for a saved block and,
+# only when explicitly told twice (dry_run=False AND confirm=True), POST
+# it to `/athlete/{id}/events/bulk?upsert=true` — the same endpoint and
+# upsert semantics IMPROVEMENT_BACKLOG.md §5 describes. Every session's
+# `external_id` is deterministic (athlete + date + week, plus -2, -3 for a
+# second or third session on the same date), so re-pushing a corrected
+# block updates the same events instead of duplicating them — and two
+# sessions on one day never overwrite each other.
+#
+# Every call not opening both gates returns the constructed payload and
+# `sent: False` without making any network request at all — this is the
+# default, and it is exercised by every automated test in this package;
+# the live-send path is exercised only by a mocked `requests.Session.post`,
+# the same way the original tool's live path was verified (and, per
+# archive/RESTORE_POINT_v6.5.md §5, never actually exercised against a
+# real account even once).
+#
+# Before that live send, this tool runs the same check `validate_block`
+# runs against `file_path` and raises `ToolError` — sending nothing — if
+# the block is BLOCKED (a real hard-constraint failure, not a warning).
+# Pass `override_validation=True` to skip that check and push anyway; the
+# dry-run path never validates, since it never sends anything either
+# way.
 @guarded
 def push_block(
     athlete_id: str,
@@ -164,29 +188,14 @@ def push_block(
     override_validation: bool = False,
     include_notes: bool = True,
 ) -> dict:
-    """Build the Intervals.icu bulk-events payload for a saved block and,
-    only when explicitly told twice (dry_run=False AND confirm=True), POST
-    it to `/athlete/{id}/events/bulk?upsert=true` — the same endpoint and
-    upsert semantics IMPROVEMENT_BACKLOG.md §5 describes. Every session's
-    `external_id` is deterministic (athlete + date + week, plus -2, -3 for a
-    second or third session on the same date), so re-pushing a corrected
-    block updates the same events instead of duplicating them — and two
-    sessions on one day never overwrite each other.
-
-    Every call not opening both gates returns the constructed payload and
-    `sent: False` without making any network request at all — this is the
-    default, and it is exercised by every automated test in this package;
-    the live-send path is exercised only by a mocked `requests.Session.post`,
-    the same way the original tool's live path was verified (and, per
-    archive/RESTORE_POINT_v6.5.md §5, never actually exercised against a
-    real account even once).
-
-    Before that live send, this tool runs the same check `validate_block`
-    runs against `file_path` and raises `ToolError` — sending nothing — if
-    the block is BLOCKED (a real hard-constraint failure, not a warning).
-    Pass `override_validation=True` to skip that check and push anyway; the
-    dry-run path never validates, since it never sends anything either
-    way."""
+    """Upload a validated week to the athlete's Intervals.icu calendar. The default is
+    a dry run: it returns the events it would create and anything skipped, and sends
+    nothing. It sends only with dry_run=false AND confirm=true, after the head coach
+    approved; it validates again first and refuses a BLOCKED file
+    (override_validation=true only when the head coach explicitly asks). It refuses
+    a file with cards for another athlete. Re-pushing a corrected week updates the
+    same events. Race days are skipped; workouts already planned on those dates are
+    not removed. include_notes=false sends only the steps."""
     ensure_import_paths()
     import validate_block as vb
 

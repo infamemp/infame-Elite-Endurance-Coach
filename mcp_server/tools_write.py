@@ -31,13 +31,17 @@ _RACE_RESULT_SPLIT_RE = re.compile(r"(?=^#RACE_RESULT\s*$)", re.M)
 _RACE_RESULT_DATE_RE = re.compile(r"^Date:\s*(\S+)", re.M)
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Write out/<athlete>/availability.md, always overwriting: the head
+# coach's stated daily maximums, so they are asked for once and read back
+# by get_athlete_state instead of being re-asked (or invented) in every
+# conversation. Requires an #AVAILABILITY ... #END envelope. It never
+# judges the numbers — that stays with the head coach.
 @guarded
 def save_availability(athlete_id: str, text: str, athlete_name: str | None = None) -> dict:
-    """Write out/<athlete>/availability.md, always overwriting: the head
-    coach's stated daily maximums, so they are asked for once and read back
-    by get_athlete_state instead of being re-asked (or invented) in every
-    conversation. Requires an #AVAILABILITY ... #END envelope. It never
-    judges the numbers — that stays with the head coach."""
+    """Save the head coach's stated daily maximums as an #AVAILABILITY … #END block (it
+    replaces the previous one), so they are never asked again. get_athlete_state
+    returns it as `availability`."""
     body = (text or "").strip()
     if not body:
         raise ToolError("Refusing to write an empty availability.md.")
@@ -52,14 +56,19 @@ def save_availability(athlete_id: str, text: str, athlete_name: str | None = Non
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Record the athlete's training age — years of consistent endurance
+# training, as the head coach stated it — in data/<athlete_id>/facts.json.
+# It sets the CTL ramp band in #STATE (Coggan Table 9.2). Asked once and
+# never again: the next get_athlete_state(force_refresh=true) shows the band.
+# A value in the declared profile (history.training_age_years) wins over
+# this one. It never judges the number.
 @guarded
 def save_training_age(athlete_id: str, years: float) -> dict:
-    """Record the athlete's training age — years of consistent endurance
-    training, as the head coach stated it — in data/<athlete_id>/facts.json.
-    It sets the CTL ramp band in #STATE (Coggan Table 9.2). Asked once and
-    never again: the next get_athlete_state(force_refresh=true) shows the band.
-    A value in the declared profile (history.training_age_years) wins over
-    this one. It never judges the number."""
+    """Save the athlete's training age — years of consistent endurance training as the
+    head coach stated it, 0 for a beginner. It sets the CTL ramp band in #STATE:
+    call get_athlete_state with force_refresh=true afterwards. A value in the
+    declared profile wins over this one."""
     try:
         value = float(years)
     except (TypeError, ValueError):
@@ -88,16 +97,20 @@ def save_training_age(athlete_id: str, years: float) -> dict:
             "path": os.path.relpath(path, os.path.dirname(DATA))}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Write out/<athlete>/continuity.md, always overwriting — the same
+# file coach.py's check_continuity() only ever reports the presence/age
+# of. Requires the boxed #SESSION ... #END envelope
+# (manual/OPERATIONS_MANUAL.md §8 describes exactly this shape) so a
+# partial or empty paste is refused instead of silently corrupting the
+# macrocycle's resumed position. Never inspects what's inside that
+# envelope — Active Phase, Current Block, the Metric Map — that's the
+# prompt's structure to define and read, not this tool's to enforce.
 @guarded
 def save_continuity(athlete_id: str, text: str, athlete_name: str | None = None) -> dict:
-    """Write out/<athlete>/continuity.md, always overwriting — the same
-    file coach.py's check_continuity() only ever reports the presence/age
-    of. Requires the boxed #SESSION ... #END envelope
-    (manual/OPERATIONS_MANUAL.md §8 describes exactly this shape) so a
-    partial or empty paste is refused instead of silently corrupting the
-    macrocycle's resumed position. Never inspects what's inside that
-    envelope — Active Phase, Current Block, the Metric Map — that's the
-    prompt's structure to define and read, not this tool's to enforce."""
+    """Save a #SESSION … #END block as the athlete's continuity record (it replaces the
+    previous one). Call it every time you emit #SESSION. Refused when the text does
+    not start with #SESSION or has no #END; the content itself is never judged."""
     body = (text or "").strip()
     if not body:
         raise ToolError("Refusing to write an empty continuity.md.")
@@ -125,6 +138,22 @@ def save_continuity(athlete_id: str, text: str, athlete_name: str | None = None)
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Append a #RACE_RESULT block to out/<athlete>/race_notes.md — never
+# overwriting or deleting what's already there, matching
+# manual/OPERATIONS_MANUAL.md §9's "never delete or overwrite" rule.
+#
+# `date_str` is required and authoritative (YYYY-MM-DD) — it's what
+# coach.py review's --since window actually filters on, so it's taken as
+# its own argument rather than trusted to already be correctly embedded
+# in free-form `text`. `text` is the rest of the block in whatever shape
+# the coach wrote it; the '#RACE_RESULT' header line and 'Date:' field
+# are added automatically if missing, exactly as save_race_result's
+# original description promised ("normalizing the header if the caller
+# omitted it") — but the result is always re-checked against the same
+# patterns coach.py's read_race_notes() uses before it's written, so a
+# block that would silently fail to be picked up later is refused now
+# instead.
 @guarded
 def save_race_result(
     athlete_id: str,
@@ -132,21 +161,9 @@ def save_race_result(
     text: str,
     athlete_name: str | None = None,
 ) -> dict:
-    """Append a #RACE_RESULT block to out/<athlete>/race_notes.md — never
-    overwriting or deleting what's already there, matching
-    manual/OPERATIONS_MANUAL.md §9's "never delete or overwrite" rule.
-
-    `date_str` is required and authoritative (YYYY-MM-DD) — it's what
-    coach.py review's --since window actually filters on, so it's taken as
-    its own argument rather than trusted to already be correctly embedded
-    in free-form `text`. `text` is the rest of the block in whatever shape
-    the coach wrote it; the '#RACE_RESULT' header line and 'Date:' field
-    are added automatically if missing, exactly as save_race_result's
-    original description promised ("normalizing the header if the caller
-    omitted it") — but the result is always re-checked against the same
-    patterns coach.py's read_race_notes() uses before it's written, so a
-    block that would silently fail to be picked up later is refused now
-    instead."""
+    """Append a #RACE_RESULT block to the athlete's race notes (it never overwrites).
+    date_str: the race date, YYYY-MM-DD. text: the rest of the block, without a
+    Date: line."""
     try:
         datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError as exc:
@@ -198,17 +215,22 @@ def save_race_result(
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Write out/<athlete>/blocks/<today>_bloque_w<week>.md (or
+# <today>_bloque.md when no week is given), overwriting a file of the same
+# name — so re-saving a corrected week replaces it, while a different
+# week saved the same day gets its own file. This is
+# deliberately dumb: it does not parse or validate the block at all
+# (that's validate_block's job, as a separate, explicit next step, the
+# same two-step shape as the manual copy-paste-then-check workflow it
+# replaces).
 @guarded
 def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
                week: int | None = None) -> dict:
-    """Write out/<athlete>/blocks/<today>_bloque_w<week>.md (or
-    <today>_bloque.md when no week is given), overwriting a file of the same
-    name — so re-saving a corrected week replaces it, while a different
-    week saved the same day gets its own file. This is
-    deliberately dumb: it does not parse or validate the block at all
-    (that's validate_block's job, as a separate, explicit next step, the
-    same two-step shape as the manual copy-paste-then-check workflow it
-    replaces)."""
+    """Save one week the moment it is written, as
+    out/<athlete>/blocks/<today>_bloque_w<week>.md (saving the same week again
+    replaces it). Returns the path to pass to validate_block and push_block. It does
+    not validate."""
     body = (text or "").strip()
     if not body:
         raise ToolError("Refusing to save an empty block.")
@@ -222,20 +244,28 @@ def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
+# Maintainer notes (the docstring below is the description the model reads):
+# Write the athlete's declared profile, config/athletes/<athlete_id>.yaml —
+# after an intake, or to change goals, equipment, limitations, methodology or
+# any other declared field. Same gate as an upload:
+#
+# 1. Call with the defaults (a dry run): the text is checked — valid YAML,
+#    every top-level section of config/athletes/_template.yaml present, names
+#    the system recognizes — and the answer shows what would change (a diff
+#    against the current file, or "new profile").
+# 2. Show the head coach the changes in plain words and wait for approval.
+# 3. Call again with dry_run=False, confirm=True. The previous file is kept in
+#    data/<athlete_id>/profile_history/ before it is replaced.
+# Then call get_athlete_profile with force_refresh=true.
 @guarded
 def save_declared_profile(athlete_id: str, yaml_text: str, dry_run: bool = True,
                           confirm: bool = False) -> dict:
-    """Write the athlete's declared profile, config/athletes/<athlete_id>.yaml —
-    after an intake, or to change goals, equipment, limitations, methodology or
-    any other declared field. Same gate as an upload:
-
-    1. Call with the defaults (a dry run): the text is checked — valid YAML,
-       every top-level section of config/athletes/_template.yaml present, names
-       the system recognizes — and the answer shows what would change (a diff
-       against the current file, or "new profile").
-    2. Show the head coach the changes in plain words and wait for approval.
-    3. Call again with dry_run=False, confirm=True. The previous file is kept in
-       data/<athlete_id>/profile_history/ before it is replaced.
+    """Write the athlete's declared profile (config/athletes/<id>.yaml) after an intake
+    or any approved change. Pass the whole profile, structured like
+    get_reference(topic='profile_template'). The default is a dry run: it checks the
+    YAML, the template's sections and the names the system knows, and returns what
+    would change. Show the head coach the changes in plain words, wait for approval,
+    then call again with dry_run=false, confirm=true. The previous version is kept.
     Then call get_athlete_profile with force_refresh=true."""
     import difflib
     import shutil
