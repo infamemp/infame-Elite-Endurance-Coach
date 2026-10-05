@@ -1,5 +1,8 @@
 {
   "athlete_id": "_test_sparse",
+  "core_sessions": {
+    "status": "no_goal"
+  },
   "heads_up": {
     "checks": [
       {

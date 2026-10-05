@@ -1,0 +1,134 @@
+# ══════════════════════════════════════════════════════════════════
+# CORE SESSIONS PER DISCIPLINE (v7.23)
+# ══════════════════════════════════════════════════════════════════
+# The few session types a race in each discipline cannot be prepared without.
+# Friel: race preparation starts from the duration and intensity demands of
+# the event (CTB-C02-022), and workouts become progressively more like the A
+# race as it nears (CTB-C02-025); base work is general, build and peak work is
+# specific (HPC-C08-005). So this list is only checked inside
+# `applies_within_weeks` of the next A goal.
+#
+# What reads it: engine/core_sessions.py. The validator (CHK-CORE, warns only,
+# never blocks) and #STATE look for each core session in the block being
+# validated and in the sessions prescribed over the last `look_back_weeks`.
+# A missing one is a question for the head coach, not an error: a deliberate
+# omission (an injury, a phase choice) is a valid answer.
+#
+# How a session is matched: engine/architecture.py names each session's
+# architecture and an approximate class (generic cutpoints). An item matches
+# when ANY entry in `match` matches; inside one entry, `architectures` and
+# `classes` must BOTH hold when both are listed. The long session is not here:
+# the race demand record (v7.21) already puts it beside the race.
+#
+# `source`: KB entry IDs behind the item, or "coach judgement". Edit freely —
+# this file is the head coach's, not a rule set.
+
+defaults:
+  applies_within_weeks: 12     # build + peak; earlier than this, work is general
+  look_back_weeks: 3           # a core session done within this window counts
+
+disciplines:
+
+  road_bike:
+    - id: sustained_threshold
+      label: Sustained threshold
+      why: Multi-hour road races are decided by long efforts at and just below FTP.
+      source: [CTB-C02-022, CTB-C02-025]
+      match:
+        - classes: [sub_threshold, threshold]
+          architectures: [sustained_effort, classic_intervals, over_unders, stepped_build]
+    - id: vo2max
+      label: VO2max intervals
+      why: Climbs, breaks and bridges ask for repeated efforts in the severe domain.
+      source: [CTB-C02-022]
+      match:
+        - classes: [vo2max, supra_threshold]
+    - id: sprint
+      label: Sprint / anaerobic
+      why: Finishes and accelerations; fades fastest when not trained.
+      source: [CTB-C02-022]
+      match:
+        - architectures: [sprints]
+        - classes: [anaerobic, neuromuscular]
+
+  mtb:
+    - id: repeated_surges
+      label: Repeated surges
+      why: Off-road racing is repeated short hard efforts on top of a steady base.
+      source: [CTB-C02-022, HPC-C08-004]
+      match:
+        - architectures: [surges_on_base, over_unders, hard_start_fading, sprints]
+    - id: vo2max
+      label: VO2max intervals
+      why: Climbs of 2-8 minutes and race starts sit in the severe domain.
+      source: [HPC-C08-004]
+      match:
+        - classes: [vo2max, supra_threshold]
+    - id: sustained_climb
+      label: Sustained climbing
+      why: Long climbs ask for steady work at and just below threshold.
+      source: [CTB-C02-022]
+      match:
+        - classes: [sub_threshold, threshold]
+          architectures: [sustained_effort, stepped_build, classic_intervals, climb_simulation]
+
+  gravel:
+    - id: sustained_threshold
+      label: Sustained threshold
+      why: Long gravel events are ridden mostly at steady sub-threshold power.
+      source: [CTB-C02-022]
+      match:
+        - classes: [tempo, sub_threshold, threshold]
+          architectures: [sustained_effort, classic_intervals, stepped_build, over_unders]
+    - id: repeated_surges
+      label: Repeated surges
+      why: Climbs, groups and rough sectors ask for surges on top of steady riding.
+      source: [CTB-C02-022, HPC-C08-004]
+      match:
+        - architectures: [surges_on_base, over_unders, hard_start_fading]
+
+  road_run:
+    - id: threshold
+      label: Threshold (T) running
+      why: Raises the pace that can be held for long; the core of 10K to marathon.
+      source: [DRF-C05-022, DRF-C06-006]
+      match:
+        - classes: [sub_threshold, threshold]
+    - id: intervals
+      label: VO2max (I) intervals
+      why: Raises aerobic power; the ceiling under every race pace.
+      source: [DRF-C05-012, DRF-C04-010]
+      match:
+        - classes: [vo2max, supra_threshold]
+
+  trail_run:
+    - id: uphill
+      label: Uphill work
+      why: Most of a trail race's cost is climbing; most of Koop's intervals are uphill.
+      source: [TEU-C02-019, TEU-C02-008, TUA-C08-016]
+      match:
+        - architectures: [climb_simulation]
+    - id: sustained
+      label: Sustained tempo / threshold
+      why: Long steady efforts close to threshold carry the race between the climbs.
+      source: [TEU-C02-008, TEU-C08-019]
+      match:
+        - classes: [tempo, sub_threshold, threshold]
+
+  track_run:
+    - id: intervals
+      label: VO2max (I) intervals
+      why: Middle-distance track racing sits at and above VO2max.
+      source: [DRF-C05-012]
+      match:
+        - classes: [vo2max]
+    - id: repetitions
+      label: Repetitions (R)
+      why: Speed and economy at race pace and faster.
+      source: [DRF-C05-017, DRF-C04-011]
+      match:
+        - classes: [anaerobic, neuromuscular]
+        - architectures: [sprints]
+
+  # trainer and treadmill are where training happens, not race disciplines:
+  # no core list. A goal declared as either gets no check.

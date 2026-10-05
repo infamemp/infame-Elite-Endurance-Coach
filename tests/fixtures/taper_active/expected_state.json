@@ -1,5 +1,34 @@
 {
   "athlete_id": "_test_taper_active",
+  "core_sessions": {
+    "applies_within_weeks": 12,
+    "discipline": "road_run",
+    "goal": "Test Marathon",
+    "items": [
+      {
+        "found_in": null,
+        "id": "threshold",
+        "label": "Threshold (T) running",
+        "source": [
+          "DRF-C05-022",
+          "DRF-C06-006"
+        ],
+        "why": "Raises the pace that can be held for long; the core of 10K to marathon."
+      },
+      {
+        "found_in": null,
+        "id": "intervals",
+        "label": "VO2max (I) intervals",
+        "source": [
+          "DRF-C05-012",
+          "DRF-C04-010"
+        ],
+        "why": "Raises aerobic power; the ceiling under every race pace."
+      }
+    ],
+    "look_back_weeks": 3,
+    "status": "checked"
+  },
   "heads_up": {
     "checks": [
       {

@@ -49,7 +49,8 @@ PASSED, FAILED = [], []
 
 # Fields that change with the calendar rather than with the code.
 VOLATILE = {"date", "resolved_at", "fetched_at", "from", "to", "dates",
-            "date_range", "window", "windows", "series", "last_session_date"}
+            "date_range", "window", "windows", "series", "last_session_date",
+            "race_date", "days_to_race"}
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -704,6 +705,70 @@ def unit_tests():
     check("block review: no fields, nothing due", _br.review_due("#SESSION\nActive Phase: 4\n#END") is None)
     check("prompt: #SESSION carries the falsifier and Phase 5 reviews it first",
           "Would Show Wrong:     <" in _pr and "Review On:            <" in _pr and "**Review first.**" in _pr)
+    # Core sessions per discipline (v7.23): CHK-CORE warns, never blocks
+    import core_sessions as _cs
+    _ccfg = _cs.load_config()
+    check("core sessions: config lists mtb, road_bike and trail_run",
+          all(k in (_ccfg.get("disciplines") or {}) for k in ("mtb", "road_bike", "trail_run")))
+    _kb = _vb2._kb_entry_ids()
+    _bad_src = [x for items in _ccfg["disciplines"].values() for it in items
+                for x in (it.get("source") if isinstance(it.get("source"), list) else [])
+                if x not in _kb]
+    check("core sessions: every source ID exists in Knowledge/", _bad_src == [], _bad_src)
+    _item = {"match": [{"classes": ["threshold"], "architectures": ["sustained_effort"]}]}
+    check("core sessions: architecture AND class must both hold",
+          _cs.matches({"architecture": "sustained_effort", "class": "threshold", "sequence": ["sustained_effort"]}, _item)
+          and not _cs.matches({"architecture": "sprints", "class": "threshold", "sequence": ["sprints"]}, _item))
+    check("core sessions: a combo matches on any shape it uses",
+          _cs.matches({"architecture": "classic_intervals", "class": "vo2max",
+                       "sequence": ["classic_intervals", "sprints"]}, {"match": [{"architectures": ["sprints"]}]}))
+    _cg = [{"description": "Titan", "priority": "A+", "date": (_today + _td(days=30)).isoformat(), "discipline": "mtb"}]
+    _rv = _cs.check(_ccfg, _cg, [{"date": _today + _td(days=1), "architecture": "classic_intervals",
+                                  "class": "vo2max", "sequence": ["classic_intervals"]}],
+                    [{"date": (_today - _td(days=10)).isoformat(), "architecture": "surges_on_base",
+                      "class": "tempo", "sequence": ["surges_on_base"]},
+                     {"date": (_today - _td(days=40)).isoformat(), "architecture": "sustained_effort",
+                      "class": "threshold", "sequence": ["sustained_effort"]}], _today)
+    _found = {i["id"]: i["found_in"] for i in _rv["items"]}
+    check("core sessions: found in the block, in recent weeks, and missing outside the window",
+          _found == {"repeated_surges": "recent", "vo2max": "block", "sustained_climb": None}, _found)
+    _l, _w = _cs.validator_lines(_rv)
+    check("core sessions: one warning for the missing one", len(_w) == 1 and "Sustained climbing" in _w[0], _w)
+    check("core sessions: #STATE shows none for the missing one",
+          "| Sustained climbing | **none** |" in _cs.render_state(_rv), _cs.render_state(_rv))
+    _far = [dict(_cg[0], date=(_today + _td(days=120)).isoformat())]
+    check("core sessions: not checked more than 12 weeks out",
+          _cs.check(_ccfg, _far, [], [], _today)["status"] == "too_far")
+    check("core sessions: a B goal is not checked", _cs.check(_ccfg, [dict(_cg[0], priority="B")], [], [], _today)["status"] == "no_goal")
+    check("core sessions: discipline taken from the race demand when not declared",
+          _cs.check(_ccfg, [{"priority": "A", "date": _cg[0]["date"], "demand": [{"discipline": "trail_run"}]}],
+                    [], [], _today)["discipline"] == "trail_run")
+    check("core sessions: trainer has no core list",
+          _cs.check(_ccfg, [dict(_cg[0], discipline="trainer")], [], [], _today)["status"] == "no_list")
+    _cs_yaml = os.path.join(ROOT, "config", "athletes", "_test_core.yaml")
+    _cs_blk = os.path.join(__import__("tempfile").mkdtemp(prefix="infame_cs_"), "cs.md")
+    try:
+        with open(_cs_yaml, "w", encoding="utf-8") as f:
+            yaml.safe_dump({"id": "_test_core", "goals": _cg}, f, allow_unicode=True)
+        _d1 = (_today + _td(days=1)).strftime("%d-%m-%Y")
+        with open(_cs_blk, "w", encoding="utf-8") as f:
+            f.write(f"[Week] 01 | [Date] {_d1}\n[Athlete ID]: _test_core\n[Category]: Training\n"
+                    "[Methodology]: coggan\n[Discipline]: mtb\n[Focus]: VO2\n[Zone]: z\n"
+                    "[Duration] pending | [Estimated TSS] pending\n\n```text\nMain Set\n\n"
+                    "5x\n- 4m 110-120% [RPE 6-7]\n- 4m 50% [RPE 1-2]\n```\n")
+        _env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        _cp = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _cs_blk],
+                             capture_output=True, text=True, encoding="utf-8", env=_env)
+        _out = _cp.stdout
+        check("validator: core sessions section with CHK-CORE for what is missing",
+              "Core sessions (warns only, never blocks)" in _out and "ok  VO2max intervals: in this block" in _out
+              and _out.count("WARN [CHK-CORE]") == 2, _out[-900:])
+        check("validator: CHK-CORE never blocks", "FAIL [" not in _out and _cp.returncode == 0, _out[-900:])
+    finally:
+        for _p in (_cs_yaml, _cs_blk):
+            if os.path.exists(_p):
+                os.remove(_p)
+    check("prompt: CHK-CORE is explained", "CHK-CORE" in _pr and "core_sessions.yaml" in _pr)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")

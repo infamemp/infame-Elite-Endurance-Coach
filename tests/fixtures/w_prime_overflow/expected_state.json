@@ -1,5 +1,8 @@
 {
   "athlete_id": "_test_w_prime_overflow",
+  "core_sessions": {
+    "status": "no_goal"
+  },
   "heads_up": {
     "checks": [
       {

@@ -40,6 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import longitudinal  # noqa: E402
 import power_profile  # noqa: E402
 import architecture  # noqa: E402
+import core_sessions  # noqa: E402  — core sessions per discipline (v7.23)
 import heads_up  # noqa: E402
 import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
@@ -752,6 +753,8 @@ def build(aid, thresholds, quiet=False):
 
     recent_arch = architecture.summarize_recent(data.get("recent_sessions") or [],
                                                  thresholds)
+    core = core_sessions.check(core_sessions.load_config(), load_declared_goals(aid),
+                               [], recent_arch.get("rows"))
 
     payload = {
         "schema_version": 1,
@@ -770,6 +773,7 @@ def build(aid, thresholds, quiet=False):
         "power_profile": pp,
         **({"pd_diagnosis": pdx} if pdx else {}),
         "recent_architectures": recent_arch,
+        "core_sessions": core,
     }
 
     dest = os.path.join(DATA, str(aid))
@@ -784,6 +788,7 @@ def build(aid, thresholds, quiet=False):
     if pdx:
         md = md.rstrip() + "\n\n" + pd_diagnosis.render(pdx)
     md = md.rstrip() + "\n\n" + architecture.render(recent_arch)
+    md = md.rstrip() + "\n\n" + core_sessions.render_state(core)
     with open(os.path.join(dest, "state.md"), "w", encoding="utf-8") as f:
         f.write(md)
     with open(os.path.join(dest, "state.json"), "w", encoding="utf-8") as f:

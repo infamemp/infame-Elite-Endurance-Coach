@@ -1,5 +1,8 @@
 {
   "athlete_id": "_test_runner",
+  "core_sessions": {
+    "status": "no_goal"
+  },
   "heads_up": {
     "checks": [
       {

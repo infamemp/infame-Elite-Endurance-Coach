@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.7 (v7.21 — race demand beside the plan, information only)
+Version: 2.8 (v7.23 — core sessions per discipline, CHK-CORE warns only)
 """
 
 import argparse
@@ -65,6 +65,7 @@ if os.path.join(ROOT, "engine") not in sys.path:
 import load_targets  # noqa: E402  — weekly TSS targets (P1); tolerance shared with the tool
 import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared with build_state.py
 import race_demand  # noqa: E402  — the next race's demand beside the plan (v7.21), information only
+import core_sessions  # noqa: E402  — core sessions per discipline (v7.23), warns only
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -1178,6 +1179,48 @@ def fill_tss(path, text, computed_by_session, duration_by_session=None):
     return tss_written, dur_written
 
 
+# ══════════════════════════════════════════════════════════════════
+# CORE SESSIONS — CHK-CORE, a warning only, never blocks (v7.23)
+# engine/architecture.py names each session's shape; engine/core_sessions.py
+# looks for the next A goal's core sessions in this block and in the
+# sessions already prescribed (data/<id>/athlete_data.json recent_sessions).
+# ══════════════════════════════════════════════════════════════════
+
+def _architecture_module():
+    """engine/architecture.py imports this module by name; when this file runs
+    as a script it is __main__, so register it first instead of loading a
+    second copy."""
+    if "validate_block" not in sys.modules and __name__ == "__main__":
+        sys.modules["validate_block"] = sys.modules["__main__"]
+    import architecture  # noqa: E402 — engine/ is already on sys.path
+    return architecture
+
+
+def classify_for_core(code, sport, th):
+    """{architecture, class, sequence} of one session, or None."""
+    try:
+        r = _architecture_module().classify_session(
+            code, event_type={"cycling": "Ride", "running": "Run"}.get(sport), thresholds=th)
+    except Exception:
+        return None
+    if not r.get("ok"):
+        return None
+    return {"architecture": r["architecture"], "class": r["class"],
+            "sequence": r["sequence"]}
+
+
+def load_recent_classified(athlete_id, th):
+    """Sessions already prescribed, classified — [] when nothing is fetched."""
+    path = os.path.join(ROOT, "data", str(athlete_id), "athlete_data.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return _architecture_module().summarize_recent(
+            data.get("recent_sessions") or [], th).get("rows") or []
+    except Exception:
+        return []
+
+
 def main():
     ap = argparse.ArgumentParser(description="Infame v6 block verification gate")
     ap.add_argument("file")
@@ -1231,6 +1274,7 @@ def main():
     computed_duration_by_session = {}
     race_sessions = {}   # athlete id -> [{date, discipline, sport, hours, category}]
     race_profiles = {}   # athlete id -> declared profile
+    core_blocks = {}     # athlete id -> classified sessions of this file (CHK-CORE)
     # Monotony state, carried across sessions in file order (see CHK-MONO
     # below): the last non-exempt profile seen per (sport, class). Whether a
     # flat Recovery/Endurance session was the right call is a coaching
@@ -1474,6 +1518,11 @@ def main():
                 "date": parse_header_date(header.get("Date", "")),
                 "discipline": discipline, "sport": author.get("sport"),
                 "hours": race_hours, "category": header.get("Category", "Training")})
+            if header.get("Category", "Training") in ("Training", "Race") and steps:
+                core_row = classify_for_core(code, author.get("sport"), th)
+                if core_row:
+                    core_row["date"] = parse_header_date(header.get("Date", ""))
+                    core_blocks.setdefault(race_aid, []).append(core_row)
 
         for c, ln, msg in errors:
             print(f"   FAIL [{c}] L{ln}: {msg}")
@@ -1534,6 +1583,22 @@ def main():
         for line in race_demand.compare(goal, race_date, race_sessions[race_aid],
                                         disc_sport, today):
             print(f"   {line}")
+        print()
+
+    # ── Core sessions (v7.23) — CHK-CORE, warns only, never blocks ────────
+    core_cfg = core_sessions.load_config()
+    for core_aid in sorted(race_sessions):
+        result = core_sessions.check(
+            core_cfg, (race_profiles.get(core_aid) or {}).get("goals"),
+            core_blocks.get(core_aid, []), load_recent_classified(core_aid, th), today)
+        lines, core_warns = core_sessions.validator_lines(result)
+        if not lines:
+            continue
+        print("── Core sessions (warns only, never blocks)")
+        for line in lines:
+            print(f"   {line}")
+        for msg in core_warns:
+            print(f"   WARN [CHK-CORE] L-: {msg}")
         print()
 
     # ── Weekly TSS target (CHK-LOAD-TARGET) — warns only, never blocks ────
