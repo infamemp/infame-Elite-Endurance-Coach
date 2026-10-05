@@ -769,6 +769,68 @@ def unit_tests():
             if os.path.exists(_p):
                 os.remove(_p)
     check("prompt: CHK-CORE is explained", "CHK-CORE" in _pr and "core_sessions.yaml" in _pr)
+    # Injury restrictions (v7.24): HC-LIMIT blocks, CHK-LIMIT warns
+    import restrictions as _rs
+    _ro = ["recovery", "endurance", "tempo", "threshold", "vo2max"]
+    _r = [{"what": "Achilles", "source": "physio", "sport": "running", "from": _today.isoformat(),
+           "until": (_today + _td(days=30)).isoformat(), "max_minutes": 30, "max_class": "endurance",
+           "max_sessions_per_week": 2, "no_consecutive_days": True, "avoid_architectures": ["climb_simulation"]}]
+    _e, _w = _rs.check_session(_r, _today + _td(days=1), "running", "road_run", 40 * 60, [],
+                               [(3, "endurance"), (5, "threshold")], ["climb_simulation"], _ro)
+    check("restrictions: too long and too hard both block",
+          sum(1 for c, _l, m in _e if c == "HC-LIMIT") == 2 and any("40 min" in m for _c, _l, m in _e), _e)
+    check("restrictions: a shape to avoid only warns", [c for c, _l, _m in _w] == ["CHK-LIMIT"], _w)
+    _e, _w = _rs.check_session(_r, _today + _td(days=1), "cycling", "road_bike", 120 * 60, [],
+                               [(3, "vo2max")], [], _ro)
+    check("restrictions: another sport is not covered", _e == [] and _w == [], _e)
+    _e, _w = _rs.check_session(_r, _today + _td(days=40), "running", "road_run", 120 * 60, [], [], [], _ro)
+    check("restrictions: not checked after `until`", _e == [], _e)
+    _e, _w = _rs.check_session(_r, _today + _td(days=1), "running", "road_run", None, ["3km"], [], [], _ro)
+    check("restrictions: distance steps say the duration cannot be checked",
+          _e == [] and any("cannot check" in m for _c, _l, m in _w), _w)
+    _mon = _today + _td(days=7 - _today.weekday())
+    _fe = _rs.check_file(_r, [{"date": _mon + _td(days=i), "sport": "running", "discipline": "road_run"}
+                              for i in (0, 1, 3)])
+    check("restrictions: consecutive days and sessions per week both block",
+          any("consecutive" in m for _c, _l, m in _fe) and any("3 sessions" in m for _c, _l, m in _fe), _fe)
+    check("restrictions: an active one opens the Heads-up line",
+          "Active restriction — Achilles" in _rs.summary(_r[0]) and len(_rs.active_on({"limitations": {"restrictions": _r}})) == 1)
+    check("restrictions: profile warnings catch a bad class and an ended restriction",
+          len(_bp.profile_warnings({"limitations": {"restrictions": [
+              {"what": "x", "source": "y", "max_class": "hard", "until": "2020-01-01"}]}})) == 2)
+    _rs_yaml = os.path.join(ROOT, "config", "athletes", "_test_limit.yaml")
+    _rs_blk = os.path.join(__import__("tempfile").mkdtemp(prefix="infame_rs_"), "rs.md")
+    try:
+        with open(_rs_yaml, "w", encoding="utf-8") as f:
+            yaml.safe_dump({"id": "_test_limit", "limitations": {"restrictions": _r}}, f, allow_unicode=True)
+        with open(_rs_blk, "w", encoding="utf-8") as f:
+            for _i in (1, 2):
+                _di = (_today + _td(days=_i)).strftime("%d-%m-%Y")
+                f.write(f"[Week] 01 | [Date] {_di}\n[Athlete ID]: _test_limit\n[Category]: Training\n"
+                        "[Methodology]: daniels\n[Discipline]: road_run\n[Focus]: Fondo\n[Zone]: z\n"
+                        "[Duration] pending | [Estimated TSS] pending\n\n```text\nMain Set\n\n"
+                        "- 25m 70-75% Pace [RPE 2-3]\n```\n\n")
+        _env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        _cp = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _rs_blk],
+                             capture_output=True, text=True, encoding="utf-8", env=_env)
+        check("validator: two runs on consecutive days under a restriction are BLOCKED",
+              _cp.returncode == 1 and "FAIL [HC-LIMIT]" in _cp.stdout and "consecutive days" in _cp.stdout,
+              _cp.stdout[-900:])
+        with open(_rs_blk, "w", encoding="utf-8") as f:
+            _di = (_today + _td(days=1)).strftime("%d-%m-%Y")
+            f.write(f"[Week] 01 | [Date] {_di}\n[Athlete ID]: _test_limit\n[Category]: Training\n"
+                    "[Methodology]: daniels\n[Discipline]: road_run\n[Focus]: Fondo\n[Zone]: z\n"
+                    "[Duration] pending | [Estimated TSS] pending\n\n```text\nMain Set\n\n"
+                    "- 25m 70-75% Pace [RPE 2-3]\n```\n")
+        _cp = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _rs_blk],
+                             capture_output=True, text=True, encoding="utf-8", env=_env)
+        check("validator: one run inside every limit is not blocked by the restriction",
+              "HC-LIMIT" not in _cp.stdout and "Injury restrictions" in _cp.stdout, _cp.stdout[-900:])
+    finally:
+        for _p in (_rs_yaml, _rs_blk):
+            if os.path.exists(_p):
+                os.remove(_p)
+    check("prompt: injury restrictions are explained", "HC-LIMIT" in _pr and "limitations.restrictions" in _pr)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")

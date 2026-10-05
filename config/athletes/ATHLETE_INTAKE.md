@@ -63,6 +63,12 @@ for fun".
 **3.1 Are you currently injured, or recovering from an injury?**
 If yes: what, when it started, and what you can and cannot do right now.
 
+*For the coach:* when there is a current injury, turn what the athlete (or their physio or
+doctor) said into `limitations.restrictions`: longest session, highest intensity, sessions per
+week, no two days in a row, shapes to avoid (hills, sprints), with `from`, `until` and who said
+it. Record only limits that were stated; ask rather than guess. The validator then blocks any
+session that breaks them.
+
 **3.2 Any injury that comes back when you train harder?**
 The knee that complains, the achilles that flares, the back that goes out. Recurring
 problems shape the plan more than past ones do.

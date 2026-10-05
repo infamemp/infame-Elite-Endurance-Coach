@@ -450,6 +450,20 @@ def profile_warnings(declared):
                 W.append(f"`preferences.methodology.{disc}`: '{author}' is a "
                          f"{authors[author]} methodology on a "
                          f"{disciplines[disc].get('sport')} discipline")
+
+    # Injury restrictions (v7.24) — engine/restrictions.py
+    import restrictions
+    classes, archs = [], []
+    if yaml is not None:
+        tpath = os.path.join(ROOT, "config", "tss_classes.yaml")
+        if os.path.exists(tpath):
+            with open(tpath, encoding="utf-8") as f:
+                classes = list(((yaml.safe_load(f) or {}).get("classes") or {}).keys())
+    adir = os.path.join(ROOT, "config", "architectures")
+    if os.path.isdir(adir):
+        archs = [fn[:-5] for fn in os.listdir(adir)
+                 if fn.endswith(".yaml") and not fn.startswith("_")]
+    W.extend(restrictions.profile_warnings(declared, disciplines, classes, archs))
     return W
 
 

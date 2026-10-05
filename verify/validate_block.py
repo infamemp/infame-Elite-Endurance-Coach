@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.8 (v7.23 — core sessions per discipline, CHK-CORE warns only)
+Version: 2.9 (v7.24 — injury restrictions, HC-LIMIT blocks / CHK-LIMIT warns)
 """
 
 import argparse
@@ -66,6 +66,7 @@ import load_targets  # noqa: E402  — weekly TSS targets (P1); tolerance shared
 import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared with build_state.py
 import race_demand  # noqa: E402  — the next race's demand beside the plan (v7.21), information only
 import core_sessions  # noqa: E402  — core sessions per discipline (v7.23), warns only
+import restrictions  # noqa: E402  — injury restrictions (v7.24), HC-LIMIT / CHK-LIMIT
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -1275,6 +1276,8 @@ def main():
     race_sessions = {}   # athlete id -> [{date, discipline, sport, hours, category}]
     race_profiles = {}   # athlete id -> declared profile
     core_blocks = {}     # athlete id -> classified sessions of this file (CHK-CORE)
+    lim_sessions = {}    # athlete id -> [{date, sport, discipline}] under a restriction
+    lim_profiles = {}    # athlete id -> its declared restrictions
     # Monotony state, carried across sessions in file order (see CHK-MONO
     # below): the last non-exempt profile seen per (sport, class). Whether a
     # flat Recovery/Endurance session was the right call is a coaching
@@ -1388,6 +1391,30 @@ def main():
         e, w = check_header(header)
         errors += e
         warns += w
+
+        # Injury restrictions (v7.24): limitations.restrictions in the profile
+        lim_aid = header.get("Athlete ID") or args.athlete
+        lim_list = restrictions.declared(profile)
+        if lim_list and steps and category in ("Training", "Race"):
+            lim_date = parse_header_date(header.get("Date", ""))
+            lim_secs, lim_undet = compute_total_duration(steps)
+            lim_classes = []
+            for st in steps:
+                if st.get("freeride") or "pct" not in st:
+                    continue
+                st_cls, _src = classify(st["pct"][1], SUFFIX_TO_METRIC.get(st["suffix"], "power"),
+                                        author, th)
+                if st_cls:
+                    lim_classes.append((st["line"], st_cls))
+            lim_row = classify_for_core(code, author.get("sport"), th) or {}
+            e, w = restrictions.check_session(
+                lim_list, lim_date, author.get("sport"), discipline, lim_secs, lim_undet,
+                lim_classes, lim_row.get("sequence") or [], CLASS_ORDER)
+            errors += e
+            warns += w
+            lim_sessions.setdefault(lim_aid, []).append(
+                {"date": lim_date, "sport": author.get("sport"), "discipline": discipline})
+            lim_profiles.setdefault(lim_aid, lim_list)
 
         # Load tracking for the planned-week Foster monotony/strain check
         # (CHK-LOAD-MONOTONY, printed after every session is processed).
@@ -1569,6 +1596,18 @@ def main():
                   f"{mono_cfg['risk_threshold']} — a prompt for coaching "
                   f"judgement, not a block")
     if reported_any:
+        print()
+
+    # ── Injury restrictions across the file (v7.24) — HC-LIMIT blocks ────
+    for lim_aid in sorted(lim_sessions, key=str):
+        lim_errors = restrictions.check_file(lim_profiles[lim_aid], lim_sessions[lim_aid])
+        print("── Injury restrictions (sessions per week, consecutive days)")
+        for c, ln, msg in lim_errors:
+            print(f"   FAIL [{c}] L{ln}: {msg}")
+        if not lim_errors:
+            print("   clean")
+        else:
+            failed = True
         print()
 
     # ── Race demand (v7.21) — information only, never warns or blocks ────

@@ -42,6 +42,16 @@ limitations:
   current_injury: null         # what, since when, what they can and cannot do
   recurring_issues: []         # problems that return under load
   notes: null                  # medication, heat tolerance, range of motion, etc.
+  restrictions: []             # what the validator checks, only as the athlete, physio or
+                               # doctor stated it. One entry per restriction:
+                               # - {what: "Achilles tendinopathy", source: "physio, 01-10-2026",
+                               #    from: 2026-10-01, until: 2026-11-15, sport: running,
+                               #    disciplines: [], max_minutes: 30, max_class: endurance,
+                               #    max_sessions_per_week: 3, no_consecutive_days: true,
+                               #    avoid_architectures: [climb_simulation, sprints]}
+                               # Leave out any limit that was not stated. Duration, class,
+                               # sessions per week and consecutive days block the block
+                               # (HC-LIMIT); avoid_architectures only warns (CHK-LIMIT).
 
 # ── Availability ──────────────────────────────────────────────────
 # The most important section. A plan built on unavailable hours fails by design.

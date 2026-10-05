@@ -41,6 +41,7 @@ import longitudinal  # noqa: E402
 import power_profile  # noqa: E402
 import architecture  # noqa: E402
 import core_sessions  # noqa: E402  — core sessions per discipline (v7.23)
+import restrictions  # noqa: E402  — injury restrictions (v7.24)
 import heads_up  # noqa: E402
 import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
@@ -750,6 +751,9 @@ def build(aid, thresholds, quiet=False):
     if thresholds.get("heads_up"):
         heads = heads_up.analyze(data, aid, thresholds["heads_up"],
                                  heads_up.declared_profile_exists(CONFIG, aid))
+        # Injury restrictions in force today (v7.24): first thing the coach reads
+        for r in restrictions.active_on(declared):
+            heads["checks"].insert(0, {"kind": "restriction", "text": restrictions.summary(r)})
 
     recent_arch = architecture.summarize_recent(data.get("recent_sessions") or [],
                                                  thresholds)
