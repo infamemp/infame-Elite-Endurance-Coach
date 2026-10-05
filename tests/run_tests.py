@@ -545,8 +545,14 @@ def unit_tests():
     listed = set(_re.findall(r"`([a-z_]+)`", mm.group(1))) if mm else set()
     on_disk = {os.path.basename(f)[:-5] for f in
                glob.glob(os.path.join(ROOT, "config", "authors", "[!_]*.yaml"))}
-    check("prompt: the [Methodology] list names every author file", listed == on_disk,
-          f"missing from prompt: {sorted(on_disk - listed)}; not on disk: {sorted(listed - on_disk)}")
+    # A zones-only author (knowledge_file: none, e.g. friel_running) is a zone
+    # reference, never a methodology the coach writes (v7.30).
+    import yaml as _yaml_a
+    writable = {a for a in on_disk
+                if str(_yaml_a.safe_load(open(os.path.join(ROOT, "config", "authors", a + ".yaml"),
+                                          encoding="utf-8")).get("knowledge_file")).lower() != "none"}
+    check("prompt: the [Methodology] list names every author file", listed == writable,
+          f"missing from prompt: {sorted(writable - listed)}; not on disk: {sorted(listed - writable)}")
 
     # Behavioural rules the head coach had to correct by hand in real sessions.
     _pr = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
@@ -568,6 +574,13 @@ def unit_tests():
         ("prompt: profile notes never override the saved weekly pattern", "they never override a pattern saved in `#SESSION`"),
     ]:
         check(name, needle in _pr, needle)
+    # v7.30: one source for each rule — the prompt never restates what the engine owns
+    check("prompt: no TSB bands of its own (the engine's Resolved state governs)",
+          "TSB > 0" not in _pr and "−10 to 0" not in _pr and "`recovery_priority`" in _pr)
+    check("prompt: catalogs are not forbidden anywhere", "never catalogs" not in _pr)
+    _fixed = [l for l in _pr.splitlines() if l.startswith("- **`[Methodology]`** is one of:")][0]
+    check("prompt: friel_running is not in the list of methodologies to write", "friel_running" not in _fixed)
+    check("prompt: carries no version-history notes", " is new in v7" not in _pr)
 
     # ── v7.9/7.10: nutrition reaches Intervals.icu; Spanish text is controlled ──
     import yaml as _yl, re as _re2

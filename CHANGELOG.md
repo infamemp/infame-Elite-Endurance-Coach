@@ -4,6 +4,21 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.30 (2026-10-05)
+
+Batch 3 of the 2026-10-05 audit: the prompt no longer contradicts the engine or itself.
+Prompt and its tests only; no engine code, number or check changed.
+
+- **One source for the opening state.** Phase 2 no longer carries its own TSB bands
+  (they said TSB −12 is "fatigued, open with a recovery week" while the engine reads it
+  as `load_pressure` / `load_accepting`). The coach starts from `#STATE`'s Resolved state:
+  `load_accepting` → progressive loading, `recovery_priority` → a recovery week.
+- **Catalogs are allowed everywhere.** The Inputs table said "principles only, never
+  catalogs" while Session Design asks for `get_knowledge(catalog=true)`.
+- **`friel_running` is out of the `[Methodology]` list.** It stays a zone reference only,
+  as the declared-profile rules already said.
+- **No version-history notes** inside the prompt (the Supra-threshold line).
+
 ## v7.29 (2026-10-05)
 
 Batch 2 of the 2026-10-05 audit: the critical fixes. Each one has its own test.

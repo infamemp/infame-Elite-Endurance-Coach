@@ -1,35 +1,26 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.29
+# RESTORE POINT — Infame Elite Endurance Coach v7.30
 
 **Date frozen:** 2026-10-05
-**Previous:** v7.28 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.27 (unchanged in v7.28 and v7.29)
-**Tests:** `python tests/run_tests.py` → 754/754 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 172/172
+**Previous:** v7.29 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.30
+**Tests:** `python tests/run_tests.py` → 758/758 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 172/172
 
-## What changed in v7.29
+## What changed in v7.30
 
-Batch 2 of the 2026-10-05 audit: the critical fixes. Each one has its own test.
+Batch 3 of the 2026-10-05 audit: the prompt no longer contradicts the engine or itself.
+Prompt and its tests only; no engine code, number or check changed.
 
-- **HC-ATHLETE — no athlete, no PASS.** `verify/validate_block.py` 3.2 blocks a session
-  whose card has no `[Athlete ID]`, an id with no `config/athletes/<id>.yaml`, or an id
-  different from the athlete the run is for (`--athlete`). Before, a missing or mistyped
-  id loaded an empty profile in silence: injury restrictions (HC-LIMIT), metric overrides
-  and equipment were never checked and the block was reported upload-safe.
-  `--skip-athlete-check` exists for the test fixtures only; the MCP tools never pass it.
-- **`push_block` never uploads to the wrong athlete.** It refuses a file with a card for
-  another athlete (the dry run too), and its pre-upload validation now runs for the
-  athlete it uploads to.
-- **Importing the engine no longer ends the process.** `fetch_athlete_data.py` checks
-  `ICU_API_KEY` when it connects (`make_session`), not at import. The MCP tests run
-  with no key set.
-- **Stable `external_id`.** The week is always two digits (`[Week] 3` and `[Week] 03`
-  both give `w03`), so a corrected re-push updates the same events.
-- **The week just saved stays the latest.** The validator keeps a block file's
-  modification time when it fills TSS or auto-corrects it, so `validate_block` and
-  `push_block` without `file_path` never pick an older week that was re-validated.
-- The test athlete `TESTRAMP` now declares a smart trainer and the `trainer`
-  discipline, so the MCP tests can validate a cycling block for a real profile.
-- **Deploy:** restart Claude Desktop (the MCP server and validator changed). Nothing to
-  change in the Project.
+- **One source for the opening state.** Phase 2 no longer carries its own TSB bands
+  (they said TSB −12 is "fatigued, open with a recovery week" while the engine reads it
+  as `load_pressure` / `load_accepting`). The coach starts from `#STATE`'s Resolved state:
+  `load_accepting` → progressive loading, `recovery_priority` → a recovery week.
+- **Catalogs are allowed everywhere.** The Inputs table said "principles only, never
+  catalogs" while Session Design asks for `get_knowledge(catalog=true)`.
+- **`friel_running` is out of the `[Methodology]` list.** It stays a zone reference only,
+  as the declared-profile rules already said.
+- **No version-history notes** inside the prompt (the Supra-threshold line).
+- **Deploy:** paste the whole prompt into the Project instructions. No file changes in the
+  Project knowledge; no restart needed.
 
 ## How the system is used
 
@@ -44,7 +35,7 @@ Batch 2 of the 2026-10-05 audit: the critical fixes. Each one has its own test.
 
 ## What the Project must contain
 
-- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.27).
+- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.30).
 - **Knowledge files (flat, no folders):** `generated/Simple_Table_Cycling_Training_Zones.md`,
   `generated/Simple_Table_Running_Training_Zones.md`, `generated/Session_Architectures.md`,
   `generated/Language_Guide_es-MX.md`, `generated/Cycling_Doctrine.md`,
