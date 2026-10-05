@@ -19,6 +19,13 @@ anything. Every number is read from data/<id>/athlete_data.json:
                                                    `compliance`, `rpe`, `feel`)
 
 Fields Intervals.icu did not record stay None. A missing RPE is never a zero.
+
+Adherence (v7.27): each paired session is also labelled `as_planned` or
+`done_differently`, with the reasons — shorter or longer, lighter or heavier
+than planned, low Intervals.icu compliance, or another sport. The limits are
+`heads_up.adherence` in config/decision_thresholds.yaml. A label describes
+what happened, never judges the athlete; the next week is designed from what
+was done. Idea taken from Prova Endurance (fulfilment per session).
 """
 
 from __future__ import annotations
@@ -31,6 +38,61 @@ SESSION_CATEGORIES = ("WORKOUT", "RACE_A", "RACE_B", "RACE_C")
 
 # The fetcher looks 56 days back (fetch_athlete_data.RECENT_SESSIONS_DAYS).
 MAX_WINDOW_DAYS = 56
+
+ADHERENCE_DEFAULTS = {"min_pct": 80, "max_pct": 120, "min_compliance": 70}
+_CYCLING = {"ride", "virtualride", "gravelride", "mtb", "mountainbikeride", "ebikeride"}
+_RUNNING = {"run", "virtualrun", "trailrun"}
+
+
+def _sport(t):
+    t = (t or "").strip().lower()
+    return "cycling" if t in _CYCLING else "running" if t in _RUNNING else None
+
+
+def adherence_config():
+    """heads_up.adherence from decision_thresholds.yaml, with defaults."""
+    cfg = dict(ADHERENCE_DEFAULTS)
+    try:
+        import os
+        import yaml
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "config", "decision_thresholds.yaml")
+        with open(path, encoding="utf-8") as f:
+            cfg.update(((yaml.safe_load(f) or {}).get("heads_up") or {}).get("adherence") or {})
+    except Exception:  # noqa: BLE001 — defaults are enough
+        pass
+    return cfg
+
+
+def adherence(row, planned_type, done_types, cfg):
+    """(label, differences) for one paired session."""
+    diffs, compared = [], False
+    lo, hi = cfg["min_pct"], cfg["max_pct"]
+    for key_p, key_a, low_word, high_word, what in (
+            ("planned_min", "actual_min", "shorter", "longer", "time"),
+            ("planned_load", "actual_load", "lighter", "heavier", "load")):
+        p, a = row.get(key_p), row.get(key_a)
+        if p and a is not None:
+            compared = True
+            pct = a / p * 100
+            if pct < lo:
+                diffs.append(f"{low_word} ({pct:.0f}% of planned {what})")
+            elif pct > hi:
+                diffs.append(f"{high_word} ({pct:.0f}% of planned {what})")
+    comp = row.get("compliance")
+    if comp is not None:
+        compared = True
+        if comp < cfg["min_compliance"]:
+            diffs.append(f"compliance {comp:.0f}%")
+    ps = _sport(planned_type)
+    ds = {_sport(t) for t in done_types if _sport(t)}
+    if ps and ds:
+        compared = True
+        if ps not in ds:
+            diffs.append(f"done as {'/'.join(sorted(ds))}, planned as {ps}")
+    if not compared:
+        return "done_unchecked", []
+    return ("done_differently" if diffs else "as_planned"), diffs
 
 
 def _d(s):
@@ -55,13 +117,14 @@ def _week_start(d):
     return d - timedelta(days=d.weekday())
 
 
-def analyze(data, days=28, as_of=None):
+def analyze(data, days=28, as_of=None, adherence_cfg=None):
     """Planned versus done over the last `days` days (ending today).
 
     Returns {"available": False, "reason": ..., "needs_refresh": bool} when
     the cached data cannot answer, so a caller can tell "nothing to report"
     from "cannot tell"."""
     as_of = as_of or date.today()
+    acfg = {**ADHERENCE_DEFAULTS, **(adherence_cfg or adherence_config())}
     capped = days > MAX_WINDOW_DAYS
     days = min(max(int(days), 1), MAX_WINDOW_DAYS)
     start = as_of - timedelta(days=days - 1)
@@ -122,6 +185,11 @@ def analyze(data, days=28, as_of=None):
             "rpe": _mean([_num(a.get("rpe")) for a in paired]),
             "feel": _mean([_num(a.get("feel")) for a in paired]),
         }
+        if status == "paired":
+            row["adherence"], row["differences"] = adherence(
+                row, e.get("type"), [a.get("type") for a in paired], acfg)
+        else:
+            row["adherence"], row["differences"] = None, []
         if status == "unpaired" and unpaired_by_day.get(e["date"]):
             row["note"] = ("an activity on the same day is not paired to any "
                            "planned event — it may be this session")
@@ -169,6 +237,9 @@ def analyze(data, days=28, as_of=None):
             "unpaired": sum(1 for r in rows if r["status"] == "unpaired"),
             "pending_today": sum(1 for r in rows if r["status"] == "pending"),
             "paired_pct_of_due": round(100 * len(paired_rows) / n_due) if n_due else None,
+            "as_planned": sum(1 for r in paired_rows if r["adherence"] == "as_planned"),
+            "done_differently": sum(1 for r in paired_rows
+                                    if r["adherence"] == "done_differently"),
             "planned_load_of_paired": round(planned_load_both, 1) if both else None,
             "actual_load_of_paired": (round(sum(r["actual_load"] for r in both), 1)
                                       if both else None),
@@ -212,6 +283,8 @@ def render(result):
                  + (f" · pending today: {t['pending_today']}" if t["pending_today"] else "")
                  + (f" · {t['paired_pct_of_due']}% of due sessions paired"
                     if t["paired_pct_of_due"] is not None else ""))
+        L.append(f"- Of the paired: as planned {t['as_planned']} · done differently "
+                 f"{t['done_differently']}")
         L.append(f"- Load, paired sessions: {_v(t['actual_load_of_paired'])} done of "
                  f"{_v(t['planned_load_of_paired'])} planned"
                  + (f" ({t['load_pct_of_planned']}%)" if t["load_pct_of_planned"] is not None else ""))
@@ -222,7 +295,12 @@ def render(result):
         L.append("| Date | Session | Status | Load plan→done | Min plan→done | Compl. | RPE | Feel | Activity id |")
         L.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
         for r in result["sessions"]:
-            L.append(f"| {r['date']} | {r['name'] or '—'} | {r['status']} | "
+            status = r["status"]
+            if r.get("adherence") == "done_differently":
+                status = "done differently: " + "; ".join(r["differences"])
+            elif r.get("adherence") == "as_planned":
+                status = "as planned"
+            L.append(f"| {r['date']} | {r['name'] or '—'} | {status} | "
                      f"{_v(r['planned_load'])}→{_v(r['actual_load'])} | "
                      f"{_v(r['planned_min'])}→{_v(r['actual_min'])} | "
                      f"{_v(r['compliance'], '%')} | {_v(r['rpe'])} | {_v(r['feel'])} | "

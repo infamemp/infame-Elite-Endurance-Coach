@@ -721,6 +721,12 @@ heads_up:
   # A planned session in this many recent days with no activity paired to it
   # in Intervals.icu becomes a Check item. Wording is "unpaired", never
   # "missed": skipped and done-but-not-paired look the same from here.
+  adherence: {min_pct: 80, max_pct: 120, min_compliance: 70}
+  # A paired session is "done differently" when its time or load falls
+  # outside min_pct-max_pct of the plan, Intervals.icu compliance is below
+  # min_compliance, or it was another sport (engine/execution.py, v7.27).
+  # Those sessions become a Check item: the next week is designed from what
+  # was done. Coach judgement, not a sourced rule.
   eftp_divergence_pct: 5
   # |eFTP - FTP| / FTP above this becomes a Check item: the FTP set in
   # Intervals.icu may be out of date. Same signal the prompt's "threshold

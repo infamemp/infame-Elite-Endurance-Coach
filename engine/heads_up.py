@@ -129,6 +129,17 @@ def analyze(data, aid, cfg, declared_profile_exists, as_of=None):
                         f"Intervals.icu: {shown}{more}. Skipped, or done without "
                         f"pairing — ask before assuming.",
             })
+        diff = [r for r in ex["sessions"] if r.get("adherence") == "done_differently"]
+        if diff:
+            shown = "; ".join(f"{r['date']} {r['name'] or 'session'} ({', '.join(r['differences'])})"
+                              for r in diff[:3])
+            more = f" (+{len(diff) - 3} more)" if len(diff) > 3 else ""
+            checks.append({
+                "kind": "done_differently",
+                "text": f"{len(diff)} session(s) in the last {ex['window']['days']} days "
+                        f"were done differently from the plan: {shown}{more}. Design the "
+                        f"next week from what was done.",
+            })
 
     # Sports trained in the lookback window, by activity type.
     recent = [a for a in acts if start <= _d(a["date"]) <= as_of]

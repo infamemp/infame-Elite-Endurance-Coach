@@ -1485,6 +1485,35 @@ def unit_tests():
     check("execution: render never raises and names unpaired",
           "unpaired" in ex.render(exr) and "not available" in ex.render(old_cache))
 
+    # Adherence (v7.27): as planned / done differently, with the reasons
+    _ad = ex.analyze({"recent_sessions": [ev(1, 5), ev(2, 4), dict(ev(3, 3), type="Ride"), ev(4, 2)],
+                      "activities": [act(5, paired=1, compliance=95),
+                                     act(4, paired=2, load=25, minutes=30),
+                                     act(3, paired=3, type="Run"),
+                                     act(2, paired=4, compliance=50)]}, days=28, as_of=today)
+    _by = {r["event_id"]: r for r in _ad["sessions"]}
+    check("adherence: inside the limits is as planned", _by[1]["adherence"] == "as_planned", _by[1])
+    check("adherence: half the time and load is done differently, shorter and lighter",
+          _by[2]["adherence"] == "done_differently"
+          and any("shorter" in d for d in _by[2]["differences"])
+          and any("lighter" in d for d in _by[2]["differences"]), _by[2])
+    check("adherence: another sport is done differently",
+          any("done as running, planned as cycling" in d for d in _by[3]["differences"]), _by[3])
+    check("adherence: low compliance is done differently",
+          any("compliance 50%" in d for d in _by[4]["differences"]), _by[4])
+    equal("adherence: totals count both labels",
+          (_ad["totals"]["as_planned"], _ad["totals"]["done_differently"]), (1, 3))
+    check("adherence: render shows the reasons", "done differently: shorter" in ex.render(_ad))
+    check("adherence: unpaired sessions carry no label",
+          all(r["adherence"] is None for r in exr["sessions"] if r["status"] != "paired"))
+    _hd = hu_data()
+    _hd["recent_sessions"] = [ev(2, 2)]
+    _hd["activities"] = _hd["activities"] + [act(2, paired=2, load=20, minutes=20)]
+    _hu = hu.analyze(_hd, "X", hu_cfg, True, today)
+    check("heads_up: a session done differently is a Check item",
+          "done_differently" in kinds(_hu), kinds(_hu))
+    check("prompt: done differently is explained", "done differently" in _pr.lower() and "get_execution" in _pr)
+
     hd = hu_data()
     hd["recent_sessions"] = [ev(1, 3), ev(2, 2)]
     hd["activities"] = hd["activities"] + [act(2, paired=2)]
