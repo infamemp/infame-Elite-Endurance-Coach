@@ -633,6 +633,60 @@ def unit_tests():
                 "Source": "DRF-C06-004", "Zone": "Umbral · Daniels T"}, "Warmup\n- 10m 70% Pace", "es", True)
     check("push: [Why] is uploaded first; [Source] and [Zone] never are",
           _d.startswith("Por qué: Para subir tu umbral.") and "DRF-C06-004" not in _d and "Daniels T" not in _d, _d)
+    # Race demand (v7.21): facts beside the plan, never a verdict
+    import race_demand as _rd
+    from datetime import date as _date, timedelta as _td
+    _today = _date.today()
+    _goals = [{"description": "Far B race", "priority": "B", "date": (_today + _td(days=20)).isoformat(),
+               "demand": [{"day": 1, "discipline": "road_run", "expected_hours": 1.0}]},
+              {"description": "Stage race", "priority": "A+", "date": (_today + _td(days=40)).isoformat(),
+               "demand_source": "official course",
+               "demand": [{"day": 1, "discipline": "mtb", "distance_km": 110, "climb_m": 1500,
+                           "expected_hours": 6.0, "terrain": "sand"},
+                          {"day": 2, "discipline": "mtb", "distance_km": 90, "climb_m": 1200,
+                           "expected_hours": 5.0}]},
+              {"description": "Past", "priority": "A", "date": (_today - _td(days=3)).isoformat(),
+               "demand": [{"day": 1, "discipline": "mtb", "expected_hours": 9.0}]}]
+    _g, _gd = _rd.next_demand_goal(_goals, _today)
+    check("race demand: an upcoming A-priority goal is preferred over a nearer B", _g["description"] == "Stage race", _g)
+    check("race demand: no goal with a demand gives nothing", _rd.next_demand_goal([{"date": "2099-01-01"}], _today) == (None, None))
+    _ds = {"mtb": "cycling", "trainer": "cycling", "road_run": "running"}
+    _sess = [{"date": _today + _td(days=1), "discipline": "mtb", "sport": "cycling", "hours": 3.0, "category": "Training"},
+             {"date": _today + _td(days=2), "discipline": "mtb", "sport": "cycling", "hours": 2.0, "category": "Training"},
+             {"date": _today + _td(days=3), "discipline": "trainer", "sport": "cycling", "hours": 1.0, "category": "Training"},
+             {"date": _today + _td(days=5), "discipline": "road_run", "sport": "running", "hours": 1.0, "category": "Training"}]
+    _lines = "\n".join(_rd.compare(_g, _gd, _sess, _ds, _today))
+    check("race demand: longest mtb session beside the longest race day",
+          "mtb: longest session in this file 3h00 · longest race day ~6h00 (50%)" in _lines, _lines)
+    check("race demand: consecutive cycling days beside race days",
+          "longest run of consecutive training days in this file 3 · race days 2" in _lines, _lines)
+    check("race demand: climbing is said to be not compared", "climbing: not compared" in _lines, _lines)
+    _w = _rd.demand_warnings({"demand": [{"discipline": "bike", "expected_hours": "six"}]}, "goals[1]", _ds)
+    check("race demand: bad discipline, non-number and missing source are flagged",
+          len(_w) == 3, _w)
+    import build_profile as _bp
+    check("race demand: profile warnings include demand problems",
+          any("demand_source" in w for w in _bp.profile_warnings({"goals": [{"demand": [{"discipline": "mtb"}]}]})))
+    _rd_yaml = os.path.join(ROOT, "config", "athletes", "_test_race_demand.yaml")
+    _rd_blk = os.path.join(_tf_dir := __import__("tempfile").mkdtemp(prefix="infame_rd_"), "rd.md")
+    try:
+        with open(_rd_yaml, "w", encoding="utf-8") as f:
+            yaml.safe_dump({"id": "_test_race_demand", "goals": _goals}, f, allow_unicode=True)
+        _d1 = (_today + _td(days=1)).strftime("%d-%m-%Y")
+        with open(_rd_blk, "w", encoding="utf-8") as f:
+            f.write(f"[Week] 01 | [Date] {_d1}\n[Athlete ID]: _test_race_demand\n[Category]: Training\n"
+                    "[Methodology]: coggan\n[Discipline]: mtb\n[Focus]: Fondo\n[Zone]: z\n"
+                    "[Duration] pending | [Estimated TSS] pending\n\n```text\nMain Set\n\n"
+                    "- 2h30m 60-70% [RPE 3-4]\n```\n")
+        _env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        _out = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _rd_blk],
+                              capture_output=True, text=True, encoding="utf-8", env=_env).stdout
+        check("validator: prints the race demand beside the block",
+              "Race demand (information, never blocks)" in _out and "longest session in this file 2h30" in _out, _out[-600:])
+    finally:
+        for _p in (_rd_yaml, _rd_blk):
+            if os.path.exists(_p):
+                os.remove(_p)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")

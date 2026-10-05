@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.6 (v7.20 — [Why] and [Source]: CHK-SRC advisories, KB IDs checked)
+Version: 2.7 (v7.21 — race demand beside the plan, information only)
 """
 
 import argparse
@@ -64,6 +64,7 @@ if os.path.join(ROOT, "engine") not in sys.path:
     sys.path.insert(0, os.path.join(ROOT, "engine"))
 import load_targets  # noqa: E402  — weekly TSS targets (P1); tolerance shared with the tool
 import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared with build_state.py
+import race_demand  # noqa: E402  — the next race's demand beside the plan (v7.21), information only
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -1228,6 +1229,8 @@ def main():
     failed = False
     computed_by_session = {}
     computed_duration_by_session = {}
+    race_sessions = {}   # athlete id -> [{date, discipline, sport, hours, category}]
+    race_profiles = {}   # athlete id -> declared profile
     # Monotony state, carried across sessions in file order (see CHK-MONO
     # below): the last non-exempt profile seen per (sport, class). Whether a
     # flat Recovery/Endurance session was the right call is a coaching
@@ -1459,6 +1462,19 @@ def main():
             if not undetermined:
                 computed_duration_by_session[n] = format_hhmmss(total_secs)
 
+        # Race demand bookkeeping (information only, printed after the loop)
+        race_aid = header.get("Athlete ID") or args.athlete
+        if race_aid:
+            race_profiles.setdefault(race_aid, profile)
+            race_hours = None
+            if steps:
+                r_secs, r_undetermined = compute_total_duration(steps)
+                race_hours = None if r_undetermined else r_secs / 3600
+            race_sessions.setdefault(race_aid, []).append({
+                "date": parse_header_date(header.get("Date", "")),
+                "discipline": discipline, "sport": author.get("sport"),
+                "hours": race_hours, "category": header.get("Category", "Training")})
+
         for c, ln, msg in errors:
             print(f"   FAIL [{c}] L{ln}: {msg}")
         for c, ln, msg in warns:
@@ -1504,6 +1520,20 @@ def main():
                   f"{mono_cfg['risk_threshold']} — a prompt for coaching "
                   f"judgement, not a block")
     if reported_any:
+        print()
+
+    # ── Race demand (v7.21) — information only, never warns or blocks ────
+    disc_sport = {k: (v or {}).get("sport")
+                  for k, v in ((th.get("disciplines") or {}).get("canonical") or {}).items()}
+    for race_aid in sorted(race_sessions):
+        goal, race_date = race_demand.next_demand_goal(
+            (race_profiles.get(race_aid) or {}).get("goals"), today)
+        if not goal:
+            continue
+        print("── Race demand (information, never blocks)")
+        for line in race_demand.compare(goal, race_date, race_sessions[race_aid],
+                                        disc_sport, today):
+            print(f"   {line}")
         print()
 
     # ── Weekly TSS target (CHK-LOAD-TARGET) — warns only, never blocks ────

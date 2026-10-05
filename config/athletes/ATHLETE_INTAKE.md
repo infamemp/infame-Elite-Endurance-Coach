@@ -39,6 +39,12 @@ An event, a trip, a deadline of any kind. If there is no date, say so — traini
 without a target date is perfectly valid. If the event lasts several days (a
 stage race, a multi-day ultra), say how many stages or days.
 
+**2.2b What does the event ask of you?** (skip it if you don't know yet)
+For each day of the event: the distance, how much climbing, how long you expect
+to take, and the terrain (road, sand, rocky trail, technical singletrack). A
+link to the official route or a GPX file is enough — the coach can read the
+figures from it.
+
 **2.3 If you have more than one goal, which matters most?**
 Goals compete for the same training time. Knowing the priority lets the coach
 protect the one that matters. Rank them — the coach records each one on a
@@ -205,6 +211,11 @@ Transfer rules that are easy to get wrong:
 - **Priority** is one of A+, A, A-, B, C, D. In Intervals.icu enter the race as
   A (for A+, A, A-), B, or C (for C, D).
 - **Multi-day events**: event_type `stage_race`, plus `discipline` and `stages`.
+- **Race demand** (`goals[].demand`): one entry per race day — `day`, `discipline`,
+  `distance_km`, `climb_m`, `expected_hours` (the athlete's realistic time),
+  `terrain` — and `demand_source` saying where the figures came from. Unknown
+  figures stay `null`; never estimate them to fill the field. Record it for every
+  A-level goal and every stage race; leave `demand: []` when nothing is known yet.
 - **Daily maximum** (availability.max_minutes): a number in minutes; `null` for
   a rest day the athlete declared; `ask` when the answer was "varies" or not
   given. Never write null for "don't know" — null means rest.

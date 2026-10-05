@@ -28,6 +28,12 @@ goals:
                                # stage_race | null — drives the target TSB range
     discipline: null           # canonical discipline of the event, e.g. mtb, trail_run
     stages: null               # number of stages/days, only for stage_race
+    demand: []                 # what the event asks, one entry per race day (each stage too).
+                               # The validator shows the plan beside it; never a verdict.
+                               # - {day: 1, discipline: mtb, distance_km: 110, climb_m: 1500,
+                               #    expected_hours: 6.0, terrain: "sand and rocky tracks"}
+                               # expected_hours = the athlete's realistic time that day.
+    demand_source: null        # where the figures come from: official course, GPX, past results
 
 # ── Injuries and limitations ──────────────────────────────────────
 # Medical screening happens before an athlete is accepted and is not repeated here.

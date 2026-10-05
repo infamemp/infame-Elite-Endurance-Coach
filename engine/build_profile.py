@@ -429,6 +429,8 @@ def profile_warnings(declared):
                      f"{', '.join(event_types)}")
         if g.get("discipline") is not None:
             disc_ok(g["discipline"], f"goals[{i}].discipline")
+        import race_demand
+        W.extend(race_demand.demand_warnings(g, f"goals[{i}]", disciplines))
 
     for d in ((declared.get("context") or {}).get("disciplines") or []):
         disc_ok(d, "context.disciplines")
