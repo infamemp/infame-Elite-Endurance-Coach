@@ -54,9 +54,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "engine"))
 sys.path.insert(0, os.path.join(ROOT, "verify"))
 
-# fetch_athlete_data checks ICU_API_KEY at import time, which "check" does not
-# need. Import both modules lazily, inside the command that actually uses them,
-# so `coach.py check` works with no key set.
+# The engine modules are imported lazily, inside the command that uses them.
+# ICU_API_KEY is only needed to connect (fetch_athlete_data.make_session), so
+# `coach.py check` works with no key set.
 
 
 def safe_filename(name):

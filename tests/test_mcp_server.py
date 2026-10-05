@@ -35,6 +35,21 @@ import subprocess
 import sys
 import tempfile
 from datetime import date
+import contextlib
+
+
+@contextlib.contextmanager
+def _placeholder_key():
+    """A stand-in ICU_API_KEY for the mocked live-send tests: making a session
+    needs a key (v7.29 checks it there instead of at import), and the POST
+    itself is mocked, so nothing ever reaches Intervals.icu."""
+    had = "ICU_API_KEY" in os.environ
+    os.environ.setdefault("ICU_API_KEY", "test-placeholder-not-a-real-key")
+    try:
+        yield
+    finally:
+        if not had:
+            os.environ.pop("ICU_API_KEY", None)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -587,16 +602,20 @@ def test_tools_validate():
         shutil.copy2(good, good_copy)
         shutil.copy2(bad, bad_copy)
 
-        r = validate_block(file_path=good_copy)
+        r = validate_block(file_path=good_copy, athlete_id=AID)
         equal("tools_validate: a known-good block passes", r.get("passed"), True)
         equal("tools_validate: a known-good block exits 0", r.get("exit_code"), 0)
+
+        r = validate_block(file_path=good_copy)
+        check("tools_validate: a block with no [Athlete ID] and no athlete_id is blocked (HC-ATHLETE)",
+              r.get("passed") is False and "HC-ATHLETE" in (r.get("report") or ""))
 
         r = validate_block(file_path=bad_copy)
         equal("tools_validate: a known-bad block is blocked", r.get("passed"), False)
         check("tools_validate: the report names at least one real failure code",
               "FAIL [" in (r.get("report") or ""))
 
-        r = validate_block(file_path=good_copy, fill_tss=True)
+        r = validate_block(file_path=good_copy, fill_tss=True, athlete_id=AID)
         equal("tools_validate: --fill-tss still passes on the known-good block",
               r.get("passed"), True)
         with open(good_copy, encoding="utf-8") as f:
@@ -605,7 +624,11 @@ def test_tools_validate():
               "pending" not in filled.lower() or "Estimated TSS" not in filled)
 
         blk = os.path.join(tmp, "flat.md")
-        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "load_monotony_flat.md"), blk)
+        with open(os.path.join(ROOT, "tests", "blocks", "load_monotony_flat.md"),
+                  encoding="utf-8") as f:
+            _flat = f.read().replace("TEST-MONO-FLAT", AID)   # an athlete with a profile
+        with open(blk, "w", encoding="utf-8") as f:
+            f.write(_flat)
         r = validate_block(file_path=blk, week_targets={"2027-03-01": 1000})
         check("tools_validate: week_targets reaches the validator and only warns",
               "Weekly TSS target" in (r.get("report") or "")
@@ -677,7 +700,7 @@ def _test_windows_style_narrow_codec(validate_block, good_block_path):
         with tempfile.TemporaryDirectory() as tmp:
             copy = os.path.join(tmp, "fixed.md")
             shutil.copy2(good_block_path, copy)
-            r = validate_block(file_path=copy)
+            r = validate_block(file_path=copy, athlete_id=AID)
     finally:
         os.environ.clear()
         os.environ.update(original_env)
@@ -739,7 +762,7 @@ def test_relative_file_path_resolves_against_root():
                       "exercises the bug)",
                       os.path.realpath(os.getcwd()) != os.path.realpath(ROOT))
 
-                r = validate_block(file_path=relative)
+                r = validate_block(file_path=relative, athlete_id=AID)
                 equal("validate_block: a relative file_path resolves against "
                       "ROOT, not the process cwd", r.get("passed"), True)
 
@@ -792,6 +815,24 @@ def test_tools_push():
         equal("tools_push: second session of that date gets a -2 suffix",
               ids[1] if len(ids) > 1 else None, f"infame-{AID}-2026-08-24-w03-2")
 
+        # v7.29: a week written as "3" and as "03" is the same week, so a
+        # corrected re-push updates the same events (no duplicate).
+        three = os.path.join(tmp, "week3.md")
+        with open(three, "w", encoding="utf-8") as f:
+            f.write(one_session.replace("[Week] 03", "[Week] 3", 1) + "\n")
+        equal("tools_push: [Week] 3 and [Week] 03 give the same external_id",
+              (push_block(AID, file_path=three).get("events") or [{}])[0].get("external_id"),
+              f"infame-{AID}-2026-08-24-w03")
+
+        # v7.29: a card written for another athlete is never uploaded, not even
+        # as a dry run.
+        other = os.path.join(tmp, "other.md")
+        with open(other, "w", encoding="utf-8") as f:
+            f.write(one_session.replace("[Category]", "[Athlete ID]: i999999\n[Category]", 1) + "\n")
+        r_other = push_block(AID, file_path=other)
+        check("tools_push: a card for another athlete is refused (dry run included)",
+              r_other.get("ok") is False and "i999999" in (r_other.get("error") or ""), r_other)
+
         r = push_block(AID, file_path=copy, dry_run=False)
         equal("tools_push: dry_run=False alone (confirm still False) still never sends",
               r.get("sent"), False)
@@ -821,7 +862,8 @@ def test_tools_push():
         original_post = requests.Session.post
         requests.Session.post = _fake_post
         try:
-            r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
+            with _placeholder_key():
+                r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
         finally:
             requests.Session.post = original_post
 
@@ -877,25 +919,26 @@ def test_tools_push_refuses_blocked_block():
         original_post = requests.Session.post
         requests.Session.post = _fake_post
         try:
-            # push_block is @guarded, so the ToolError this raises internally
-            # is caught at the tool boundary and comes back as an error
-            # dict, not a raised exception — the same shape every other
-            # tool's expected failure takes.
-            r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
-            equal("push_block: refuses a known-BLOCKED block with both "
-                  "gates open and no override", r.get("ok"), False)
-            equal("push_block: the refusal is reported as a ToolError",
-                  r.get("error_type"), "ToolError")
-            check("push_block: the refusal names it as blocked",
-                  "BLOCKED" in (r.get("error") or ""), r.get("error", "")[:200])
-            equal("push_block: refusing a BLOCKED block makes no network call",
-                  len(calls), 0)
+            with _placeholder_key():
+                # push_block is @guarded, so the ToolError this raises internally
+                # is caught at the tool boundary and comes back as an error
+                # dict, not a raised exception — the same shape every other
+                # tool's expected failure takes.
+                r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
+                equal("push_block: refuses a known-BLOCKED block with both "
+                      "gates open and no override", r.get("ok"), False)
+                equal("push_block: the refusal is reported as a ToolError",
+                      r.get("error_type"), "ToolError")
+                check("push_block: the refusal names it as blocked",
+                      "BLOCKED" in (r.get("error") or ""), r.get("error", "")[:200])
+                equal("push_block: refusing a BLOCKED block makes no network call",
+                      len(calls), 0)
 
-            r = push_block(AID, file_path=copy, dry_run=False, confirm=True,
-                            override_validation=True)
-            equal("push_block: override_validation=True proceeds anyway "
-                  "(against the mock)", r.get("sent"), True)
-            equal("push_block: override still makes exactly one call", len(calls), 1)
+                r = push_block(AID, file_path=copy, dry_run=False, confirm=True,
+                                override_validation=True)
+                equal("push_block: override_validation=True proceeds anyway "
+                      "(against the mock)", r.get("sent"), True)
+                equal("push_block: override still makes exactly one call", len(calls), 1)
         finally:
             requests.Session.post = original_post
 
@@ -1038,7 +1081,7 @@ def test_mcp_first_workflow():
     with _t2.TemporaryDirectory() as _d:
         _p = os.path.join(_d, "n.md")
         with open(_p, "w", encoding="utf-8") as f:
-            f.write("[Week] 01 | [Date] 28-09-2026\n[Athlete ID]: x\n[Category]: Training\n[Methodology]: daniels\n"
+            f.write("[Week] 01 | [Date] 28-09-2026\n[Athlete ID]: TESTRAMP\n[Category]: Training\n[Methodology]: daniels\n"
                     "[Discipline]: road_run\n[Focus]: Base\n[Zone]: Tempo · Friel Zona 3\n[Duration] 00:10:00 | [Estimated TSS] 5\n"
                     "[Execution]: - Corre parejo en 6x\n[Nutrition]: Toma 500 ml de agua antes de salir.\n\n"
                     "```text\nMain Set\n\n- 10m 75-80% Pace [RPE 1-3]\n```\n")

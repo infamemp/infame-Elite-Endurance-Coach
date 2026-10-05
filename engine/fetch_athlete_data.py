@@ -52,10 +52,10 @@ except ImportError:
 BASE_URL = "https://intervals.icu/api/v1"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# The key is read when a session is made, not at import (v7.29): importing this
+# module used to exit the whole process when ICU_API_KEY was unset, which also
+# took down anything that only imported it (the MCP tests, a future interface).
 API_KEY = os.getenv("ICU_API_KEY")
-if not API_KEY:
-    sys.exit('Missing environment variable ICU_API_KEY '
-             '(run: setx ICU_API_KEY "your_key")')
 
 # Power curve anchors, in seconds.
 # 5s neuromuscular · 1m anaerobic · 5m VO2max · 20m threshold · 60m durability
@@ -91,8 +91,12 @@ _SUMMARY_CACHE = {}
 
 
 def make_session():
+    key = os.getenv("ICU_API_KEY") or API_KEY
+    if not key:
+        sys.exit('Missing environment variable ICU_API_KEY '
+                 '(run: setx ICU_API_KEY "your_key")')
     s = requests.Session()
-    token = base64.b64encode(f"API_KEY:{API_KEY}".encode()).decode()
+    token = base64.b64encode(f"API_KEY:{key}".encode()).decode()
     s.headers.update({
         "Authorization": f"Basic {token}",
         "Accept": "application/json",

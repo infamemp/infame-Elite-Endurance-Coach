@@ -16,9 +16,9 @@ availability:
   preferred_time: null
   sustainable: true
   disruptions: []
-context: {sports: [running], disciplines: [treadmill]}
+context: {sports: [running, cycling], disciplines: [treadmill, trainer]}
 history: {starting_from_zero: false}
-equipment: {devices: [], bike_power_meter: false, smart_trainer: false,
+equipment: {devices: [], bike_power_meter: false, smart_trainer: true,
             erg_control: false, run_power_meter: true, tracks_sleep: false,
             tracks_hrv: false, hr_monitor: null}
 metric_overrides: {road_bike: null, mtb: null, gravel: null, trainer: null,

@@ -86,6 +86,14 @@ def _iso_date(date_str: str) -> str | None:
             continue
     return None
 
+def _week_tag(week) -> str:
+    """The week as it goes into external_id: two digits for a number ("3" and
+    "03" both give "03", the template's own form), so re-pushing a corrected
+    week updates the same events instead of creating a second copy (v7.29)."""
+    raw = str(week or "").strip()
+    return f"{int(raw):02d}" if raw.isdigit() else raw
+
+
 _NOTE_LABELS = {
     "es": ("Por qué", "Ejecución", "Nutrición e hidratación"),
     "en": ("Why", "Execution", "Nutrition & hydration"),
@@ -200,6 +208,19 @@ def push_block(
     text, _fixes = vb.normalize_block(raw_text)
     sessions = vb.split_sessions(text)
 
+    # A card written for another athlete is never uploaded here (v7.29). The
+    # validator checks the same thing (HC-ATHLETE); this refusal also covers the
+    # dry run, which does not validate.
+    wanted = str(athlete_id).strip()
+    others = sorted({str(h.get("Athlete ID")).strip() for h, _ in sessions
+                     if h and str(h.get("Athlete ID") or "").strip()
+                     and str(h.get("Athlete ID")).strip() != wanted})
+    if others:
+        raise ToolError(
+            f"Refusing: this file has sessions for athlete(s) {', '.join(others)}, "
+            f"not '{wanted}'. Nothing was built or sent. Check the [Athlete ID] of each "
+            f"card, or the file path.")
+
     language = _athlete_language(athlete_id)
     events, skipped = [], []
     same_day: dict[str, int] = {}
@@ -244,7 +265,7 @@ def push_block(
         # upsert=true silently kept only the last one. The first session of
         # a date keeps the original id (so events already pushed still match
         # on re-push); later sessions on that date get -2, -3, ...
-        base_id = f"infame-{athlete_id}-{iso}-w{header.get('Week', '')}"
+        base_id = f"infame-{athlete_id}-{iso}-w{_week_tag(header.get('Week'))}"
         same_day[base_id] = same_day.get(base_id, 0) + 1
         external_id = base_id if same_day[base_id] == 1 else f"{base_id}-{same_day[base_id]}"
         events.append({
@@ -280,7 +301,7 @@ def push_block(
         }
 
     if not override_validation:
-        validation = _run_validation(file_path=file_path, quiet=True)
+        validation = _run_validation(athlete_id=athlete_id, file_path=file_path, quiet=True)
         if not validation.get("passed", False):
             raise ToolError(
                 "Refusing to push — validate_block reports this file is "

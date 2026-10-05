@@ -4,6 +4,30 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.29 (2026-10-05)
+
+Batch 2 of the 2026-10-05 audit: the critical fixes. Each one has its own test.
+
+- **HC-ATHLETE — no athlete, no PASS.** `verify/validate_block.py` 3.2 blocks a session
+  whose card has no `[Athlete ID]`, an id with no `config/athletes/<id>.yaml`, or an id
+  different from the athlete the run is for (`--athlete`). Before, a missing or mistyped
+  id loaded an empty profile in silence: injury restrictions (HC-LIMIT), metric overrides
+  and equipment were never checked and the block was reported upload-safe.
+  `--skip-athlete-check` exists for the test fixtures only; the MCP tools never pass it.
+- **`push_block` never uploads to the wrong athlete.** It refuses a file with a card for
+  another athlete (the dry run too), and its pre-upload validation now runs for the
+  athlete it uploads to.
+- **Importing the engine no longer ends the process.** `fetch_athlete_data.py` checks
+  `ICU_API_KEY` when it connects (`make_session`), not at import. The MCP tests run
+  with no key set.
+- **Stable `external_id`.** The week is always two digits (`[Week] 3` and `[Week] 03`
+  both give `w03`), so a corrected re-push updates the same events.
+- **The week just saved stays the latest.** The validator keeps a block file's
+  modification time when it fills TSS or auto-corrects it, so `validate_block` and
+  `push_block` without `file_path` never pick an older week that was re-validated.
+- The test athlete `TESTRAMP` now declares a smart trainer and the `trainer`
+  discipline, so the MCP tests can validate a cycling block for a real profile.
+
 ## v7.28 (2026-10-05)
 
 Maintenance only (batch 1 of the 2026-10-05 audit). No training rule, number or

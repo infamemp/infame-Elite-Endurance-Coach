@@ -304,14 +304,19 @@ def unit_tests():
         # Same guard as block_tests(): on Windows a captured child inherits the
         # locale encoding (cp1252) and crashes printing "—" or "─".
         env = dict(os.environ, PYTHONIOENCODING="utf-8")
-        subprocess.run([sys.executable, script, blk, "--fill-tss", "--quiet"],
+        os.utime(blk, (1_700_000_000, 1_700_000_000))
+        subprocess.run([sys.executable, script, blk, "--fill-tss", "--quiet", "--skip-athlete-check"],
                        capture_output=True, text=True, encoding="utf-8",
                        errors="replace", env=env)
         with open(blk, encoding="utf-8") as f:
             written = f.read()
+        # v7.29: filling TSS rewrites the file but keeps its modification time,
+        # so "the week just saved" (picked by mtime) stays the week just saved.
+        equal("hardening: --fill-tss keeps the block file's modification time",
+              int(os.path.getmtime(blk)), 1_700_000_000)
         check("hardening: TSS with uncosted steps is written as '(partial)'",
               "(partial)" in written)
-        again = subprocess.run([sys.executable, script, blk, "--quiet"],
+        again = subprocess.run([sys.executable, script, blk, "--quiet", "--skip-athlete-check"],
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace", env=env)
         equal("hardening: a '(partial)' TSS re-validates without divergence",
@@ -688,6 +693,55 @@ def unit_tests():
         for _p in (_rd_yaml, _rd_blk):
             if os.path.exists(_p):
                 os.remove(_p)
+    # HC-ATHLETE (v7.29): a card with no [Athlete ID], or a mistyped one, used to
+    # load an empty profile in silence -- the injury restriction below was then
+    # never checked and the block was reported upload-safe.
+    _ag_yaml = os.path.join(ROOT, "config", "athletes", "_test_athlete_gate.yaml")
+    _ag_dir = __import__("tempfile").mkdtemp(prefix="infame_ag_")
+    _ag_blk = os.path.join(_ag_dir, "ag.md")
+    _ag_env = dict(os.environ, PYTHONIOENCODING="utf-8")
+
+    def _ag_run(card_id, *extra):
+        _d = (_today + _td(days=1)).strftime("%d-%m-%Y")
+        _idl = f"[Athlete ID]: {card_id}\n" if card_id is not None else ""
+        with open(_ag_blk, "w", encoding="utf-8") as f:
+            f.write(f"[Week] 01 | [Date] {_d}\n{_idl}[Category]: Training\n"
+                    "[Methodology]: daniels\n[Discipline]: road_run\n[Focus]: Umbral\n"
+                    "[Why]: Prueba.\n[Zone]: Threshold · Daniels T\n[Source]: coach judgement\n"
+                    "[Duration] pending | [Estimated TSS] pending\n\n```text\nWarmup\n\n"
+                    "- 15m 75-80% Pace [RPE 2-3]\n\nMain Set 4x\n- 8m 98-102% Pace [RPE 4-5]\n"
+                    "- 2m 70-75% Pace [RPE 2-3]\n\nCooldown\n\n- 10m 70-75% Pace [RPE 2-3]\n```\n")
+        _p = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"),
+                             _ag_blk, "--quiet", *extra],
+                            capture_output=True, text=True, encoding="utf-8", env=_ag_env)
+        return _p.returncode, _p.stdout + _p.stderr
+    try:
+        with open(_ag_yaml, "w", encoding="utf-8") as f:
+            yaml.safe_dump({"id": "_test_athlete_gate", "limitations": {"restrictions": [{
+                "what": "Achilles", "source": "physio", "sport": "running",
+                "from": (_today - _td(days=1)).isoformat(),
+                "until": (_today + _td(days=60)).isoformat(),
+                "max_minutes": 30, "max_class": "endurance"}]}}, f, allow_unicode=True)
+        _c, _o = _ag_run("_test_athlete_gate")
+        check("athlete gate: the right id applies the injury restriction (HC-LIMIT)",
+              _c == 1 and "HC-LIMIT" in _o and "HC-ATHLETE" not in _o, _o[-500:])
+        _c, _o = _ag_run("_test_athlete_gatX")
+        check("athlete gate: a mistyped id is blocked, never passed (HC-ATHLETE)",
+              _c == 1 and "HC-ATHLETE" in _o and "no declared profile" in _o, _o[-500:])
+        _c, _o = _ag_run(None)
+        check("athlete gate: a card with no [Athlete ID] is blocked (HC-ATHLETE)",
+              _c == 1 and "HC-ATHLETE" in _o and "missing" in _o, _o[-500:])
+        _c, _o = _ag_run(None, "--athlete", "_test_athlete_gate")
+        check("athlete gate: --athlete fills a missing card id and the restriction applies",
+              _c == 1 and "HC-LIMIT" in _o and "HC-ATHLETE" not in _o, _o[-500:])
+        _c, _o = _ag_run("_test_athlete_gate", "--athlete", "someone_else", "--skip-athlete-check")
+        check("athlete gate: a card for another athlete fails even with --skip-athlete-check",
+              _c == 1 and "written for another athlete" in _o, _o[-500:])
+    finally:
+        for _p in (_ag_yaml, _ag_blk):
+            if os.path.exists(_p):
+                os.remove(_p)
+        os.rmdir(_ag_dir)
     # Block falsifier (v7.22): handed back once its review date has passed
     import block_review as _br
     _sess = ("#SESSION\nActive Phase: 4\nWould Show Wrong: decoupling on the long ride still above 6%\n"
@@ -2380,7 +2434,7 @@ def block_tests():
             # middle dots. Without this the child crashes on encoding rather
             # than on anything real.
             env = dict(os.environ, PYTHONIOENCODING="utf-8")
-            proc = subprocess.run([sys.executable, script, path, "--quiet"],
+            proc = subprocess.run([sys.executable, script, path, "--quiet", "--skip-athlete-check"],
                                   capture_output=True, text=True,
                                   encoding="utf-8", errors="replace", env=env)
             out = proc.stdout + proc.stderr
@@ -2413,7 +2467,7 @@ def week_target_tests():
     def run(fname, *targets):
         path = os.path.join(tmpdir, fname)
         shutil.copy2(os.path.join(BLOCKS, fname), path)
-        cmd = [sys.executable, script, path, "--quiet"]
+        cmd = [sys.executable, script, path, "--quiet", "--skip-athlete-check"]
         for t in targets:
             cmd += ["--week-target", t]
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",

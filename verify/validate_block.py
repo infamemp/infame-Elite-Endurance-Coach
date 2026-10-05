@@ -39,10 +39,10 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.1 (v7.26 — every run recorded in the athlete's ledger)
+Version: 3.2 (v7.29 — HC-ATHLETE: no athlete, no PASS)
 """
 
-VERSION = "3.1"   # keep equal to the "Version:" line above
+VERSION = "3.2"   # keep equal to the "Version:" line above
 
 
 import argparse
@@ -635,6 +635,44 @@ def resolve_discipline(raw, sport, th):
 # HARD CONSTRAINTS
 # ══════════════════════════════════════════════════════════════════
 
+_NO_ID = {"", "-", "—", "none", "n/a", "na", "pending"}
+
+
+def check_athlete(header, cli_athlete, skip_existence=False):
+    """HC-ATHLETE (v7.29). The injury restrictions (HC-LIMIT), the declared
+    metric overrides and the equipment checks all read the athlete's declared
+    profile. Before v7.29 a card with no [Athlete ID], or with a mistyped one,
+    loaded an empty profile in silence: every one of those checks was skipped
+    and the block was reported upload-safe. Now that is a hard failure:
+      - [Athlete ID] differs from the athlete this run is for (--athlete);
+      - no athlete id at all (neither the card nor --athlete);
+      - an id with no config/athletes/<id>.yaml.
+    skip_existence (--skip-athlete-check) waives only the last two, for test
+    fixtures checked for format alone; a mismatch is always a failure."""
+    errors = []
+    hdr = str((header or {}).get("Athlete ID") or "").strip()
+    hdr = "" if hdr.lower() in _NO_ID else hdr
+    cli = str(cli_athlete or "").strip()
+    if hdr and cli and hdr != cli:
+        errors.append(("HC-ATHLETE", "-", f"[Athlete ID] is '{hdr}' but this run is for "
+                       f"athlete '{cli}' — a session written for another athlete"))
+        return errors
+    if skip_existence:
+        return errors
+    aid = hdr or cli
+    if not aid:
+        errors.append(("HC-ATHLETE", "-", "[Athlete ID] missing — without it the athlete's "
+                       "injury restrictions, metric choices and equipment cannot be checked"))
+    elif not re.fullmatch(r"[A-Za-z0-9_-]+", aid):
+        errors.append(("HC-ATHLETE", "-", f"[Athlete ID] '{aid}' is not a valid athlete id"))
+    elif not os.path.exists(os.path.join(CONFIG, "athletes", f"{aid}.yaml")):
+        errors.append(("HC-ATHLETE", "-", f"no declared profile for '{aid}' "
+                       f"(config/athletes/{aid}.yaml) — check the id; without the profile the "
+                       "athlete's injury restrictions, metric choices and equipment cannot "
+                       "be checked"))
+    return errors
+
+
 def load_profile(athlete_id):
     """Athlete-declared profile. Absent is normal — most checks do not need it."""
     if not athlete_id:
@@ -1180,9 +1218,19 @@ def fill_tss(path, text, computed_by_session, duration_by_session=None):
 
         pieces.append(chunk)
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("".join(pieces))
+    _write_keeping_mtime(path, "".join(pieces))
     return tss_written, dur_written
+
+
+def _write_keeping_mtime(path, text):
+    """Rewrite a block file without changing its modification time (v7.29).
+    The MCP tools pick "the week just saved" by modification time when no
+    file_path is given; a validation that filled TSS into an older week used to
+    make that week look like the newest one."""
+    st = os.stat(path)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.utime(path, (st.st_atime, st.st_mtime))
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1295,6 +1343,10 @@ def main():
     ap.add_argument("--tolerance", type=float)
     ap.add_argument("--athlete", help="athlete id, to load config/athletes/<id>.yaml")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--skip-athlete-check", action="store_true",
+                    help="test fixtures only: do not require an [Athlete ID] with a declared "
+                         "profile (a mismatch with --athlete still fails). The MCP tools "
+                         "never pass it.")
     ap.add_argument("--week-target", action="append", default=[], metavar="DATE=TSS",
                     help="Monday of a week and its TSS target, e.g. 2026-10-05=330. "
                          "Repeatable. Warns only.")
@@ -1321,8 +1373,7 @@ def main():
     raw_text = open(args.file, encoding="utf-8").read()
     text, fixes = normalize_block(raw_text)
     if text != raw_text:
-        with open(args.file, "w", encoding="utf-8") as f:
-            f.write(text)
+        _write_keeping_mtime(args.file, text)
     sessions = split_sessions(text)
 
     th = load_thresholds_only()
@@ -1458,6 +1509,7 @@ def main():
         e, w = check_header(header)
         errors += e
         warns += w
+        errors += check_athlete(header, args.athlete, args.skip_athlete_check)
 
         # Injury restrictions (v7.24): limitations.restrictions in the profile
         lim_aid = header.get("Athlete ID") or args.athlete

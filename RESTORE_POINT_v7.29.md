@@ -1,35 +1,34 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.28
+# RESTORE POINT — Infame Elite Endurance Coach v7.29
 
 **Date frozen:** 2026-10-05
-**Previous:** v7.27 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.27 (unchanged in v7.28)
-**Tests:** `python tests/run_tests.py` → 748/748 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 169/169
+**Previous:** v7.28 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.27 (unchanged in v7.28 and v7.29)
+**Tests:** `python tests/run_tests.py` → 754/754 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 172/172
 
-## What changed in v7.28
+## What changed in v7.29
 
-Maintenance only (batch 1 of the 2026-10-05 audit). No training rule, number or
-check changed; the prompt and the Project files stay as they are.
+Batch 2 of the 2026-10-05 audit: the critical fixes. Each one has its own test.
 
-- **Removed** what git already keeps: the two duplicated prompt copies at the root,
-  `legacy/` (retired Excel pipeline), `archive/Knowledge_legacy/`, every
-  `Prompt/archive/` copy except the last two, and every archived restore point
-  except `archive/RESTORE_POINT_v6.5.md` (the MCP incident record the code cites).
-- **`CHANGELOG.md`** (new): every version, newest first, in one place. The README
-  points to it instead of carrying its own changelog.
-- **Real names out of the repo:** test blocks renamed (`road_taper_block.md`,
-  `road_taper_raw_unfixed.md`), an unused one deleted, a real athlete id and
-  folder name replaced by placeholders in the docs.
-- **MCP server:** the temporary diagnostics are gone (they logged every tool's full
-  arguments); the log records only the tool name and rotates at 5 MB (3 files kept).
-- **`get_athlete_state`** returns the `#STATE` markdown without the duplicated
-  `state.json` (about half the size); `include_json=true` still returns it.
-- **`get_knowledge`** search skips the "Contents of the library file" index entry,
-  which matched almost every query and filled most of the answer.
-- **`post_activity_comment`** is recorded in the ledger like the other changes.
-- **`python engine/build_state.py --athlete <id>`** runs on its own again.
-- Small text fixes: the validator prints its real version (3.1), `server.py` counts
-  19 tools, two config headers no longer say "not yet consumed".
-- **Deploy:** restart Claude Desktop (the MCP server code changed). Nothing to
+- **HC-ATHLETE — no athlete, no PASS.** `verify/validate_block.py` 3.2 blocks a session
+  whose card has no `[Athlete ID]`, an id with no `config/athletes/<id>.yaml`, or an id
+  different from the athlete the run is for (`--athlete`). Before, a missing or mistyped
+  id loaded an empty profile in silence: injury restrictions (HC-LIMIT), metric overrides
+  and equipment were never checked and the block was reported upload-safe.
+  `--skip-athlete-check` exists for the test fixtures only; the MCP tools never pass it.
+- **`push_block` never uploads to the wrong athlete.** It refuses a file with a card for
+  another athlete (the dry run too), and its pre-upload validation now runs for the
+  athlete it uploads to.
+- **Importing the engine no longer ends the process.** `fetch_athlete_data.py` checks
+  `ICU_API_KEY` when it connects (`make_session`), not at import. The MCP tests run
+  with no key set.
+- **Stable `external_id`.** The week is always two digits (`[Week] 3` and `[Week] 03`
+  both give `w03`), so a corrected re-push updates the same events.
+- **The week just saved stays the latest.** The validator keeps a block file's
+  modification time when it fills TSS or auto-corrects it, so `validate_block` and
+  `push_block` without `file_path` never pick an older week that was re-validated.
+- The test athlete `TESTRAMP` now declares a smart trainer and the `trainer`
+  discipline, so the MCP tests can validate a cycling block for a real profile.
+- **Deploy:** restart Claude Desktop (the MCP server and validator changed). Nothing to
   change in the Project.
 
 ## How the system is used
