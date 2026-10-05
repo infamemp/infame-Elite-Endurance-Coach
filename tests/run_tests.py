@@ -884,6 +884,41 @@ def unit_tests():
     check("plan checks: a taper the file only partly covers is not judged",
           not any(c == "CHK-TAPER" for c, _m in _w) and any("does not cover" in x for x in _l), _l)
     check("prompt: plan checks are explained", "CHK-SPACING" in _pr and "plan_checks" in _pr)
+    # Ledger (v7.26): one line per event, best effort, never committed
+    import ledger as _lg
+    _ldir = __import__("tempfile").mkdtemp(prefix="infame_lg_")
+    os.environ.pop("INFAME_NO_LEDGER", None)
+    try:
+        check("ledger: an event is appended", _lg.record("i1", "threshold_changed", ledger_dir=_ldir,
+                                                          field="ftp", old=250, new=260))
+        for _f, _r in (("a.md", "blocked"), ("a.md", "pass"), ("b.md", "pass")):
+            _lg.record("i1", "validation", ledger_dir=_ldir, file=_f, result=_r,
+                       fail_codes={"HC-RPE": 2} if _r == "blocked" else {}, warn_codes={"CHK-SRC": 1})
+        _v = _lg.validation_stats(_lg.read("i1", _ldir))
+        check("ledger: first-try pass rate per block file",
+              _v["files"] == 2 and _v["first_try_pass"] == 1 and _v["mean_runs_to_pass"] == 1.5
+              and _v["fail_codes"] == {"HC-RPE": 2}, _v)
+        _txt = _lg.render("i1", _lg.summary("i1", ledger_dir=_ldir))
+        check("ledger: render shows the stats and the change",
+              "passed on the first try 1/2 (50%)" in _txt and "threshold_changed" in _txt, _txt)
+        os.environ["INFAME_NO_LEDGER"] = "1"
+        check("ledger: INFAME_NO_LEDGER switches it off", not _lg.record("i1", "x", ledger_dir=_ldir))
+        os.environ.pop("INFAME_NO_LEDGER", None)
+        _lenv = dict(os.environ, PYTHONIOENCODING="utf-8", INFAME_LEDGER_DIR=_ldir)
+        _lblk = os.path.join(_ldir, "lg.md")
+        with open(_lblk, "w", encoding="utf-8") as f:
+            f.write("[Week] 01 | [Date] 28-09-2026\n[Athlete ID]: i2\n[Category]: Training\n"
+                    "[Methodology]: coggan\n[Discipline]: trainer\n[Focus]: x\n[Zone]: z\n"
+                    "[Duration] pending | [Estimated TSS] pending\n\n```text\nMain Set\n\n"
+                    "- 30m 60-65%\n```\n")
+        subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _lblk],
+                       capture_output=True, text=True, encoding="utf-8", env=_lenv)
+        _e = _lg.read("i2", _ldir)
+        check("ledger: a validator run is recorded with its result and codes",
+              len(_e) == 1 and _e[0]["result"] == "blocked" and _e[0]["fail_codes"].get("HC-RPE") == 1, _e)
+    finally:
+        os.environ["INFAME_NO_LEDGER"] = "1"
+    check("prompt: the ledger is explained", "ledger" in _pr and "coach.py ledger" in _pr)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")
@@ -2408,6 +2443,8 @@ def main():
                     help="accept current output as the new golden baseline")
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
+    # The ledger (v7.26) never records the test suite's own validations.
+    os.environ["INFAME_NO_LEDGER"] = "1"
 
     run_all = not (args.unit or args.golden or args.blocks)
 

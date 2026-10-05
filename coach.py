@@ -25,6 +25,9 @@ Usage:
                                              race_notes.md if present
 
     python coach.py check <file>            validate a workout block and fill its TSS
+    python coach.py ledger [<athlete_id>] [--days N]
+                                            what was changed and how blocks fared at the
+                                            gate (all athletes when no id is given)
                                              (shortcut for validate_block.py <file> --fill-tss)
 
 Output:
@@ -546,6 +549,28 @@ def cmd_check(args):
     sys.exit(result.returncode)
 
 
+def cmd_ledger(args):
+    """Print the ledger summary (engine/ledger.py) for one athlete or all.
+    With every athlete, a combined validation line comes first: the evidence
+    for whether schema-first sessions are worth building."""
+    import ledger
+    ids = [args.athlete] if args.athlete else ledger.athletes()
+    if not ids:
+        print("No ledger yet: nothing has been validated or changed since v7.26.")
+        return
+    if len(ids) > 1:
+        events = [e for aid in ids for e in ledger._since(ledger.read(aid), args.days)]
+        v = ledger.validation_stats(events)
+        print(f"All athletes, last {args.days} days: {v['runs']} validation run(s) on "
+              f"{v['files']} block file(s) · first-try pass {v['first_try_pass_pct']}% · "
+              f"most frequent failures: "
+              + (", ".join(f"{k} {n}" for k, n in v["fail_codes"].items()) or "none"))
+        print()
+    for aid in ids:
+        print(ledger.render(aid, ledger.summary(aid, days=args.days)))
+        print()
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Infame v6 — unified entry point for the daily workflow")
@@ -573,6 +598,11 @@ def main():
     r.add_argument("--since", required=True, help="YYYY-MM-DD — the block/period start date")
     r.set_defaults(func=cmd_review)
 
+    g = sub.add_parser("ledger", help="what was changed and how blocks fared at the gate")
+    g.add_argument("athlete", nargs="?", help="athlete id; every athlete when omitted")
+    g.add_argument("--days", type=int, default=30)
+    g.set_defaults(func=cmd_ledger)
+
     args = ap.parse_args()
     if args.cmd == "prep":
         cmd_prep(args)
@@ -582,6 +612,8 @@ def main():
         cmd_new(args)
     elif args.cmd == "review":
         cmd_review(args)
+    elif args.cmd == "ledger":
+        cmd_ledger(args)
 
 
 if __name__ == "__main__":

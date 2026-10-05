@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.0 (v7.25 — plan checks on the week as a whole, warns only)
+Version: 3.1 (v7.26 — every run recorded in the athlete's ledger)
 """
 
 import argparse
@@ -68,6 +68,7 @@ import race_demand  # noqa: E402  — the next race's demand beside the plan (v7
 import core_sessions  # noqa: E402  — core sessions per discipline (v7.23), warns only
 import restrictions  # noqa: E402  — injury restrictions (v7.24), HC-LIMIT / CHK-LIMIT
 import plan_checks  # noqa: E402  — the week as a whole (v7.25), warns only
+import ledger  # noqa: E402  — one line per validation in the athlete's ledger (v7.26)
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -1247,6 +1248,41 @@ def plan_session_row(steps, author, th, tssc, header, discipline):
             "load": load, "minutes": minutes, "easy_minutes": easy, "hard_minutes": hard}
 
 
+class _Tee:
+    """Keeps a copy of everything printed, so the ledger can count the codes
+    this run reported without touching every print site."""
+
+    def __init__(self, stream):
+        self.stream, self.parts = stream, []
+
+    def write(self, text):
+        self.parts.append(text)
+        return self.stream.write(text)
+
+    def flush(self):
+        return self.stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
+
+_CODE_RE = re.compile(r"\b(FAIL|WARN) \[([A-Z0-9-]+)\]")
+
+
+def record_validation(tee, path, result, athlete_ids, n_sessions):
+    """One ledger line per athlete in the file (never raises)."""
+    try:
+        fails, warns = {}, {}
+        for kind, code in _CODE_RE.findall("".join(tee.parts)):
+            box = fails if kind == "FAIL" else warns
+            box[code] = box.get(code, 0) + 1
+        for aid in sorted({a for a in athlete_ids if a}, key=str):
+            ledger.record(aid, "validation", file=os.path.basename(path), result=result,
+                          sessions=n_sessions, fail_codes=fails, warn_codes=warns)
+    except Exception:  # noqa: BLE001 — the ledger never changes a result
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(description="Infame v6 block verification gate")
     ap.add_argument("file")
@@ -1277,6 +1313,8 @@ def main():
 
     if not os.path.exists(args.file):
         sys.exit(f"File not found: {args.file}")
+    tee = _Tee(sys.stdout)
+    sys.stdout = tee
     raw_text = open(args.file, encoding="utf-8").read()
     text, fixes = normalize_block(raw_text)
     if text != raw_text:
@@ -1729,6 +1767,8 @@ def main():
         if args.fill_tss:
             print("TSS not written: the block must pass every hard constraint first.")
         print("RESULT: BLOCKED — hard-constraint violations. Do not upload.")
+        record_validation(tee, args.file, "blocked",
+                          list(race_sessions) + [args.athlete], len(sessions))
         sys.exit(1)
 
     if args.fill_tss and (computed_by_session or computed_duration_by_session):
@@ -1739,6 +1779,7 @@ def main():
               f"{os.path.basename(args.file)}")
 
     print("RESULT: PASS — verified against config. Upload-safe.")
+    record_validation(tee, args.file, "pass", list(race_sessions) + [args.athlete], len(sessions))
     sys.exit(0)
 
 

@@ -19,7 +19,7 @@ import os
 import re
 from datetime import date, datetime
 
-from .common import DATA, OUT, safe_out_dir, block_file_name
+from .common import DATA, OUT, ledger_record, safe_out_dir, block_file_name
 import json
 from .guard import ToolError, guarded
 
@@ -83,6 +83,7 @@ def save_training_age(athlete_id: str, years: float) -> dict:
     facts["training_age_stated_on"] = date.today().isoformat()
     with open(path, "w", encoding="utf-8") as f:
         json.dump(facts, f, indent=2, ensure_ascii=False)
+    ledger_record(athlete_id, "training_age_saved", years=value)
     return {"ok": True, "training_age_years": value,
             "path": os.path.relpath(path, os.path.dirname(DATA))}
 
@@ -114,6 +115,13 @@ def save_continuity(athlete_id: str, text: str, athlete_name: str | None = None)
     path = os.path.join(out_dir, "continuity.md")
     with open(path, "w", encoding="utf-8") as f:
         f.write(body.rstrip() + "\n")
+    phase = re.search(r"^\s*Active Phase\s*:\s*(.+?)\s*$", body, re.M)
+    falsifier = re.search(r"^\s*Would Show Wrong\s*:\s*(.+?)\s*$", body, re.M | re.I)
+    review = re.search(r"^\s*Review On\s*:\s*(.+?)\s*$", body, re.M | re.I)
+    ledger_record(athlete_id, "continuity_saved",
+                  active_phase=phase.group(1) if phase else None,
+                  would_show_wrong=falsifier.group(1) if falsifier else None,
+                  review_on=review.group(1) if review else None)
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
@@ -186,6 +194,7 @@ def save_race_result(
             existing = f.read()
     with open(path, "w", encoding="utf-8") as f:
         f.write(existing.rstrip("\n") + ("\n\n" if existing.strip() else "") + block)
+    ledger_record(athlete_id, "race_result_saved", date=date_str)
     return {"ok": True, "path": os.path.relpath(path, os.path.dirname(OUT))}
 
 
@@ -282,5 +291,12 @@ def save_declared_profile(athlete_id: str, yaml_text: str, dry_run: bool = True,
         shutil.copy2(path, os.path.join(hist, f"{aid}_{stamp}.yaml"))
     with open(path, "w", encoding="utf-8") as f:
         f.write(new)
+    try:
+        before = _yaml.safe_load(old) or {} if old else {}
+    except _yaml.YAMLError:
+        before = {}
+    ledger_record(aid, "profile_saved", new=not exists,
+                  sections_changed=sorted(k for k in set(before) | set(data)
+                                          if before.get(k) != data.get(k)))
     return {**report, "dry_run": False, "path": os.path.relpath(path, ROOT),
             "message": "Saved. Now call get_athlete_profile with force_refresh=true."}

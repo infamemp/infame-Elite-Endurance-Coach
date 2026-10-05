@@ -60,6 +60,18 @@ def _load_state_cache_minutes() -> float:
         return 60.0
 
 
+def ledger_record(aid, event: str, **fields) -> None:
+    """Append one event to the athlete's ledger (engine/ledger.py, v7.26).
+    Best effort: a failure here never fails the tool that called it."""
+    try:
+        ensure_import_paths()
+        import ledger
+
+        ledger.record(aid, event, **fields)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def athlete_data_path(aid: str) -> str:
     return os.path.join(DATA, str(aid), "athlete_data.json")
 

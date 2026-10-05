@@ -40,6 +40,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "engine"))
 sys.path.insert(0, os.path.join(ROOT, "verify"))
+# The ledger (v7.26) writes to a throwaway folder during the tests, never to
+# the real config/athletes/ledger/.
+os.environ.pop("INFAME_NO_LEDGER", None)
+LEDGER_TMP = tempfile.mkdtemp(prefix="infame_ledger_")
+os.environ["INFAME_LEDGER_DIR"] = LEDGER_TMP
 
 PASSED, FAILED = [], []
 
@@ -521,6 +526,10 @@ def test_tools_write():
         written = f.read()
     check("tools_write: save_continuity's content round-trips to disk verbatim",
           "Current Block: Base 2" in written)
+    import ledger
+    _ev = [e for e in ledger.read(AID) if e.get("event") == "continuity_saved"]
+    check("ledger: save_continuity records the active phase",
+          bool(_ev) and _ev[-1].get("active_phase") == "4", _ev[-1:] if _ev else None)
 
     r = save_race_result(AID, "not-a-date", "Finished 3rd", athlete_name="Test Fixture")
     equal("tools_write: save_race_result rejects a malformed date", r.get("ok"), False)

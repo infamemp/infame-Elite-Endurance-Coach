@@ -39,7 +39,7 @@ import os
 import re
 from datetime import date
 
-from .common import ROOT, ensure_import_paths, safe_out_dir, latest_block_path
+from .common import ROOT, ensure_import_paths, ledger_record, safe_out_dir, latest_block_path
 from .guard import ToolError, guarded
 from .tools_validate import _run_validation
 
@@ -304,6 +304,9 @@ def push_block(
     url = f"{fad.BASE_URL}/athlete/{athlete_id}/events/bulk"
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)
     resp.raise_for_status()
+    ledger_record(athlete_id, "block_uploaded", file=os.path.basename(str(file_path or "")) or None,
+                  sessions=len(events), override_validation=bool(override_validation),
+                  dates=sorted({str(e.get("start_date_local") or "")[:10] for e in events}))
     return {
         "ok": True,
         "dry_run": False,

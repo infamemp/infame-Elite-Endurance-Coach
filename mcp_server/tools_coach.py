@@ -24,7 +24,7 @@ import os
 import re
 from datetime import date, datetime, timedelta
 
-from .common import DATA, ensure_import_paths
+from .common import DATA, ensure_import_paths, ledger_record
 from .guard import ToolError, guarded
 
 MAX_COMMENT_CHARS = 2000
@@ -241,6 +241,8 @@ def update_threshold(
 
     # The cached athlete_data.json still has the old threshold: mark it stale
     # so the next get_athlete_state re-fetches by itself.
+    ledger_record(athlete_id, "threshold_changed", sport_type=sport, field=field,
+                  old=change["old_display"], new=change["new_display"], verified=confirmed)
     invalidated = False
     cache = os.path.join(DATA, str(athlete_id), "athlete_data.json")
     if os.path.exists(cache):
@@ -321,6 +323,8 @@ def remove_block(
                   "deleting the sessions")
     _, still = _mine()
     left = [e.get("id") for e in still if e.get("id") in {r["id"] for r in rows}]
+    ledger_record(athlete_id, "sessions_removed", count=len(rows),
+                  dates=sorted({r["date"] for r in rows}), verified=not left)
     return {"ok": True, "dry_run": False, "sent": True, "status_code": resp.status_code,
             **summary, "still_on_calendar": left, "verified": not left,
             "note": None if not left else

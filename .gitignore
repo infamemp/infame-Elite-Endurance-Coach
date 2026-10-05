@@ -23,6 +23,7 @@ out/
 config/athletes/*.yaml
 !config/athletes/_template.yaml
 !config/athletes/TESTRAMP.yaml
+config/athletes/ledger/
 
 __pycache__/
 

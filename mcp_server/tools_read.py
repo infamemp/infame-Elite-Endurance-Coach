@@ -35,6 +35,8 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
     ensure_import_paths()
     import block_review
     due = block_review.review_due(continuity) if continuity else None
+    import ledger
+    led = ledger.summary(athlete_id, days=30)
     state_md = read_text(
         os.path.join(DATA, str(athlete_id), "state.md"),
         f"state.md was not produced for '{athlete_id}' — check the server log.",
@@ -60,6 +62,9 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         "review_due": due["text"] if due else None,
         "race_notes": _optional_text(os.path.join(info["out_dir"], "race_notes.md")),
         "availability": _optional_text(os.path.join(info["out_dir"], "availability.md")),
+        # What was changed and what the validator said, last 30 days
+        # (engine/ledger.py, v7.26). None when nothing is recorded yet.
+        "ledger": ledger.render(athlete_id, led) if led["events"] else None,
     }
 
 
