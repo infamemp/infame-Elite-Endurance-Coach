@@ -774,3 +774,45 @@ mcp:
   # network fetch itself is skipped. force_refresh=true on either tool
   # bypasses this unconditionally.
   state_cache_minutes: 60
+
+# ══════════════════════════════════════════════════════════════════
+# PLAN CHECKS — the week as a whole (v7.25)
+# ══════════════════════════════════════════════════════════════════
+# verify/validate_block.py + engine/plan_checks.py. Every check WARNS, never
+# blocks: each is a prompt for the head coach's judgement, and a deliberate
+# choice (back-to-back days before a stage race, a big first week after a
+# break) is a valid answer. An athlete can override any value, or switch a
+# check off, with `plan_checks` in config/athletes/<id>.yaml plus a `reason`
+# (shown with every line that uses it).
+plan_checks:
+  # A hard day: at least this many minutes in steps at or above this class
+  # (each step's class from the author's table, at its midpoint).
+  hard_session: {at_or_above: threshold, min_minutes: 8}
+
+  # CHK-SPACING — two hard days in a row. Friel: density is how closely the
+  # high-dose workouts are spaced; too dense is the second most common cause
+  # of stalled fitness (CTB-C05-035, CTB-C09-032).
+  spacing: {min_easy_days_between_hard: 1}
+
+  # CHK-RAMP — one sport's planned weekly load against the mean of its last 4
+  # complete weeks of real load. 1.3 is the top of acwr_safe_range above.
+  ramp: {max_ratio: 1.3, baseline_weeks: 4, min_baseline_load: 50}
+
+  # CHK-RECOVERY — weeks of load in a row with no lighter week. Friel puts
+  # the rest-and-recovery week every third or fourth week (CTB-C08-026). A
+  # week counts as lighter when its load is at least `drop_pct` below the
+  # mean of the 3 weeks before it.
+  recovery: {max_loading_weeks: 3, drop_pct: 20}
+
+  # CHK-EASY — share of written time (all sports) in recovery and endurance,
+  # per week with at least `min_sessions` sessions in the file. "Far more
+  # easy rides than hard ones" (HPC-C02-010, HPC-C08-004); the 70% line is
+  # coach judgement.
+  easy_share: {min_pct: 70, min_sessions: 3}
+
+  # CHK-TAPER — inside `taper.a_race_taper_days` before the next A goal:
+  # volume cut against the `taper.a_race_pre_taper_days` before it must sit in
+  # taper.volume_reduction_pct, frequency stay at or above
+  # taper.min_frequency_pct_of_pretaper, and intensity stay (at least one
+  # hard day). Uses the taper section above (Bosquet 2007, TPOP-C09-022).
+  taper: {min_history_days: 14}

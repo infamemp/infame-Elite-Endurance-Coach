@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.9 (v7.24 — injury restrictions, HC-LIMIT blocks / CHK-LIMIT warns)
+Version: 3.0 (v7.25 — plan checks on the week as a whole, warns only)
 """
 
 import argparse
@@ -67,6 +67,7 @@ import load_metrics  # noqa: E402  — Foster monotony & strain (M2), shared wit
 import race_demand  # noqa: E402  — the next race's demand beside the plan (v7.21), information only
 import core_sessions  # noqa: E402  — core sessions per discipline (v7.23), warns only
 import restrictions  # noqa: E402  — injury restrictions (v7.24), HC-LIMIT / CHK-LIMIT
+import plan_checks  # noqa: E402  — the week as a whole (v7.25), warns only
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -1222,6 +1223,30 @@ def load_recent_classified(athlete_id, th):
         return []
 
 
+def load_activities(athlete_id):
+    """Real activities from data/<id>/athlete_data.json, [] when not fetched."""
+    path = os.path.join(ROOT, "data", str(athlete_id), "athlete_data.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("activities") or []
+    except (OSError, ValueError):
+        return []
+
+
+def plan_session_row(steps, author, th, tssc, header, discipline):
+    """One session as engine/plan_checks.py reads it."""
+    pc = th.get("plan_checks") or {}
+    top = (pc.get("hard_session") or {}).get("at_or_above", "threshold")
+    top_rank = CLASS_RANK.get(top, CLASS_RANK.get("threshold", 4))
+    load, detail, _skipped = compute_tss(steps, author, th, tssc)
+    minutes = sum(d[5] for d in detail)
+    easy = sum(d[5] for d in detail if d[3] in ("recovery", "endurance"))
+    hard = sum(d[5] for d in detail if CLASS_RANK.get(d[3], -1) >= top_rank)
+    return {"date": parse_header_date(header.get("Date", "")), "sport": author.get("sport"),
+            "discipline": discipline, "category": header.get("Category", "Training"),
+            "load": load, "minutes": minutes, "easy_minutes": easy, "hard_minutes": hard}
+
+
 def main():
     ap = argparse.ArgumentParser(description="Infame v6 block verification gate")
     ap.add_argument("file")
@@ -1278,6 +1303,7 @@ def main():
     core_blocks = {}     # athlete id -> classified sessions of this file (CHK-CORE)
     lim_sessions = {}    # athlete id -> [{date, sport, discipline}] under a restriction
     lim_profiles = {}    # athlete id -> its declared restrictions
+    plan_rows = {}       # athlete id -> sessions as plan_checks reads them (v7.25)
     # Monotony state, carried across sessions in file order (see CHK-MONO
     # below): the last non-exempt profile seen per (sport, class). Whether a
     # flat Recovery/Endurance session was the right call is a coaching
@@ -1545,6 +1571,12 @@ def main():
                 "date": parse_header_date(header.get("Date", "")),
                 "discipline": discipline, "sport": author.get("sport"),
                 "hours": race_hours, "category": header.get("Category", "Training")})
+            # Every dated card counts for plan checks: a Rest day too, as a
+            # planned zero (it tells the taper check the day is covered).
+            plan_rows.setdefault(race_aid, []).append(
+                plan_session_row(steps if header.get("Category", "Training") in
+                                 ("Training", "Race") else [], author, th, tssc, header,
+                                 discipline))
             if header.get("Category", "Training") in ("Training", "Race") and steps:
                 core_row = classify_for_core(code, author.get("sport"), th)
                 if core_row:
@@ -1638,6 +1670,20 @@ def main():
             print(f"   {line}")
         for msg in core_warns:
             print(f"   WARN [CHK-CORE] L-: {msg}")
+        print()
+
+    # ── Plan checks (v7.25) — the week as a whole, warns only ─────────────
+    for pc_aid in sorted(plan_rows, key=str):
+        pc_profile = race_profiles.get(pc_aid) or {}
+        pc_goal, pc_race = core_sessions.next_a_goal(pc_profile.get("goals"), today)
+        pc_lines, pc_warns = plan_checks.run(
+            th.get("plan_checks") or {}, th.get("taper") or {}, pc_profile,
+            plan_rows[pc_aid], load_activities(pc_aid), pc_goal, pc_race, today)
+        print("── Plan checks (warns only, never blocks)")
+        for line in pc_lines:
+            print(f"   {line}")
+        for code_, msg in pc_warns:
+            print(f"   WARN [{code_}] L-: {msg}")
         print()
 
     # ── Weekly TSS target (CHK-LOAD-TARGET) — warns only, never blocks ────

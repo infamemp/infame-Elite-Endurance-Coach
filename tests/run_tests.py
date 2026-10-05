@@ -831,6 +831,59 @@ def unit_tests():
             if os.path.exists(_p):
                 os.remove(_p)
     check("prompt: injury restrictions are explained", "HC-LIMIT" in _pr and "limitations.restrictions" in _pr)
+    # Plan checks (v7.25): the week as a whole, warns only
+    import plan_checks as _pc
+    _pcfg = _vb2.load_thresholds_only()
+    _ptap = _pcfg["taper"]
+    _pcfg = _pcfg["plan_checks"]
+    _T = _date(2026, 6, 1)  # a Monday
+
+    def _act(d, tss=50, mins=60, typ="Ride"):
+        return {"date": d.isoformat(), "type": typ, "training_load": tss, "moving_time": mins * 60}
+
+    def _ses(d, load=60, mins=60, easy=50, hard=0, sport="cycling", cat="Training"):
+        return {"date": d, "sport": sport, "category": cat, "load": load, "minutes": mins,
+                "easy_minutes": easy, "hard_minutes": hard}
+
+    _hist = [_act(_T - _td(days=i), 50, 60) for i in range(1, 43) if i % 7 not in (0, 3)]
+    _week = [_ses(_T + _td(days=i), hard=(20 if i in (0, 1) else 0), easy=(30 if i in (0, 1) else 60))
+             for i in range(4)]
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _week, _hist, today=_T)
+    _codes = [c for c, _m in _w]
+    check("plan checks: two hard days in a row warn (CHK-SPACING)", "CHK-SPACING" in _codes, _w)
+    check("plan checks: a normal week does not trip the ramp", "CHK-RAMP" not in _codes, _l)
+    _big = [_ses(_T + _td(days=i), load=150) for i in range(5)]
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _big, _hist, today=_T)
+    check("plan checks: a week far above the last 4 warns (CHK-RAMP)",
+          any(c == "CHK-RAMP" for c, _m in _w), _l)
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _big, [], today=_T)
+    check("plan checks: no history, the ramp is not checked",
+          not any(c == "CHK-RAMP" for c, _m in _w) and any("not checked" in x for x in _l if x.startswith("ramp")), _l)
+    check("plan checks: weeks of steady load with no lighter week warn (CHK-RECOVERY)",
+          any(c == "CHK-RECOVERY" for c, _m in _pc.run(_pcfg, _ptap, {}, _week, _hist, today=_T)[1]))
+    _light = [a for a in _hist if not (_T - _td(days=14) <= _date.fromisoformat(a["date"]) < _T - _td(days=7))]
+    check("plan checks: a lighter week two weeks ago clears it",
+          not any(c == "CHK-RECOVERY" for c, _m in _pc.run(_pcfg, _ptap, {}, _week, _light, today=_T)[1]))
+    _hardwk = [_ses(_T + _td(days=i), easy=20, hard=30) for i in (0, 2, 4)]
+    check("plan checks: a week mostly hard warns (CHK-EASY)",
+          any(c == "CHK-EASY" for c, _m in _pc.run(_pcfg, _ptap, {}, _hardwk, _hist, today=_T)[1]))
+    _prof = {"plan_checks": {"reason": "stage race block", "off": ["spacing"]}}
+    _l, _w = _pc.run(_pcfg, _ptap, _prof, _week, _hist, today=_T)
+    check("plan checks: an athlete exception switches a check off and is shown",
+          "CHK-SPACING" not in [c for c, _m in _w] and any("stage race block" in x for x in _l), _l)
+    _race = _T + _td(days=14)
+    _tap = [_ses(_T + _td(days=i), mins=30, easy=20, hard=(10 if i % 3 == 0 else 0)) for i in range(14)]
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _tap, _hist, {"priority": "A"}, _race, today=_T)
+    check("plan checks: a taper cutting volume ~40% with intensity kept is clean",
+          not any(c == "CHK-TAPER" for c, _m in _w), (_l, _w))
+    _flat = [_ses(_T + _td(days=i), mins=60, easy=60, hard=0) for i in range(14)]
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _flat, _hist, {"priority": "A"}, _race, today=_T)
+    check("plan checks: a taper with no cut and no intensity warns twice (CHK-TAPER)",
+          sum(1 for c, _m in _w if c == "CHK-TAPER") == 2, _w)
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _tap[:5], _hist, {"priority": "A"}, _race, today=_T)
+    check("plan checks: a taper the file only partly covers is not judged",
+          not any(c == "CHK-TAPER" for c, _m in _w) and any("does not cover" in x for x in _l), _l)
+    check("prompt: plan checks are explained", "CHK-SPACING" in _pr and "plan_checks" in _pr)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")
