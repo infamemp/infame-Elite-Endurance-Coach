@@ -31,6 +31,10 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
     visible here as data instead of requiring a human to open the file.
     """
     info = resolve_and_prep(athlete_id, days=days, force_refresh=force_refresh)
+    continuity = _optional_text(os.path.join(info["out_dir"], "continuity.md"))
+    ensure_import_paths()
+    import block_review
+    due = block_review.review_due(continuity) if continuity else None
     state_md = read_text(
         os.path.join(DATA, str(athlete_id), "state.md"),
         f"state.md was not produced for '{athlete_id}' — check the server log.",
@@ -50,7 +54,10 @@ def get_athlete_state(athlete_id: str, force_refresh: bool = False, days: int = 
         # #SESSION and race history travel with #STATE, so one call gives
         # the coach everything a conversation starts from. None = no file
         # yet (new macrocycle / no race logged), never an error.
-        "continuity": _optional_text(os.path.join(info["out_dir"], "continuity.md")),
+        "continuity": continuity,
+        # The block's own falsifier, handed back once its Review On date has
+        # passed and no review was recorded (engine/block_review.py, v7.22).
+        "review_due": due["text"] if due else None,
         "race_notes": _optional_text(os.path.join(info["out_dir"], "race_notes.md")),
         "availability": _optional_text(os.path.join(info["out_dir"], "availability.md")),
     }

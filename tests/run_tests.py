@@ -687,6 +687,23 @@ def unit_tests():
         for _p in (_rd_yaml, _rd_blk):
             if os.path.exists(_p):
                 os.remove(_p)
+    # Block falsifier (v7.22): handed back once its review date has passed
+    import block_review as _br
+    _sess = ("#SESSION\nActive Phase: 4\nWould Show Wrong: decoupling on the long ride still above 6%\n"
+             "Review On: 01-10-2026\nLast Review: none\n#END")
+    _due = _br.review_due(_sess, _date(2026, 10, 3))
+    check("block review: due after its date with no review recorded",
+          _due is not None and _due["days_overdue"] == 2 and "decoupling" in _due["text"], _due)
+    check("block review: not due before its date", _br.review_due(_sess, _date(2026, 9, 30)) is None)
+    _done = _sess.replace("Last Review: none", "Last Review: 02-10-2026 · did not happen · decoupling 4.8%")
+    check("block review: a review on or after the date clears it", _br.review_due(_done, _date(2026, 10, 3)) is None)
+    _old = _sess.replace("Last Review: none", "Last Review: 2026-09-01 · happened · previous block")
+    check("block review: an older review does not clear a new one", _br.review_due(_old, _date(2026, 10, 3)) is not None)
+    check("block review: a template placeholder is not a falsifier",
+          _br.review_due("Would Show Wrong: <the current block's falsifier>\nReview On: 01-01-2026") is None)
+    check("block review: no fields, nothing due", _br.review_due("#SESSION\nActive Phase: 4\n#END") is None)
+    check("prompt: #SESSION carries the falsifier and Phase 5 reviews it first",
+          "Would Show Wrong:     <" in _pr and "Review On:            <" in _pr and "**Review first.**" in _pr)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")

@@ -114,6 +114,11 @@ def check_continuity(out_dir):
     age_days = (time.time() - os.path.getmtime(path)) / 86400
     flag = "  — check it's still current" if age_days > 10 else ""
     print(f"   continuity.md last updated {age_days:.0f} day(s) ago{flag}")
+    import block_review
+    with open(path, encoding="utf-8") as f:
+        due = block_review.review_due(f.read())
+    if due:
+        print(f"   {due['text']}")
 
 
 def capture_snapshot(aid):
@@ -500,6 +505,21 @@ def cmd_review(args):
 
     md = render_review(args.athlete, name, dest_name, since, data, snap, snap_age,
                        curves, races, bs)
+
+    # The block's falsifier (v7.22): what the design said would show it wrong,
+    # so this review answers "was the reasoning right", not only "what moved".
+    import block_review
+    cont = os.path.join(ROOT, "out", dest_name, "continuity.md")
+    if os.path.exists(cont):
+        with open(cont, encoding="utf-8") as f:
+            bf = block_review.fields(f.read())
+        if bf["would_show_wrong"]:
+            md = md.rstrip() + "\n\n## Block falsifier\n\n" + \
+                f"- Would show the design wrong: {bf['would_show_wrong']}\n" + \
+                f"- Review on: {bf['review_on'].isoformat() if bf['review_on'] else 'not set'}\n" + \
+                f"- Last review: {bf['last_review_text'] or 'none recorded'}\n" + \
+                "\nOne question only: did that happen? A review judges the design, never " \
+                "the athlete, and one block is one observation.\n"
 
     out_dir = os.path.join(ROOT, "out", dest_name)
     os.makedirs(out_dir, exist_ok=True)

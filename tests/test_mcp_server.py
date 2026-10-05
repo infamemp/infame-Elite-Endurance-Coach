@@ -910,6 +910,14 @@ def test_mcp_first_workflow():
           "#SESSION" in (r.get("continuity") or ""), r.get("continuity"))
     check("workflow: get_athlete_state has a `race_notes` key (None or text)",
           "race_notes" in r)
+    check("workflow: no falsifier in #SESSION, no review_due", r.get("review_due") is None, r.get("review_due"))
+    save_continuity(AID, session.replace("#END", "Would Show Wrong: long-ride decoupling above 6%\n"
+                                         "Review On: 01-01-2020\nLast Review: none\n#END"),
+                    athlete_name="Test Fixture")
+    r = get_athlete_state(AID)
+    check("workflow: a past Review On with no review comes back as review_due",
+          "long-ride decoupling above 6%" in (r.get("review_due") or ""), r.get("review_due"))
+    save_continuity(AID, session, athlete_name="Test Fixture")
 
     # 1b — stated availability is saved once and comes back with #STATE
     ra = save_availability(AID, "just some days", athlete_name="Test Fixture")
