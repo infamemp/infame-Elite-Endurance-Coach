@@ -1020,7 +1020,7 @@ def test_mcp_first_workflow():
         _d0 = _ev0["description"]
         _dz = _d0 + " " + _ev0["name"]
     from mcp_server.tools_push import _NOTE_LABELS, _athlete_language
-    _ex, _nu = _NOTE_LABELS[_athlete_language(AID)]
+    _why, _ex, _nu = _NOTE_LABELS[_athlete_language(AID)]
     check("workflow: Execution and Nutrition both reach the description, before the steps",
           f"{_nu}: Toma 500 ml de agua" in _d0 and _d0.index(_nu) < _d0.index("Main Set"), _d0)
     check("workflow: the coach-only [Zone] never reaches Intervals.icu",

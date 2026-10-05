@@ -34,3 +34,8 @@ athlete_docs/
 # mcp_server's own crash/debug log, written by run_server.py — local
 # diagnostics only, may contain data/profile.md content in a traceback.
 mcp_server/logs/
+# Test fixtures that tests/run_tests.py regenerates on every run (dated relative
+# to today), so they change every time and are never committed. The golden
+# baselines next to them (expected_state.json) stay tracked.
+tests/fixtures/*/athlete_data.json
+tests/fixtures/*/declared_profile.yaml

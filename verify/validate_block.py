@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 2.5
+Version: 2.6 (v7.20 — [Why] and [Source]: CHK-SRC advisories, KB IDs checked)
 """
 
 import argparse
@@ -97,7 +97,7 @@ def language_warnings(header, code):
     """Advisory findings on the athlete-facing text of one session. Only for
     Spanish text (three or more Spanish stop-words in the prose), so an English
     block is never checked against Spanish patterns. Never blocks."""
-    prose = " ".join(str(header.get(k, "")) for k in ("Focus", "Execution", "Nutrition"))
+    prose = " ".join(str(header.get(k, "")) for k in ("Focus", "Why", "Execution", "Nutrition"))
     cues = re.findall(r'"([^"\n]+)"', code or "")
     out = []
     if len(_ES_STOP.findall(prose)) < 3:
@@ -193,6 +193,10 @@ HEADER_LABEL_TRANSLATIONS = {
     "tss estimado": "Estimated TSS",
     "ejecucion": "Execution",
     "nutricion": "Nutrition",
+    "por que": "Why",
+    "porque": "Why",
+    "fuente": "Source",
+    "fuentes": "Source",
 }
 HEADER_LABEL_RE = re.compile(r"\[([^\[\]\n]+)\]")
 
@@ -917,6 +921,100 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
     return errors, warns
 
 
+# ── [Why] and [Source] (v7.20) ────────────────────────────────────
+# [Why] tells the athlete why this session, now; [Source] tells the head coach
+# what the reasoning rests on: KB entry IDs (Principles `DRF-C06-004`, Catalogs
+# `TRPM-L2-014`), sections (§N) of the active
+# methodology's file, or the literal `coach judgement`. Both are advisory: a
+# missing field or an ID that does not exist in Knowledge/ is a CHK-SRC
+# warning, never a block. An unknown ID matters because it means the coach
+# cited something it did not read.
+_KB_ENTRY_RE = re.compile(r"^### \[([A-Z]+-[CL]\d{1,2}-\d{3})\]", re.M)
+_KB_SECTION_RE = re.compile(r"^## (\d{1,2})\. ", re.M)
+_SRC_ID_RE = re.compile(r"\b[A-Z]+-[CL]\d{1,2}-\d{3}\b")
+_SRC_SECTION_RE = re.compile(r"(?:\b([a-z][a-z_]*)\s+)?§\s?(\d{1,2})\b")
+_SRC_JUDGEMENT_RE = re.compile(r"\bcoach(?:'s)?\s+judg(?:e)?ment\b", re.I)
+_KB_IDS = None
+
+
+def _kb_entry_ids():
+    """Every KB entry ID in Knowledge/ (Principles and Catalogs), read once."""
+    global _KB_IDS
+    if _KB_IDS is None:
+        ids = set()
+        for dirpath, _dirs, files in os.walk(os.path.join(ROOT, "Knowledge")):
+            for name in files:
+                if name.endswith(".md"):
+                    try:
+                        with open(os.path.join(dirpath, name), encoding="utf-8") as f:
+                            ids.update(_KB_ENTRY_RE.findall(f.read()))
+                    except OSError:
+                        continue
+        _KB_IDS = ids
+    return _KB_IDS
+
+
+def _author_sections(author_id):
+    """Section numbers (§N) in an author's knowledge files, or None when the
+    author or its files cannot be read."""
+    path = os.path.join(CONFIG, "authors", f"{author_id}.yaml")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        a = yaml.safe_load(f) or {}
+    files = [a.get("knowledge_file")]
+    for key in ("supplementary_knowledge_files", "companion_knowledge_files"):
+        for item in a.get(key) or []:
+            files.append(item.get("file") if isinstance(item, dict) else item)
+    found, read_any = set(), False
+    for rel in files:
+        if not rel or str(rel).lower() == "none":
+            continue
+        full = os.path.join(ROOT, "Knowledge", rel)
+        if os.path.exists(full):
+            read_any = True
+            with open(full, encoding="utf-8") as f:
+                found.update(f"§{n}" for n in _KB_SECTION_RE.findall(f.read()))
+    return found if read_any else None
+
+
+def check_source(header):
+    """CHK-SRC advisories for [Why] and [Source] on Training and Race days."""
+    warns = []
+    cat = header.get("Category", "")
+    if cat not in ("", "Training", "Race"):
+        return warns
+    why = str(header.get("Why", "")).strip()
+    src = str(header.get("Source", "")).strip()
+    if not why:
+        warns.append(("CHK-SRC", "-", "Header field [Why] missing — one sentence for the "
+                                      "athlete: why this session, now"))
+    if not src:
+        warns.append(("CHK-SRC", "-", "Header field [Source] missing — KB entry IDs, §N of "
+                                      "the methodology's file, or 'coach judgement'"))
+        return warns
+    ids = _SRC_ID_RE.findall(src)
+    sections = _SRC_SECTION_RE.findall(src)
+    judgement = bool(_SRC_JUDGEMENT_RE.search(src))
+    if not ids and not sections and not judgement:
+        warns.append(("CHK-SRC", "-", f"[Source] '{src}' names no KB entry ID, no §N and "
+                                      f"not 'coach judgement'"))
+    unknown = sorted({i for i in ids if i not in _kb_entry_ids()})
+    if unknown:
+        warns.append(("CHK-SRC", "-", f"[Source] cites {', '.join(unknown)} — not found in "
+                                      f"Knowledge/. Cite only entries you read"))
+    methodology = header.get("Methodology", "")
+    for owner, num in sections:
+        owner = owner or methodology
+        known = _author_sections(owner) if owner else None
+        if known is None:
+            warns.append(("CHK-SRC", "-", f"[Source] §{num}: cannot resolve the file of "
+                                          f"'{owner or '?'}'"))
+        elif f"§{num}" not in known:
+            warns.append(("CHK-SRC", "-", f"[Source] §{num} not found in {owner}'s knowledge file"))
+    return warns
+
+
 def check_header(header):
     errors, warns = [], []
     if not header:
@@ -936,6 +1034,7 @@ def check_header(header):
     # never sees author codes, so the head coach needs them somewhere: here.
     if cat in ("", "Training", "Race") and "Zone" not in header:
         warns.append(("CHK-HDR", "-", "Header field [Zone] missing — the coach-only class and author zone"))
+    warns += check_source(header)
     return errors, warns
 
 

@@ -598,6 +598,41 @@ def unit_tests():
     check("validator: a Training session without [Zone] gets an advisory", any("[Zone]" in m for _c, _l, m in _h))
     _h = _vb2.check_header({"Week": "01", "Date": "28-09-2026", "Category": "Rest", "Focus": "x"})[1]
     check("validator: a Rest day does not need [Zone]", not any("[Zone]" in m for _c, _l, m in _h))
+    # [Why] and [Source] (v7.20): advisories, never blocks
+    _base = {"Week": "01", "Date": "28-09-2026", "Category": "Training", "Focus": "x", "Zone": "z",
+             "Methodology": "daniels"}
+    _s = _vb2.check_source(dict(_base))
+    check("validator: missing [Why] and [Source] get advisories",
+          any("[Why]" in m for _c, _l, m in _s) and any("[Source]" in m for _c, _l, m in _s), _s)
+    _real_id = sorted(_vb2._kb_entry_ids())[0]
+    _s = _vb2.check_source(dict(_base, Why="Para subir tu umbral.", Source=f"{_real_id}, coach judgement"))
+    check("validator: a real KB ID plus coach judgement is clean", _s == [], _s)
+    _s = _vb2.check_source(dict(_base, Why="w", Source="DRF-C99-999"))
+    check("validator: an invented KB ID is flagged", any("DRF-C99-999" in m for _c, _l, m in _s), _s)
+    _s = _vb2.check_source(dict(_base, Why="w", Source="coach judgement"))
+    check("validator: coach judgement alone is a valid source", _s == [], _s)
+    _s = _vb2.check_source(dict(_base, Why="w", Source="my experience"))
+    check("validator: a source with no ID, §N or judgement is flagged", len(_s) == 1, _s)
+    _s = _vb2.check_source(dict(_base, Methodology="palladino", Why="w", Source="§8"))
+    check("validator: a §N of the active methodology resolves", _s == [], _s)
+    _s = _vb2.check_source(dict(_base, Methodology="palladino", Why="w", Source="§99"))
+    check("validator: a §N that does not exist is flagged", any("§99" in m for _c, _l, m in _s), _s)
+    _s = _vb2.check_source({"Category": "Rest", "Focus": "x"})
+    check("validator: a Rest day needs no [Why] or [Source]", _s == [], _s)
+    _n, _t = _vb2.normalize_header_labels("[Por qué]: a\n[Fuente]: coach judgement")
+    check("validator: Spanish [Por qué]/[Fuente] labels are translated",
+          "[Why]" in _n and "[Source]" in _n, _n)
+    check("prompt: [Why] is athlete-facing and [Source] coach-only",
+          "[Why]: <" in _pr and "[Source]: <" in _pr and "is for the head coach only and is never uploaded: the design table's *Source* column" in _pr)
+    _cat_id = next(i for i in sorted(_vb2._kb_entry_ids()) if "-L" in i)
+    _s = _vb2.check_source(dict(_base, Why="w", Source=_cat_id))
+    check("validator: a catalog ID (…-L2-014) is a valid source", _s == [], _s)
+    sys.path.insert(0, ROOT)
+    from mcp_server.tools_push import _description as _desc
+    _d = _desc({"Why": "Para subir tu umbral.", "Execution": "E.", "Nutrition": "N.",
+                "Source": "DRF-C06-004", "Zone": "Umbral · Daniels T"}, "Warmup\n- 10m 70% Pace", "es", True)
+    check("push: [Why] is uploaded first; [Source] and [Zone] never are",
+          _d.startswith("Por qué: Para subir tu umbral.") and "DRF-C06-004" not in _d and "Daniels T" not in _d, _d)
     import tempfile as _tf
     _fill = os.path.join(_tf.gettempdir(), "fill_dur_space.md")
     open(_fill, "w", encoding="utf-8").write("[Week] 01 | [Date] 28-09-2026\n[Duration] pending| [Estimated TSS] pending\n")
@@ -2126,6 +2161,15 @@ def main():
     run_all = not (args.unit or args.golden or args.blocks)
 
     print("Infame v6 — regression tests\n")
+
+    # The fixtures' athlete_data.json files are not in git (they are dated
+    # relative to today and would change on every run). Build them first, so
+    # the unit tests that read them work on a fresh clone too.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import make_fixtures
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()):
+        make_fixtures.main()
 
     if run_all or args.unit:
         print("Unit tests...")

@@ -87,8 +87,8 @@ def _iso_date(date_str: str) -> str | None:
     return None
 
 _NOTE_LABELS = {
-    "es": ("Ejecución", "Nutrición e hidratación"),
-    "en": ("Execution", "Nutrition & hydration"),
+    "es": ("Por qué", "Ejecución", "Nutrición e hidratación"),
+    "en": ("Why", "Execution", "Nutrition & hydration"),
 }
 _EMPTY_NOTE = {"", "pending", "-", "—", "n/a", "none", "ninguno", "ninguna"}
 
@@ -118,16 +118,17 @@ def _note_line(text: str) -> str:
 
 
 def _description(header: dict, code: str, language: str, include_notes: bool) -> str:
-    """What the athlete sees in Intervals.icu: the Execution and Nutrition
-    notes from the session card, a blank line, then the workout steps. Until
-    v7.9 only the steps were sent, so the nutrition and hydration guidance
-    (and the how-to-execute text) never left the card."""
+    """What the athlete sees in Intervals.icu: the Why, Execution and
+    Nutrition notes from the session card, a blank line, then the workout
+    steps. Until v7.9 only the steps were sent, so the nutrition and hydration
+    guidance (and the how-to-execute text) never left the card. [Why] joined
+    in v7.20. [Zone] and [Source] are for the head coach and never uploaded."""
     steps = code.strip()
     if not include_notes:
         return steps
-    ex_label, nu_label = _NOTE_LABELS.get(language, _NOTE_LABELS["es"])
+    why_label, ex_label, nu_label = _NOTE_LABELS.get(language, _NOTE_LABELS["es"])
     lines = []
-    for label, key in ((ex_label, "Execution"), (nu_label, "Nutrition")):
+    for label, key in ((why_label, "Why"), (ex_label, "Execution"), (nu_label, "Nutrition")):
         val = _note_line(header.get(key, ""))
         if val.lower() not in _EMPTY_NOTE:
             lines.append(f"{label}: {val}")
