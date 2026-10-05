@@ -243,13 +243,23 @@ taper:
   # improve performance but with wider confidence intervals — individual
   # variation in optimal duration is well documented.
 
-  volume_reduction_pct: {min: 41, max: 60}
-  # Largest effect (0.72) of any moderator variable in the meta-analysis.
-  # Performance responds more to volume reduction than to any other component.
+  volume_reduction_pct: {min: 21, max: 60}
+  # Band for cycling and running, the only sports this system coaches.
+  # Bosquet's pooled optimum is 41-60% (effect 0.72, the largest moderator in
+  # the meta-analysis), but that result is driven by swimming (0.81, P <= 0.01).
+  # In the per-sport data (Table 2) 41-60% is NOT significant in running (0.23,
+  # N = 14) or cycling (2.14, N = 15), while 21-40% trends positive in both
+  # (0.47 and 0.84, P <= 0.10). The authors conclude (p. 1362): "we were not
+  # able to find a similar cutoff value in cycling and running, the optimal
+  # decrease being somewhere between 21 and 60%." Below 21% no benefit in any
+  # sport. KB: TPOP-C09-022. Where to sit inside the band is coach judgement,
+  # e.g. by how much fatigue the athlete carries into the taper.
 
   pattern: progressive
-  # Progressive (linear or exponential) outperforms step taper. A fast decay is
-  # reported as more beneficial than a slow one.
+  # Default, not a proven winner. Progressive (linear or exponential) is
+  # significant overall (0.30, N = 380) and in running (0.46 vs -0.09 for step).
+  # Overall, step taper's point estimate is higher (0.42) but not significant
+  # (N = 98); in cycling the authors call step vs progressive unresolved.
 
   maintain_intensity: true
   # Training load must NOT be reduced at the expense of intensity. Intensity

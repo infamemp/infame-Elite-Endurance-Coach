@@ -236,11 +236,13 @@ decisions:
     governs:
       source: mujika
       rule: >-
-        Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or
-        above about 80%, with a progressive (non-linear) reduction; two weeks is the default
-        when the athlete's own response is unknown, and the taper is individualized. The
-        numbers live in config/decision_thresholds.yaml (taper section).
-      refs: [TPOP-C06-008, TPOP-C04-042, TPOP-C06-009, TPOP-C08-002, TPOP-C06-010]
+        Taper by cutting volume 21-60% (in cycling and running Bosquet found no clear
+        cutoff inside that range; the pooled 41-60% optimum is driven by swimming), keeping
+        intensity, and keeping frequency at or above about 80%, with a progressive reduction
+        by default; two weeks is the default when the athlete's own response is unknown, and
+        the taper is individualized. The numbers live in config/decision_thresholds.yaml
+        (taper section).
+      refs: [TPOP-C06-008, TPOP-C09-022, TPOP-C04-042, TPOP-C06-009, TPOP-C08-002, TPOP-C06-010]
     refines:
       - source: friel_tb
         rule: >-

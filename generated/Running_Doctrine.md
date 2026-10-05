@@ -1,6 +1,6 @@
 # Running Doctrine — v1.1
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/running.yaml`. Built 2026-10-02 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/running.yaml`. Built 2026-10-04 by `python build_zone_tables.py build`.
 
 How the running sources work as one system. Palladino is the spine: the intensity language, the load guardrails and the testing logic, anchored to tested fitness and usable with power, pace or heart rate. Daniels governs road training structure and session doses, Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical, muscular-endurance and strength work. Mujika governs the taper; Hansons, Hudson, Rosario and Olbrich refine inside those rules; Run Less, Run Faster is a mode used only on request. The methodology the athlete declared still supplies the zone table; this file decides which source answers each question. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged.
 
@@ -141,7 +141,7 @@ How the running sources work as one system. Palladino is the spine: the intensit
 
 *Executed in: Config (decision_thresholds.yaml)*
 
-**Governs — Iñigo Mujika.** Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or above about 80%, with a progressive (non-linear) reduction; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
+**Governs — Iñigo Mujika.** Taper by cutting volume 21-60% (in cycling and running Bosquet found no clear cutoff inside that range; the pooled 41-60% optimum is driven by swimming), keeping intensity, and keeping frequency at or above about 80%, with a progressive reduction by default; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C09-022`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
 
 - **Refines — Steve Palladino.** Peak and race by power or effort plans built from tested fitness. [`§8`]
 - **Refines — Jack Daniels.** How marathon pace is estimated and practised. [`DRF-C06-005`]

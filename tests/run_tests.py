@@ -825,8 +825,8 @@ def unit_tests():
     # ── Taper is evidence-based ───────────────────────────────────
     tp = th["taper"]
     equal("taper: 2 weeks per Bosquet 2007", tp["optimal_duration_days"], 14)
-    equal("taper: volume cut 41-60%", (tp["volume_reduction_pct"]["min"],
-                                       tp["volume_reduction_pct"]["max"]), (41, 60))
+    equal("taper: volume cut 21-60% (cycling/running, Bosquet Table 2)",
+          (tp["volume_reduction_pct"]["min"], tp["volume_reduction_pct"]["max"]), (21, 60))
     equal("taper: intensity is maintained", tp["maintain_intensity"], True)
     equal("taper: TSB targets are labelled as heuristic, not evidence",
           tp["target_tsb_source"], "coach_heuristic")

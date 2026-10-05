@@ -1,6 +1,6 @@
 # Cycling Doctrine — v1.1
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/cycling.yaml`. Built 2026-10-02 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/cycling.yaml`. Built 2026-10-04 by `python build_zone_tables.py build`.
 
 How the three cycling sources work as one system. Coggan and Allen give the language (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume, limiters), Mujika gives the taper, and Cusick gives the diagnosis and the fine control of training (the power-duration model, time to exhaustion, optimized intervals, intensity distribution). Use this file to decide which source answers a question; open the cited entries when you need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged. The zone table of the athlete's declared methodology always governs zone boundaries.
 
@@ -127,7 +127,7 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 
 *Executed in: Config (decision_thresholds.yaml)*
 
-**Governs — Iñigo Mujika.** Taper by cutting volume 41-60%, keeping intensity, and keeping frequency at or above about 80%, with a progressive (non-linear) reduction; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
+**Governs — Iñigo Mujika.** Taper by cutting volume 21-60% (in cycling and running Bosquet found no clear cutoff inside that range; the pooled 41-60% optimum is driven by swimming), keeping intensity, and keeping frequency at or above about 80%, with a progressive reduction by default; two weeks is the default when the athlete's own response is unknown, and the taper is individualized. The numbers live in config/decision_thresholds.yaml (taper section). [`TPOP-C06-008`, `TPOP-C09-022`, `TPOP-C04-042`, `TPOP-C06-009`, `TPOP-C08-002`, `TPOP-C06-010`]
 
 - **Refines — Joe Friel.** Taper workouts stay race-like, with frequent recovery; the Peak period sets its place in the season. [`CTB-C08-048`, `CTB-C08-049`, `CTB-C08-050`]
 - **Refines — Tim Cusick.** The intensive peak block lasts 3-6 weeks and must progress (+1 each hard day); it only works on a solid aerobic foundation. [`WKOC-C08-040`, `WKOC-C08-041`]
