@@ -1285,6 +1285,53 @@ def load_activities(athlete_id):
         return []
 
 
+_STEP_START = re.compile(r"^(Warmup|Main Set|Cooldown|\d+x\b|- )", re.I)
+
+
+def uploaded_rows(athlete_id, file_dates, th, tssc, today):
+    """Weeks this system already uploaded, as plan_checks rows (v7.32).
+
+    The coach saves and validates one week per file, so the plan checks that
+    look at several weeks (taper, recovery, spacing across a week boundary)
+    used to see only the file in hand. The athlete's planned Intervals.icu
+    events that push_block created ("infame-<athlete>-" external ids), from
+    today on and on dates this file does not write, are read back from the
+    cached athlete_data.json: the steps in each event's description are
+    parsed and classed with the sport's cutpoints (the methodology is not
+    stored on the event), and the event's own planned load is used when
+    Intervals.icu computed one. Old caches without external ids give none."""
+    path = os.path.join(ROOT, "data", str(athlete_id), "athlete_data.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            events = json.load(f).get("events") or []
+    except (OSError, ValueError):
+        return []
+    prefix = f"infame-{athlete_id}-"
+    rows = []
+    for e in events:
+        if not str(e.get("external_id") or "").startswith(prefix):
+            continue
+        dt = plan_checks._as_date(e.get("date"))   # events carry ISO dates
+        if not dt or dt < today or dt in file_dates or e.get("category") != "WORKOUT":
+            continue
+        sport = plan_checks.sport_of(e.get("type"))
+        if not sport:
+            continue
+        lines = (e.get("description") or "").splitlines()
+        start = next((i for i, l in enumerate(lines) if _STEP_START.match(l.strip())), None)
+        steps = parse_block("\n".join(lines[start:]))[0] if start is not None else []
+        proxy = {"id": "uploaded", "name": "uploaded session", "sport": sport, "zones": []}
+        row = plan_session_row(steps, proxy, th, tssc,
+                               {"Date": dt.strftime("%d-%m-%Y"), "Category": "Training"}, None)
+        if e.get("planned_load") is not None:
+            row["load"] = e["planned_load"]
+        if not row["minutes"] and e.get("planned_time"):
+            row["minutes"] = e["planned_time"] / 60
+        row["uploaded"] = True
+        rows.append(row)
+    return rows
+
+
 def plan_session_row(steps, author, th, tssc, header, discipline):
     """One session as engine/plan_checks.py reads it."""
     pc = th.get("plan_checks") or {}
@@ -1769,9 +1816,11 @@ def main():
     for pc_aid in sorted(plan_rows, key=str):
         pc_profile = race_profiles.get(pc_aid) or {}
         pc_goal, pc_race = core_sessions.next_a_goal(pc_profile.get("goals"), today)
+        pc_file_dates = {r["date"] for r in plan_rows[pc_aid] if r.get("date")}
         pc_lines, pc_warns = plan_checks.run(
             th.get("plan_checks") or {}, th.get("taper") or {}, pc_profile,
-            plan_rows[pc_aid], load_activities(pc_aid), pc_goal, pc_race, today)
+            plan_rows[pc_aid], load_activities(pc_aid), pc_goal, pc_race, today,
+            uploaded=uploaded_rows(pc_aid, pc_file_dates, th, tssc, today))
         print("── Plan checks (warns only, never blocks)")
         for line in pc_lines:
             print(f"   {line}")

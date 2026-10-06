@@ -120,35 +120,41 @@ def get_athlete_profile(athlete_id: str, force_refresh: bool = False, days: int 
 
 
 # Maintainer notes (the docstring below is the description the model reads):
-# Reads out/roster.md — no network call of its own. Matches
-# coach.py's own write_roster() output exactly; this tool never
-# regenerates it, only reports what the last prep run wrote.
+# Until v7.31 this only read out/roster.md, which only `coach.py prep`
+# writes, so an athlete added on Intervals.icu never appeared through the MCP
+# tools. Now it reads the account's list (one call) and rewrites roster.md
+# with coach.py's own write_roster(); a failed read falls back to the file.
 @guarded
-def list_roster() -> dict:
+def list_roster(refresh: bool = True) -> dict:
     """The roster (`markdown`): every athlete on the account by name and Intervals.icu
-    id, as of the last full prep. Use it to find an athlete's id from the name the
-    head coach used."""
+    id, read from Intervals.icu now (refresh=false: the last saved list). Use it to
+    find an athlete's id from the name the head coach used."""
     ensure_import_paths()
+    import coach
+
     path = os.path.join(OUT, "roster.md")
+    note = None
+    if refresh:
+        # v7.32: the list is read from Intervals.icu each time (one call), so
+        # an athlete added this week is found without running coach.py prep.
+        try:
+            import fetch_athlete_data as fad
+            fad.SESSION = fad.make_session()
+            path = coach.write_roster(fad.list_athletes())
+        except BaseException as exc:  # noqa: BLE001 — fall back to the saved list
+            note = (f"Intervals.icu could not be read ({type(exc).__name__}: {exc}); "
+                    f"this is the last saved roster.")
     if not os.path.exists(path):
         raise ToolError(
-            "out/roster.md doesn't exist yet — run get_athlete_state or "
-            "get_athlete_profile at least once (or `python coach.py prep`) "
-            "before asking for the roster."
-        )
+            "The roster could not be read from Intervals.icu and no saved roster "
+            "exists yet. " + (note or ""))
     with open(path, encoding="utf-8") as f:
-        return {"ok": True, "markdown": f.read()}
+        result = {"ok": True, "markdown": f.read(), "live": refresh and note is None}
+    if note:
+        result["note"] = note
+    return result
 
 
-# Maintainer notes (the docstring below is the description the model reads):
-# Every athlete in one table, from what is already on disk: each
-# athlete's saved #STATE (data/<id>/state.json) plus out/roster.md for the
-# athletes on the account that were never prepared. No network call, and no
-# figure computed here that state.json does not already carry — the only
-# arithmetic is days-to-race against today and idle days counted to the
-# date of the last prep. Each row says how old its
-# numbers are (`state_age_days`, `data_age_hours`); an athlete's row is only
-# as current as the last time get_athlete_state ran for them.
 @guarded
 def roster_overview() -> dict:
     """All athletes in one table: load/recovery state, TSB, days since the last

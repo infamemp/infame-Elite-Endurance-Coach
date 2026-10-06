@@ -42,6 +42,7 @@ import base64
 import json
 import os
 import sys
+import time
 from datetime import date, timedelta
 
 try:
@@ -110,18 +111,47 @@ def make_session():
     return s
 
 
+RETRY_STATUS = (429, 500, 502, 503, 504)
+RETRY_WAITS = (2, 5)          # seconds before the 2nd and 3rd attempt
+_sleep = time.sleep           # replaced by the tests
+
+
 def get(endpoint, params=None, optional=False):
-    """GET one endpoint. With optional=True, a failure returns None instead of
-    raising — used for endpoints that may not exist for every athlete."""
-    try:
-        r = SESSION.get(f"{BASE_URL}{endpoint}", params=params, timeout=45)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
+    """GET one endpoint. A rate limit (429), a server error (5xx) or a dropped
+    connection is retried twice, waiting a few seconds (or what Retry-After
+    asks, up to 30 s) — v7.32. With optional=True, a failure that survives
+    the retries returns None instead of raising: only for data that may not
+    exist for every athlete (curves). The athlete's core data — profile,
+    wellness and PMC, activities, planned and recent events — is never
+    optional: if it cannot be read, the fetch fails and the previous
+    athlete_data.json stays as it was, instead of being replaced by empty
+    lists that would make the athlete look untrained."""
+    attempts = len(RETRY_WAITS) + 1
+    for attempt in range(attempts):
+        try:
+            r = SESSION.get(f"{BASE_URL}{endpoint}", params=params, timeout=45)
+            status = getattr(r, "status_code", 200)
+            if status in RETRY_STATUS and attempt < attempts - 1:
+                wait = RETRY_WAITS[attempt]
+                try:
+                    wait = min(30, max(wait, int((r.headers or {}).get("Retry-After", wait))))
+                except (TypeError, ValueError, AttributeError):
+                    pass
+                _sleep(wait)
+                continue
+            r.raise_for_status()
+            return r.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt < attempts - 1:
+                _sleep(RETRY_WAITS[attempt])
+                continue
+            err = e
+        except Exception as e:  # noqa: BLE001
+            err = e
         if optional:
-            print(f"      note: {endpoint} unavailable ({type(e).__name__})")
+            print(f"      note: {endpoint} unavailable ({type(err).__name__})")
             return None
-        raise
+        raise err
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -135,7 +165,7 @@ def fetch_wellness(aid, days):
     oldest = (date.today() - timedelta(days=days)).isoformat()
     newest = date.today().isoformat()
     rows = get(f"/athlete/{aid}/wellness",
-               params={"oldest": oldest, "newest": newest}, optional=True) or []
+               params={"oldest": oldest, "newest": newest}) or []
 
     wellness, pmc = [], []
     for r in rows:
@@ -382,7 +412,7 @@ def fetch_activities(aid, days):
     oldest = (date.today() - timedelta(days=days)).isoformat()
     newest = date.today().isoformat()
     acts = get(f"/athlete/{aid}/activities",
-               params={"oldest": oldest, "newest": newest}, optional=True) or []
+               params={"oldest": oldest, "newest": newest}) or []
 
     fields = [
         ("start_date_local", "date"), ("type", "type"), ("name", "name"),
@@ -432,11 +462,17 @@ def fetch_events(aid):
     today = date.today().isoformat()
     future = (date.today() + timedelta(days=365)).isoformat()
     evs = get(f"/athlete/{aid}/events",
-              params={"oldest": today, "newest": future}, optional=True) or []
+              params={"oldest": today, "newest": future}) or []
 
     out = []
     for e in evs:
         out.append({
+            "id": e.get("id"),
+            # external_id says which events this system uploaded (push_block's
+            # "infame-<athlete>-..."); description holds their steps. Both feed
+            # the PMC projection and the plan checks of later weeks (v7.32).
+            "external_id": e.get("external_id"),
+            "description": e.get("description") or "",
             "date": (e.get("start_date_local") or "")[:10],
             "name": e.get("name"),
             "category": e.get("category"),
@@ -471,7 +507,7 @@ def fetch_recent_sessions(aid, days=RECENT_SESSIONS_DAYS):
     oldest = (date.today() - timedelta(days=days)).isoformat()
     newest = date.today().isoformat()
     evs = get(f"/athlete/{aid}/events",
-              params={"oldest": oldest, "newest": newest}, optional=True) or []
+              params={"oldest": oldest, "newest": newest}) or []
 
     out = []
     for e in evs:
@@ -519,7 +555,7 @@ def fetch_profile(aid, summary_row=None):
     pace units, zones, eFTP. summary_row (from list_athletes()'s cache)
     supplies eFTP-by-category — falls back to _SUMMARY_CACHE if not passed
     explicitly, so existing callers get it with no change on their side."""
-    a = get(f"/athlete/{aid}", optional=True) or {}
+    a = get(f"/athlete/{aid}") or {}
     summary_row = summary_row or _SUMMARY_CACHE.get(aid) or {}
     eftp_map = eftp_by_category(summary_row)
 
@@ -649,8 +685,12 @@ def fetch_one(aid, name, days, outdir):
     dest = os.path.join(outdir, str(aid))
     os.makedirs(dest, exist_ok=True)
     path = os.path.join(dest, "athlete_data.json")
-    with open(path, "w", encoding="utf-8") as f:
+    # Written to a temporary file first and swapped in whole (v7.32): an
+    # interrupted write never leaves a half file where the good one was.
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, path)
     size = os.path.getsize(path) / 1024
     print(f"   wrote {os.path.relpath(path, ROOT)} ({size:.0f} KB)")
     return path

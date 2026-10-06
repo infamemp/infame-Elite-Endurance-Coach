@@ -103,30 +103,39 @@ def _week_loads(real, sessions, today, sport=None):
     return weeks
 
 
-def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None, today=None):
+def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None, today=None,
+        uploaded=None):
     """Return (lines, warnings). warnings: [(code, message)].
 
     sessions: the file's Training/Race sessions for ONE athlete —
       {date, sport, category, load, minutes, easy_minutes, hard_minutes}
       (minutes = costed minutes; a session without a date is ignored).
+    uploaded: the same rows for weeks already uploaded to Intervals.icu, on
+      dates this file does not write (v7.32). They are context — loads, hard
+      days, taper coverage — and never get a warning of their own: every
+      warning is about a week or a day this file writes.
     goal/race_date: the next A goal, or None."""
     today = today or date.today()
     values, off, reason = settings(cfg, profile)
     note = f" (athlete exception: {reason})" if reason else ""
     cards = [s for s in sessions if s.get("date")]
     sessions = [s for s in cards if s.get("category") != "Rest"]
+    file_dates = {s["date"] for s in cards}
+    extra = [u for u in (uploaded or []) if u.get("date") and u["date"] not in file_dates]
+    context = sessions + extra          # what the athlete will do: this file + uploaded weeks
     real = real_days(activities)
     lines, warns = [], []
     if not sessions:
         return ["no dated training session in this file — nothing to check"], []
     hs = values.get("hard_session") or {}
     hard_min = hs.get("min_minutes", 8)
-    hard_dates = sorted({s["date"] for s in sessions if (s.get("hard_minutes") or 0) >= hard_min})
+    hard_dates = sorted({s["date"] for s in context if (s.get("hard_minutes") or 0) >= hard_min})
 
     # ── Spacing ──────────────────────────────────────────────────
     if "spacing" not in off:
         gap = (values.get("spacing") or {}).get("min_easy_days_between_hard", 1)
-        pairs = [(a, b) for a, b in zip(hard_dates, hard_dates[1:]) if (b - a).days <= gap]
+        pairs = [(a, b) for a, b in zip(hard_dates, hard_dates[1:]) if (b - a).days <= gap
+                 and (a in file_dates or b in file_dates)]
         for a, b in pairs:
             between = "no easier day" if gap == 1 else f"fewer than {gap} easier days"
             warns.append(("CHK-SPACING", f"hard days {_dmy(a)} and {_dmy(b)} with {between} "
@@ -144,7 +153,7 @@ def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None
             base_weeks = [this_monday - timedelta(weeks=i) for i in range(1, n_base + 1)]
             real_only = _week_loads(real, [], today, sport)
             base = sum(real_only.get(m, 0.0) for m in base_weeks) / n_base
-            planned = _week_loads(real, sessions, today, sport)
+            planned = _week_loads(real, context, today, sport)
             file_weeks = sorted({_monday(s["date"]) for s in sessions if s.get("sport") == sport})
             if base < floor:
                 lines.append(f"ramp {sport}: not checked — last {n_base} weeks average "
@@ -162,7 +171,7 @@ def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None
     if "recovery" not in off:
         rv = values.get("recovery") or {}
         mx_w, drop = rv.get("max_loading_weeks", 3), rv.get("drop_pct", 20)
-        weeks = _week_loads(real, sessions, today)
+        weeks = _week_loads(real, context, today)
         file_weeks = sorted({_monday(s["date"]) for s in sessions})
         first = min(weeks) if weeks else None
         for m in file_weeks:
@@ -189,9 +198,12 @@ def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None
         ec = values.get("easy_share") or {}
         mn, min_s = ec.get("min_pct", 70), ec.get("min_sessions", 3)
         by_week = {}
-        for s in sessions:
+        for s in context:
             by_week.setdefault(_monday(s["date"]), []).append(s)
+        own_weeks = {_monday(s["date"]) for s in sessions}
         for m, ss in sorted(by_week.items()):
+            if m not in own_weeks:
+                continue
             total = sum(s.get("minutes") or 0 for s in ss)
             if len(ss) < min_s or total <= 0:
                 lines.append(f"easy share: week of {_dmy(m)} not checked — {len(ss)} session(s)")
@@ -210,9 +222,11 @@ def run(cfg, taper_cfg, profile, sessions, activities, goal=None, race_date=None
         freq_min = (taper_cfg or {}).get("min_frequency_pct_of_pretaper", 80)
         min_hist = (values.get("taper") or {}).get("min_history_days", 14)
         start = race_date - timedelta(days=t_days)
-        in_win = [s for s in sessions if start <= s["date"] < race_date
+        in_win = [s for s in context if start <= s["date"] < race_date
                   and s.get("category") != "Race"]
-        card_dates = [c["date"] for c in cards]
+        if not any(start <= s["date"] < race_date for s in sessions):
+            in_win = []          # this file writes no taper day: nothing to say
+        card_dates = [c["date"] for c in cards] + [u["date"] for u in extra]
         f_first, f_last = min(card_dates), max(card_dates)
         days = [start + timedelta(days=i) for i in range((race_date - start).days)]
         gaps = [d for d in days if d >= today and not f_first <= d <= f_last]

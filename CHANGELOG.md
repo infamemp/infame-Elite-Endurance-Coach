@@ -4,6 +4,34 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.32 (2026-10-06)
+
+Batch 5 of the 2026-10-05 audit: the data the coach plans on stays complete and true.
+
+- **A failed download never replaces good data.** Intervals.icu answers that hit a rate
+  limit (429), a server error (5xx) or a dropped connection are retried twice. The
+  athlete's core data — profile, wellness and PMC, activities, planned and recent events —
+  is no longer optional: if it cannot be read, the fetch fails and the previous
+  `athlete_data.json` stays as it was (before, empty lists replaced it and the athlete
+  looked untrained). The file is written whole or not at all.
+- **`list_roster` reads the account live** (one call) and rewrites `out/roster.md`, so an
+  athlete added on Intervals.icu is found without `coach.py prep`. If Intervals.icu cannot
+  be read, it returns the last saved roster and says so.
+- **The PMC projection after an upload.** A week this system uploaded is a written plan:
+  its days without an event count as rest (zero), not as the weekday average. Before, the
+  projected race-morning TSB came out too low once a week was uploaded.
+- **Plan checks see the weeks already uploaded.** The validator reads the athlete's
+  planned `infame-` events back from the cached data (their steps are classed with the
+  sport's cutpoints; their planned load is Intervals.icu's) and gives them to the plan
+  checks as context. The taper is judged across an uploaded week and the file in hand,
+  and two hard days across a week boundary are caught. Warnings are still only about the
+  days this file writes.
+- **Hours per sport in `#STATE`** ("Recent volume": last 7 days and the weekly average of
+  the last 4 weeks). The prompt reads them from there instead of adding them up by hand.
+- **GitHub Actions** runs both test suites on every push (`.github/workflows/tests.yml`).
+- Planned events now keep their `id`, `external_id` and `description` in
+  `athlete_data.json`; the first `get_athlete_state` with `force_refresh=true` brings them.
+
 ## v7.31 (2026-10-05)
 
 Batch 4 of the 2026-10-05 audit: fewer tokens per conversation, no rule removed.

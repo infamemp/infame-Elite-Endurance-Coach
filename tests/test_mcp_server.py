@@ -270,6 +270,25 @@ def test_tools_read():
     equal("tools_read: get_reference refuses an unknown topic cleanly",
           get_reference("weather").get("ok"), False)
 
+    # The live roster rewrites out/roster.md: keep the head coach's real file
+    # and put it back afterwards, byte for byte.
+    _roster = os.path.join(ROOT, "out", "roster.md")
+    _saved = open(_roster, "rb").read() if os.path.exists(_roster) else None
+    _fake_r, _undo_r = _with_fake({("GET", "/athlete/0/athlete-summary.json"):
+                                   [{"athlete_id": "iNEW1", "athlete_name": "New Athlete"}]})
+    try:
+        r_live = list_roster()
+    finally:
+        _undo_r()
+        if _saved is None:
+            if os.path.exists(_roster):
+                os.remove(_roster)
+        else:
+            with open(_roster, "wb") as f:
+                f.write(_saved)
+    check("tools_read: list_roster reads the account live and shows a new athlete",
+          r_live.get("live") is True and "New Athlete" in (r_live.get("markdown") or ""), r_live)
+
     r4 = list_roster()
     check("tools_read: list_roster returns something (either roster.md content, "
           "or a clean 'not found yet' error, never a crash)",
@@ -1114,6 +1133,51 @@ def test_mcp_first_workflow():
               rr)
 
 
+def test_fetch_robustness():
+    """v7.32: a rate limit or a server error is retried; the athlete's core
+    data is never optional; a failed fetch leaves the previous file intact."""
+    import fetch_athlete_data as fad
+    waits, real_sleep = [], fad._sleep
+    fad._sleep = waits.append
+    try:
+        answers = [_Resp({"x": 1}, 429), _Resp({"x": 1}, 503), _Resp({"ok": 1})]
+        fad.SESSION = _FakeSession({("GET", "/probe"): lambda kw: answers.pop(0)}, fad.BASE_URL)
+        equal("fetch: a 429 then a 503 are retried and the third answer is used",
+              (fad.get("/probe"), len(waits)), ({"ok": 1}, 2))
+
+        waits.clear()
+        fad.SESSION = _FakeSession({("GET", "/down"): lambda kw: _Resp({}, 503)}, fad.BASE_URL)
+        try:
+            fad.get("/down")
+            raised = False
+        except Exception:  # noqa: BLE001
+            raised = True
+        check("fetch: a core endpoint still failing after the retries raises", raised)
+        equal("fetch: an optional endpoint still failing returns None",
+              fad.get("/down", optional=True), None)
+
+        # A failed fetch never replaces the athlete's previous data.
+        dest = tempfile.mkdtemp(prefix="infame_fetch_")
+        os.makedirs(os.path.join(dest, "X1"))
+        good = os.path.join(dest, "X1", "athlete_data.json")
+        with open(good, "w", encoding="utf-8") as f:
+            f.write('{"previous": true}')
+        fad.SESSION = _FakeSession({("GET", "/athlete/X1"): {"id": "X1", "name": "x"},
+                                    ("GET", "/athlete/X1/wellness"): lambda kw: _Resp({}, 503)},
+                                   fad.BASE_URL)
+        try:
+            fad.fetch_one("X1", "x", 30, dest)
+        except Exception:  # noqa: BLE001
+            pass
+        with open(good, encoding="utf-8") as f:
+            kept = f.read()
+        equal("fetch: when wellness cannot be read, the previous athlete_data.json stays",
+              kept, '{"previous": true}')
+        shutil.rmtree(dest, ignore_errors=True)
+    finally:
+        fad._sleep = real_sleep
+
+
 def test_fatigue_curves_fetch():
     """fetch_fatigue_curves: optional data, silent when absent, never guessed.
     The fake answers have the shape of the API's ActivityPowerCurvePayload:
@@ -1247,7 +1311,7 @@ def main():
         return 0
 
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fetch_robustness, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):

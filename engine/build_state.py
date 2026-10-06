@@ -43,6 +43,7 @@ import architecture  # noqa: E402
 import core_sessions  # noqa: E402  — core sessions per discipline (v7.23)
 import restrictions  # noqa: E402  — injury restrictions (v7.24)
 import heads_up  # noqa: E402
+import plan_checks  # noqa: E402  — sport of an activity type
 import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
 import pd_diagnosis  # noqa: E402
@@ -369,6 +370,59 @@ def resolve_state(pmc, hrv, acwr, durability, thresholds, monotony=None):
 
 
 # ══════════════════════════════════════════════════════════════════
+# RECENT VOLUME — hours per sport (v7.32)
+# ══════════════════════════════════════════════════════════════════
+
+def recent_volume(activities, as_of=None, weeks=4):
+    """Hours and sessions per sport: the last 7 days and the weekly average of
+    the last `weeks` weeks, from the activities' moving time. The coach used
+    to add these up by hand from the activity table, which is where a
+    language model miscounts; the strategy's starting hours come from here."""
+    as_of = as_of or date.today()
+    start = as_of - timedelta(days=7 * weeks - 1)
+    last7 = as_of - timedelta(days=6)
+    by = {}
+    for a in activities or []:
+        if not a.get("date"):
+            continue
+        day = d(a["date"])
+        if not start <= day <= as_of:
+            continue
+        sport = plan_checks.sport_of(a.get("type")) or "other"
+        row = by.setdefault(sport, {"hours_7d": 0.0, "sessions_7d": 0,
+                                    "hours_total": 0.0, "sessions_total": 0})
+        h = (a.get("moving_time") or 0) / 3600
+        row["hours_total"] += h
+        row["sessions_total"] += 1
+        if day >= last7:
+            row["hours_7d"] += h
+            row["sessions_7d"] += 1
+    out = {}
+    for sport in sorted(by, key=lambda s: (s == "other", s)):
+        r = by[sport]
+        out[sport] = {"hours_7d": round(r["hours_7d"], 1), "sessions_7d": r["sessions_7d"],
+                      "hours_per_week": round(r["hours_total"] / weeks, 1),
+                      "sessions_per_week": round(r["sessions_total"] / weeks, 1)}
+    return {"weeks": weeks, "from": start.isoformat(), "to": as_of.isoformat(), "by_sport": out,
+            "source": "activity moving_time"}
+
+
+def render_volume(vol):
+    L = [f"## Recent volume (hours per sport)", ""]
+    if not vol["by_sport"]:
+        L.append(f"No activity in the last {vol['weeks']} weeks.")
+        return "\n".join(L)
+    L += [f"| Sport | Last 7 days | Average per week, last {vol['weeks']} weeks |",
+          "| :--- | ---: | ---: |"]
+    for sport, r in vol["by_sport"].items():
+        L.append(f"| {sport} | {r['hours_7d']} h · {r['sessions_7d']} sessions | "
+                 f"{r['hours_per_week']} h · {r['sessions_per_week']} sessions |")
+    L += ["", "From each activity's moving time. The baseline hours for the strategy come "
+          "from here; never add them up by hand."]
+    return "\n".join(L)
+
+
+# ══════════════════════════════════════════════════════════════════
 # PMC PROJECTION
 # ══════════════════════════════════════════════════════════════════
 
@@ -448,6 +502,15 @@ def project_pmc(pmc, events, activities=None, horizon_days=42):
 
     pattern = weekday_load_pattern(activities or [])
 
+    # A week this system already uploaded (push_block's "infame-" events) is a
+    # written plan: its days without an event are rest days, not unknown days,
+    # so they count as zero instead of the weekday average (v7.32). Before,
+    # an uploaded week's rest days were filled with load the athlete would
+    # not do, and the projected race-morning TSB came out too low.
+    uploaded_weeks = {d(e["date"]) - timedelta(days=d(e["date"]).weekday())
+                      for e in events if e.get("date")
+                      and str(e.get("external_id") or "").startswith("infame-")}
+
     ctl, atl = pmc["ctl"], pmc["atl"]
     kc, ka = 1 - math.exp(-1 / CTL_TAU), 1 - math.exp(-1 / ATL_TAU)
     start = d(pmc["date"])
@@ -459,6 +522,9 @@ def project_pmc(pmc, events, activities=None, horizon_days=42):
         if iso in planned:
             load = planned[iso]
             entry = {"date": iso, "planned_load": load}
+        elif day - timedelta(days=day.weekday()) in uploaded_weeks:
+            load = 0
+            entry = {"date": iso, "planned_load": 0, "uploaded_rest": True}
         elif pattern is not None:
             load = pattern[day.weekday()]
             entry = {"date": iso, "planned_load": 0, "assumed_load": load}
@@ -474,9 +540,13 @@ def project_pmc(pmc, events, activities=None, horizon_days=42):
     planned_days = sum(1 for s in series
                        if "assumed_load" not in s and s["planned_load"] > 0)
     assumed_days = sum(1 for s in series if "assumed_load" in s)
+    rest_days = sum(1 for s in series if s.get("uploaded_rest"))
     if pattern is not None:
         caveat = (f"{planned_days} of {horizon_days} days have an explicit "
-                  f"Intervals.icu event. The other {assumed_days} have no "
+                  f"Intervals.icu event. "
+                  + (f"{rest_days} are rest days inside weeks already uploaded, "
+                     f"counted as zero. " if rest_days else "")
+                  + f"The other {assumed_days} have no "
                   f"declared session, so they are filled with the athlete's "
                   f"average load for that day of the week over the trailing "
                   f"8 weeks, not zero.")
@@ -728,6 +798,7 @@ def build(aid, thresholds, quiet=False):
     dur_watts = durability_watts.analyze(data)   # None when the athlete has no kJ curves
     state = resolve_state(pmc, hrv, acwr, durability, thresholds, monotony)
     projection = project_pmc(pmc, data.get("events", []), data.get("activities", []))
+    volume = recent_volume(data.get("activities", []))
     goals = load_declared_goals(aid)
     taper = taper_check(projection, goals, thresholds, pmc)
     longit = longitudinal.analyze(data, thresholds)
@@ -772,6 +843,7 @@ def build(aid, thresholds, quiet=False):
                    # Intervals.icu; absent otherwise, never a zero.
                    **({"durability_watts": dur_watts} if dur_watts else {})},
         "projection": projection,
+        "recent_volume": volume,
         "taper": taper,
         "longitudinal": longit,
         "power_profile": pp,
@@ -784,6 +856,7 @@ def build(aid, thresholds, quiet=False):
     os.makedirs(dest, exist_ok=True)
     md = render_markdown(aid, data, state, pmc, hrv, acwr, durability, projection, taper,
                          heads, monotony, neuro)
+    md = md.rstrip() + "\n\n" + render_volume(volume)
     md = md.rstrip() + "\n\n" + longitudinal.render(longit)
     if dur_watts:
         md = md.rstrip() + "\n\n" + durability_watts.render(dur_watts)

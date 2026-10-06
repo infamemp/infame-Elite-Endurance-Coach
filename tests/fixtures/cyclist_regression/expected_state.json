@@ -217,6 +217,18 @@
   "recent_architectures": {
     "rows": []
   },
+  "recent_volume": {
+    "by_sport": {
+      "cycling": {
+        "hours_7d": 2.0,
+        "hours_per_week": 1.8,
+        "sessions_7d": 2,
+        "sessions_per_week": 1.8
+      }
+    },
+    "source": "activity moving_time",
+    "weeks": 4
+  },
   "schema_version": 1,
   "signals": {
     "acwr": {

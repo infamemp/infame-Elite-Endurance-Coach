@@ -581,6 +581,8 @@ def unit_tests():
     _fixed = [l for l in _pr.splitlines() if l.startswith("- **`[Methodology]`** is one of:")][0]
     check("prompt: friel_running is not in the list of methodologies to write", "friel_running" not in _fixed)
     check("prompt: carries no version-history notes", " is new in v7" not in _pr)
+    check("prompt: baseline hours come from #STATE, never added up by hand (v7.32)",
+          "*Recent volume*" in _pr and "does not yet compute recent weekly hours" not in _pr)
 
     # ── v7.9/7.10: nutrition reaches Intervals.icu; Spanish text is controlled ──
     import yaml as _yl, re as _re2
@@ -950,6 +952,53 @@ def unit_tests():
     _l, _w = _pc.run(_pcfg, _ptap, {}, _tap[:5], _hist, {"priority": "A"}, _race, today=_T)
     check("plan checks: a taper the file only partly covers is not judged",
           not any(c == "CHK-TAPER" for c, _m in _w) and any("does not cover" in x for x in _l), _l)
+    # v7.32: weeks already uploaded are context for the file in hand
+    _up = [dict(s, uploaded=True) for s in _tap[:7]]          # first taper week, uploaded
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _tap[7:], _hist, {"priority": "A"}, _race, today=_T,
+                     uploaded=_up)
+    check("plan checks: the second taper week is judged with the uploaded first week",
+          any(x.startswith("taper:") and "counted" in x for x in _l)
+          and not any(c == "CHK-TAPER" for c, _m in _w), (_l, _w))
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _flat[7:], _hist, {"priority": "A"}, _race, today=_T,
+                     uploaded=[dict(s, uploaded=True) for s in _flat[:7]])
+    check("plan checks: a flat taper across an uploaded week and this file still warns",
+          sum(1 for c, _m in _w if c == "CHK-TAPER") == 2, _w)
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _week[2:], _hist, today=_T,
+                     uploaded=[dict(s, uploaded=True) for s in _week[:2]])
+    check("plan checks: two hard days that were both uploaded earlier do not warn again",
+          "CHK-SPACING" not in [c for c, _m in _w], _w)
+    _l, _w = _pc.run(_pcfg, _ptap, {}, [_week[1]], _hist, today=_T,
+                     uploaded=[dict(_week[0], uploaded=True)])
+    check("plan checks: a hard day next to an uploaded hard day warns (CHK-SPACING)",
+          "CHK-SPACING" in [c for c, _m in _w], _w)
+    _l, _w = _pc.run(_pcfg, _ptap, {}, _tap[:5], _hist, {"priority": "A"}, _race - _td(days=20),
+                     today=_T)
+    check("plan checks: a file with no taper day says nothing about the taper",
+          not any(x.startswith("taper") for x in _l), _l)
+    # The validator reads uploaded weeks back from the cached events (v7.32)
+    _ud = os.path.join(ROOT, "data", "_test_uploaded")
+    os.makedirs(_ud, exist_ok=True)
+    _tom = _date.today() + _td(days=1)
+    _desc = ("Por qué: Base.\nEjecución: Constante.\n\nWarmup\n\n- 10m 60-65% [RPE 2-3]\n\n"
+             "Main Set 3x\n- 8m 98-102% [RPE 6-7]\n- 4m 55% [RPE 1-2]\n\nCooldown\n\n- 5m 55% [RPE 1-2]")
+    with open(os.path.join(_ud, "athlete_data.json"), "w", encoding="utf-8") as f:
+        json.dump({"events": [
+            {"date": _tom.isoformat(), "category": "WORKOUT", "type": "VirtualRide",
+             "external_id": f"infame-_test_uploaded-{_tom.isoformat()}-w01",
+             "description": _desc, "planned_load": 71, "planned_time": 3060},
+            {"date": _tom.isoformat(), "category": "WORKOUT", "type": "Ride",
+             "external_id": None, "description": "athlete's own ride"}]}, f)
+    try:
+        _th3 = _vb2.load_thresholds_only()
+        _tc3 = _vb2.load_config("coggan")[2]
+        _rows = _vb2.uploaded_rows("_test_uploaded", set(), _th3, _tc3, _date.today())
+        check("validator: an uploaded session is read back with its steps, class and load",
+              len(_rows) == 1 and _rows[0]["load"] == 71 and _rows[0]["sport"] == "cycling"
+              and _rows[0]["hard_minutes"] >= 24 and _rows[0]["uploaded"], _rows)
+        check("validator: a date this file writes is not read back from the calendar",
+              _vb2.uploaded_rows("_test_uploaded", {_tom}, _th3, _tc3, _date.today()) == [])
+    finally:
+        shutil.rmtree(_ud, ignore_errors=True)
     check("prompt: plan checks are explained", "CHK-SPACING" in _pr and "plan_checks" in _pr)
     # Ledger (v7.26): one line per event, best effort, never committed
     import ledger as _lg
@@ -1372,6 +1421,22 @@ def unit_tests():
           "assumed_load" not in loaded)
     equal("pmc projection: explicit event's planned_load wins over the pattern",
           loaded["planned_load"], 150)
+
+    # v7.32: a week this system uploaded is a written plan — its days without
+    # an event are rest (zero), not the weekday average.
+    _next_mon = today - timedelta(days=today.weekday()) + timedelta(days=7)
+    _up = bs.project_pmc(pmc, [{"date": _next_mon.isoformat(), "planned_load": 80,
+                                "external_id": "infame-X-" + _next_mon.isoformat() + "-w01"}],
+                         activities, horizon_days=21)
+    _wk = [s for s in _up["series"]
+           if _next_mon < date.fromisoformat(s["date"]) < _next_mon + timedelta(days=7)]
+    check("pmc projection: rest days of an uploaded week count as zero, not the average",
+          _wk and all(s["planned_load"] == 0 and "assumed_load" not in s for s in _wk), _wk[:2])
+    _own = bs.project_pmc(pmc, [{"date": _next_mon.isoformat(), "planned_load": 80}],
+                          activities, horizon_days=21)
+    check("pmc projection: a week with only the athlete's own events keeps the average",
+          any("assumed_load" in s for s in _own["series"]
+              if _next_mon < date.fromisoformat(s["date"]) < _next_mon + timedelta(days=7)))
 
     unplanned_date = today + timedelta(days=1)
     unplanned = by_date[unplanned_date.isoformat()]
