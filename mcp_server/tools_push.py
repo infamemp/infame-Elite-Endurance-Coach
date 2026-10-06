@@ -1,7 +1,7 @@
 """tools_push.py — push_block. The one tool this task's own limits govern.
 
-IMPROVEMENT_BACKLOG.md §6 states the non-negotiable line this file exists
-to respect: "Do not let the engine start giving advice... A future feature
+ROADMAP.md ("Lines not to cross") states the line this file exists to
+respect, in the words of the original backlog: "Do not let the engine start giving advice... A future feature
 that crosses that line — an engine that prescribes rather than reports —
 would undo the architecture even if each individual step seemed
 reasonable." Uploading to Intervals.icu is the one action in this whole
@@ -158,7 +158,7 @@ def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
 # Build the Intervals.icu bulk-events payload for a saved block and,
 # only when explicitly told twice (dry_run=False AND confirm=True), POST
 # it to `/athlete/{id}/events/bulk?upsert=true` — the same endpoint and
-# upsert semantics IMPROVEMENT_BACKLOG.md §5 describes. Every session's
+# upsert semantics the original backlog (git history) described. Every session's
 # `external_id` is deterministic (athlete + date + week, plus -2, -3 for a
 # second or third session on the same date), so re-pushing a corrected
 # block updates the same events instead of duplicating them — and two
@@ -265,7 +265,7 @@ def push_block(
             continue
         try:
             author, _th, _tssc = vb.load_config(methodology.strip().lower())
-        except SystemExit as exc:
+        except Exception as exc:  # noqa: BLE001 — EngineError: unknown methodology
             skipped.append({"reason": f"unknown methodology: {exc}", "header": header})
             continue
         activity_type, inferred = _activity_type(author.get("sport"), discipline)

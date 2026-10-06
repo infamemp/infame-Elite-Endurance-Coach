@@ -4,6 +4,32 @@
 # Cross-cutting rules that are NOT properties of any single author.
 # Nothing here may be duplicated in the prompt, the engine, or the validator —
 # all three read from this file. Zero magic numbers outside config/.
+#
+# SECTION INDEX (v7.33) — search for the name followed by a colon.
+#   Writing a workout
+#     output_formats         how each metric is written ......... validator, zone tables
+#     prescription_floors    minimum targets per class ........... validator, zone tables
+#     disciplines            canonical names and aliases ......... profile, validator, core sessions, restrictions
+#     ramps                  where a ramp target is allowed ...... validator
+#     metric_equipment       metric needs which device ........... validator
+#     tss_rules              TSS per session and per class ....... validator
+#     class_resolution       zone first, cutpoints second ........ rule as written (no code reads it)
+#     metric_defaults        default metric per discipline ....... rule as written (tests check the names)
+#     discouraged_metrics    pace on trail ....................... rule as written
+#     no_metric_available    fall back to RPE .................... rule as written
+#   Athlete state (#STATE)
+#     state_resolution       TSB bands, HRV, ACWR ................ build_state
+#     state_block            how old a #STATE may be ............. rule as written
+#     longitudinal           curves, durability, repeatability ... build_state, longitudinal
+#     heads_up               alerts and adherence ................ build_state, execution, roster
+#     load_monotony          Foster monotony and strain .......... load_metrics, validator
+#     neuromuscular_density  days with work above FTP ............ build_state, load_metrics
+#   Races and the week as a whole
+#     race_priorities        A+ … D and their Intervals.icu map .. profile
+#     taper                  taper length and target TSB ......... build_state, plan checks, roster, validator
+#     plan_checks            spacing, ramp, recovery, easy share . plan checks, validator
+#   Server
+#     mcp                    #STATE cache minutes ................ mcp_server
 
 # ══════════════════════════════════════════════════════════════════
 # OUTPUT FORMATS — how each metric is written in Intervals.icu syntax

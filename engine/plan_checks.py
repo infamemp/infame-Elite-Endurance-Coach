@@ -30,25 +30,10 @@ Version: 1.0 (v7.25)
 from datetime import date, datetime, timedelta
 
 CHECKS = ("spacing", "ramp", "recovery", "easy_share", "taper")
-_CYCLING = {"ride", "virtualride", "gravelride", "mtb", "mountainbikeride", "ebikeride"}
-_RUNNING = {"run", "virtualrun", "trailrun"}
+from shared import sport_of  # noqa: E402 — shared (v7.33)
 
 
-def sport_of(activity_type):
-    t = (activity_type or "").strip().lower()
-    return "cycling" if t in _CYCLING else "running" if t in _RUNNING else None
-
-
-def _as_date(raw):
-    if isinstance(raw, datetime):
-        return raw.date()
-    if isinstance(raw, date):
-        return raw
-    try:
-        return date.fromisoformat(str(raw)[:10])
-    except (TypeError, ValueError):
-        return None
-
+from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
 
 def _monday(d):
     return d - timedelta(days=d.weekday())

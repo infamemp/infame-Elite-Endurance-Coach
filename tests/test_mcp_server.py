@@ -7,7 +7,7 @@ never touches the MCP server. If `mcp` isn't installed, this file reports
 that plainly and exits 0 rather than failing the whole suite over an
 optional package.
 
-Uses `config/athletes/TESTRAMP.yaml` — the repo's own committed,
+Uses the TESTRAMP profile (tests/profiles/, put into config/athletes/ for the run) — the repo's own committed,
 non-real fixture athlete — for everything that writes files
 (out/TESTRAMP/...) or validates a block. The two network-calling tools
 (get_athlete_state/get_athlete_profile's fetch path, and push_block's live
@@ -190,6 +190,17 @@ def test_guard():
     r = blows_up()
     equal("guard: a plain exception is caught, not propagated", r["ok"], False)
     equal("guard: exception type is reported", r["error_type"], "ValueError")
+
+    @guarded
+    def engine_error():
+        from mcp_server.common import ensure_import_paths
+        ensure_import_paths()
+        import shared
+        raise shared.EngineError("simulated: no data")
+
+    r = engine_error()
+    equal("guard: the engine's EngineError is reported with its own error_type",
+          (r["ok"], r["error_type"], r["error"]), (False, "EngineError", "simulated: no data"))
 
     r = tool_error()
     equal("guard: ToolError is caught and reported", r["ok"], False)
@@ -567,6 +578,11 @@ def test_tools_write():
 
     r = save_continuity(AID, "#SESSION\nActive Phase: 4\n", athlete_name="Test Fixture")
     equal("tools_write: save_continuity rejects a #SESSION with no #END", r.get("ok"), False)
+
+    r_typo = save_continuity("TESTRAMQ", "#SESSION\nActive Phase: 4\n#END\n")
+    check("tools_write: a mistyped athlete id is refused and creates no folder (v7.33)",
+          r_typo.get("ok") is False and "Unknown athlete id" in (r_typo.get("error") or "")
+          and not os.path.exists(os.path.join(ROOT, "out", "TESTRAMQ")), r_typo)
 
     good = "#SESSION\nActive Phase: 4\nCurrent Block: Base 2\n#END\n"
     r = save_continuity(AID, good, athlete_name="Test Fixture")
@@ -1034,7 +1050,7 @@ def test_mcp_first_workflow():
     # 1d — the declared profile is written by the coach, behind a dry-run gate
     import shutil as _sh
     from mcp_server.tools_write import save_declared_profile
-    _tpl = open(os.path.join(ROOT, "config", "athletes", "_template.yaml"), encoding="utf-8").read()
+    _tpl = open(os.path.join(ROOT, "config", "templates", "profile_template.yaml"), encoding="utf-8").read()
     _pid = "TESTPROFILE"
     _ppath = os.path.join(ROOT, "config", "athletes", _pid + ".yaml")
     try:
@@ -1178,6 +1194,34 @@ def test_fetch_robustness():
         fad._sleep = real_sleep
 
 
+def test_services():
+    """v7.33: the services package is the engine's interface for every client
+    (the web interface, scripts). Same functions as the MCP tools."""
+    import services
+    missing = [n for n in services.__all__ if not callable(getattr(services, n, None))]
+    equal("services: every name in the interface exists", missing, [])
+    _seed_athlete_data(fresh=True)
+    st = services.athlete_state(AID)
+    check("services: athlete_state answers like the MCP tool", st.get("ok") is True
+          and "STATE" in (st.get("markdown") or ""))
+    with tempfile.TemporaryDirectory() as tmp:
+        bad = os.path.join(tmp, "bad.md")
+        shutil.copy2(os.path.join(ROOT, "tests", "blocks", "bad_road.md"), bad)
+        v = services.validate(file_path=bad, athlete_id=AID)
+        s = v.get("summary") or {}
+        check("services: validate returns every finding as data (severity, code, line)",
+              s.get("passed") is False and s["counts"]["block"] > 0
+              and any(f["code"] == "HC-NESTED" and f["line"] == 7 and f["severity"] == "block"
+                      for f in s["findings"]), s.get("counts"))
+    lg = services.ledger(AID)
+    check("services: ledger answers even with no events", lg.get("ok") is True and "events" in lg)
+    services.save_continuity(AID, "#SESSION\nActive Phase: 2\n#END\n", athlete_name="Test Fixture")
+    af = services.athlete_files(AID)
+    check("services: athlete_files finds the athlete's folder by id and its #SESSION",
+          af.get("ok") is True and "Active Phase: 2" in (af["files"].get("continuity") or ""), af)
+    equal("services: an unknown athlete has no folder", services.athlete_files("nobody")["folder"], None)
+
+
 def test_fatigue_curves_fetch():
     """fetch_fatigue_curves: optional data, silent when absent, never guessed.
     The fake answers have the shape of the API's ActivityPowerCurvePayload:
@@ -1310,14 +1354,18 @@ def main():
               "see requirements.txt). Install with: pip install \"mcp==1.30.0\"")
         return 0
 
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import fixture_profiles
+    _profiles = fixture_profiles.install()
     try:
-        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_fetch_robustness, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
+        for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_services, test_fetch_robustness, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
                    test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
             fn()
     finally:
         _cleanup()
+        fixture_profiles.remove(_profiles)
 
     print()
     for name, detail in FAILED:

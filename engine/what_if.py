@@ -34,8 +34,7 @@ from datetime import date, datetime, timedelta
 MAX_HORIZON = 200
 
 
-def _d(s):
-    return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+from shared import iso_day as _d  # noqa: E402 — shared parser (v7.33)
 
 
 def _weights(pattern):

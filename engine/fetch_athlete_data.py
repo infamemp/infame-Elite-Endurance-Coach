@@ -52,6 +52,8 @@ except ImportError:
 
 BASE_URL = "https://intervals.icu/api/v1"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from shared import EngineError, cli as _cli  # noqa: E402 — no sys.exit in the engine (v7.33)
 
 # The key is read when a session is made, not at import (v7.29): importing this
 # module used to exit the whole process when ICU_API_KEY was unset, which also
@@ -94,8 +96,8 @@ _SUMMARY_CACHE = {}
 def make_session():
     key = os.getenv("ICU_API_KEY") or API_KEY
     if not key:
-        sys.exit('Missing environment variable ICU_API_KEY '
-                 '(run: setx ICU_API_KEY "your_key")')
+        raise EngineError('Missing environment variable ICU_API_KEY '
+                          '(run: setx ICU_API_KEY "your_key")')
     s = requests.Session()
     token = base64.b64encode(f"API_KEY:{key}".encode()).decode()
     s.headers.update({
@@ -741,4 +743,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _cli(main)

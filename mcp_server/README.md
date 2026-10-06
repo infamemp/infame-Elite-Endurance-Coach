@@ -181,13 +181,13 @@ makes sure that when it happens, there's a reason on disk.
 python tests/test_mcp_server.py
 ```
 
-Separate from `tests/run_tests.py` on purpose — the 193 tests there must
+Separate from `tests/run_tests.py` on purpose — the tests there must
 keep passing with zero new dependencies for anyone who never touches this
 server. If `mcp` isn't installed, this file says so and exits 0 rather
 than failing the whole suite over an optional package.
 
-Covers, against the repo's own committed `config/athletes/TESTRAMP.yaml`
-fixture and a synthetic `athlete_data.json` (same technique
+Covers, against the repo's own committed `tests/profiles/TESTRAMP.yaml`
+fixture (copied into `config/athletes/` for the run and taken out after) and a synthetic `athlete_data.json` (same technique
 `tests/make_fixtures.py` uses for the engine's own golden tests, so no real
 account or network access is needed):
 

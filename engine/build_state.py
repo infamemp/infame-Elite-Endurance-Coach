@@ -47,6 +47,8 @@ import plan_checks  # noqa: E402  — sport of an activity type
 import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
 import pd_diagnosis  # noqa: E402
+import shared as _shared  # noqa: E402 — config, errors (v7.33)
+from shared import EngineError  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -67,25 +69,15 @@ def load_power_profile_cfg():
 
 
 def load_thresholds():
-    path = os.path.join(CONFIG, "decision_thresholds.yaml")
-    if not os.path.exists(path):
-        sys.exit(f"Config not found: {path}")
-    with open(path, encoding="utf-8") as f:
-        th = yaml.safe_load(f)
-    # Class cutpoints are derived (config/tss_classes.yaml + crosswalk.yaml),
-    # never stored — inject them for the architecture record.
-    root = os.path.dirname(CONFIG)
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    import zone_model
-    return zone_model.with_derived_cutpoints(th)
+    """decision_thresholds.yaml with the derived class cutpoints (shared.thresholds)."""
+    return _shared.thresholds()
 
 
 def load_athlete(aid):
     path = os.path.join(DATA, str(aid), "athlete_data.json")
     if not os.path.exists(path):
-        sys.exit(f"No data for '{aid}'. Run: python engine/fetch_athlete_data.py "
-                 f"--athlete {aid}")
+        raise EngineError(f"No data for '{aid}'. Run: python engine/fetch_athlete_data.py "
+                          f"--athlete {aid}")
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
@@ -142,8 +134,7 @@ def training_age(declared, facts):
     return v if v is not None else (facts or {}).get("training_age_years")
 
 
-def d(s):
-    return datetime.strptime(s[:10], "%Y-%m-%d").date()
+from shared import iso_day as d  # noqa: E402 — shared parser (v7.33)
 
 
 def band_of(value, bands):
@@ -905,4 +896,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _shared.cli(main)

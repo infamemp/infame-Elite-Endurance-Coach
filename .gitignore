@@ -20,10 +20,11 @@ data/
 *.xlsx
 out/
 
-config/athletes/*.yaml
-!config/athletes/_template.yaml
-!config/athletes/TESTRAMP.yaml
-config/athletes/ledger/
+# Real athletes' declared profiles and ledgers. On the head coach's computers
+# this folder is a junction to Google Drive; since v7.33 git tracks nothing in
+# it (the templates are in config/templates/, the test athletes in
+# tests/fixtures/athletes/).
+config/athletes/
 
 __pycache__/
 

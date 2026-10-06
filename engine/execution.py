@@ -40,25 +40,18 @@ SESSION_CATEGORIES = ("WORKOUT", "RACE_A", "RACE_B", "RACE_C")
 MAX_WINDOW_DAYS = 56
 
 ADHERENCE_DEFAULTS = {"min_pct": 80, "max_pct": 120, "min_compliance": 70}
-_CYCLING = {"ride", "virtualride", "gravelride", "mtb", "mountainbikeride", "ebikeride"}
-_RUNNING = {"run", "virtualrun", "trailrun"}
 
 
-def _sport(t):
-    t = (t or "").strip().lower()
-    return "cycling" if t in _CYCLING else "running" if t in _RUNNING else None
+from shared import sport_of as _sport  # noqa: E402 — shared (v7.33)
 
 
 def adherence_config():
     """heads_up.adherence from decision_thresholds.yaml, with defaults."""
     cfg = dict(ADHERENCE_DEFAULTS)
     try:
-        import os
-        import yaml
-        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "config", "decision_thresholds.yaml")
-        with open(path, encoding="utf-8") as f:
-            cfg.update(((yaml.safe_load(f) or {}).get("heads_up") or {}).get("adherence") or {})
+        from shared import read_config
+        th = read_config("decision_thresholds.yaml", required=False)
+        cfg.update((th.get("heads_up") or {}).get("adherence") or {})
     except Exception:  # noqa: BLE001 — defaults are enough
         pass
     return cfg
@@ -95,8 +88,7 @@ def adherence(row, planned_type, done_types, cfg):
     return ("done_differently" if diffs else "as_planned"), diffs
 
 
-def _d(s):
-    return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+from shared import iso_day as _d  # noqa: E402 — shared parser (v7.33)
 
 
 def _num(x):

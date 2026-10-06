@@ -26,16 +26,7 @@ A_PRIORITIES = ("A+", "A", "A-")
 NUMERIC_FIELDS = ("day", "distance_km", "climb_m", "expected_hours")
 
 
-def _as_date(raw):
-    if isinstance(raw, datetime):
-        return raw.date()
-    if isinstance(raw, date):
-        return raw
-    try:
-        return date.fromisoformat(str(raw))
-    except (TypeError, ValueError):
-        return None
-
+from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
 
 def _num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None

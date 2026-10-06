@@ -207,7 +207,7 @@ or terrain. No opinion is a fine answer — the coach will choose what fits.
 ## For the coach
 
 Once this form is complete, create `config/athletes/<athlete_id>.yaml` from
-`config/athletes/_template.yaml` and transfer the answers. That file is the
+the profile template (`config/templates/profile_template.yaml`) and transfer the answers. That file is the
 athlete's permanent declared profile — everything measurable comes from
 Intervals.icu and never gets copied here.
 

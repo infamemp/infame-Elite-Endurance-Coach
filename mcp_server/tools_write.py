@@ -101,7 +101,7 @@ def save_training_age(athlete_id: str, years: float) -> dict:
 # Write out/<athlete>/continuity.md, always overwriting — the same
 # file coach.py's check_continuity() only ever reports the presence/age
 # of. Requires the boxed #SESSION ... #END envelope
-# (manual/OPERATIONS_MANUAL.md §8 describes exactly this shape) so a
+# (the shape the prompt's #SESSION block has) so a
 # partial or empty paste is refused instead of silently corrupting the
 # macrocycle's resumed position. Never inspects what's inside that
 # envelope — Active Phase, Current Block, the Metric Map — that's the
@@ -141,7 +141,7 @@ def save_continuity(athlete_id: str, text: str, athlete_name: str | None = None)
 # Maintainer notes (the docstring below is the description the model reads):
 # Append a #RACE_RESULT block to out/<athlete>/race_notes.md — never
 # overwriting or deleting what's already there, matching
-# manual/OPERATIONS_MANUAL.md §9's "never delete or overwrite" rule.
+# manual/GUIDE.md's "never delete or overwrite" rule.
 #
 # `date_str` is required and authoritative (YYYY-MM-DD) — it's what
 # coach.py review's --since window actually filters on, so it's taken as
@@ -250,7 +250,7 @@ def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
 # any other declared field. Same gate as an upload:
 #
 # 1. Call with the defaults (a dry run): the text is checked — valid YAML,
-#    every top-level section of config/athletes/_template.yaml present, names
+#    every top-level section of config/templates/profile_template.yaml present, names
 #    the system recognizes — and the answer shows what would change (a diff
 #    against the current file, or "new profile").
 # 2. Show the head coach the changes in plain words and wait for approval.
@@ -284,14 +284,15 @@ def save_declared_profile(athlete_id: str, yaml_text: str, dry_run: bool = True,
     except _yaml.YAMLError as e:
         raise ToolError(f"The text is not valid YAML ({str(e).splitlines()[0]}). Nothing was written.")
     if not isinstance(data, dict):
-        raise ToolError("The profile must be a YAML mapping like _template.yaml. Nothing was written.")
+        raise ToolError("The profile must be a YAML mapping like the profile template. Nothing was written.")
 
     cfg_dir = os.path.join(ROOT, "config", "athletes")
-    with open(os.path.join(cfg_dir, "_template.yaml"), encoding="utf-8") as f:
+    with open(os.path.join(ROOT, "config", "templates", "profile_template.yaml"),
+              encoding="utf-8") as f:
         template = _yaml.safe_load(f) or {}
     missing = [k for k in template if k not in data]
     if missing:
-        raise ToolError("Missing sections compared with _template.yaml: " + ", ".join(missing)
+        raise ToolError("Missing sections compared with the profile template: " + ", ".join(missing)
                         + ". Nothing was written.")
 
     ensure_import_paths()

@@ -40,18 +40,7 @@ FIELDS = ("what", "source", "from", "until", "sport", "disciplines", "max_minute
 SPORTS = ("cycling", "running")
 
 
-def _as_date(raw):
-    if raw in (None, ""):
-        return None
-    if isinstance(raw, datetime):
-        return raw.date()
-    if isinstance(raw, date):
-        return raw
-    try:
-        return date.fromisoformat(str(raw)[:10])
-    except ValueError:
-        return None
-
+from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
 
 def _num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None

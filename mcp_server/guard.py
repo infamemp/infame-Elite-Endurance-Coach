@@ -78,6 +78,11 @@ def guarded(fn: F) -> F:
             except ToolError as exc:
                 return _error(fn.__name__, "ToolError", str(exc), buf.getvalue())
             except Exception as exc:  # noqa: BLE001 — the whole point is to catch everything
+                if type(exc).__name__ == "EngineError":
+                    # engine/shared.py (v7.33): a stated, expected problem
+                    # (no data, missing config) — one line, no traceback.
+                    logger.error("tool %s: EngineError(%r)", fn.__name__, str(exc))
+                    return _error(fn.__name__, "EngineError", str(exc), buf.getvalue())
                 logger.exception("tool %s raised", fn.__name__)
                 return _error(fn.__name__, type(exc).__name__, str(exc), buf.getvalue())
         captured = buf.getvalue()

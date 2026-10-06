@@ -4,6 +4,34 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.33 (2026-10-06)
+
+Batch 6 of the 2026-10-05 audit: the base for the web interface. No training rule and no
+number changed — the golden outputs are identical.
+
+- **`engine/shared.py`:** one copy of the date parsers (there were eight), the sport of an
+  activity type (three), the athlete folder rule (two) and the config reader (each file
+  read once, again only when it changes on disk; every caller gets its own copy).
+- **No `sys.exit` in the engine's functions.** Missing data, a missing config file or an
+  unknown methodology raise `EngineError`. The command line prints the same message and
+  exits 1; the MCP guard reports `error_type: EngineError` without a traceback.
+- **`validate_block.parse_report()`:** the validator's result as data (`passed`, sessions
+  with computed TSS and duration, findings with severity, code, line and message).
+- **`services/`:** the engine as plain functions for scripts and the interface — the same
+  functions the MCP tools run — plus `ledger` and `athlete_files`. `services.validate`
+  adds the structured `summary`.
+- **Athlete folders by id:** `out/<name>/` gets an `athlete_id.txt` marker; a renamed
+  athlete keeps the folder, a same-name athlete gets `<name>_<id>`, and an unknown id
+  writes nothing.
+- **git out of the Google Drive folder:** `config/athletes/` is ignored as a whole.
+  `_template.yaml` → `config/templates/profile_template.yaml`, `ATHLETE_INTAKE.md` →
+  `config/templates/`, `TESTRAMP.yaml` → `tests/profiles/` (copied in for each test run,
+  taken out after). The test runs also remove their `_test_*.yaml` profiles.
+- **`config/decision_thresholds.yaml`:** section index at the top; not split, because the
+  doctrines and the prompt cite it by name.
+- **Documentation:** short `README.md`; `ROADMAP.md` replaces `IMPROVEMENT_BACKLOG.md`;
+  `manual/GUIDE.md` (one page) replaces `OPERATIONS_MANUAL.md` and `QUICK_GUIDE.md`.
+
 ## v7.32 (2026-10-06)
 
 Batch 5 of the 2026-10-05 audit: the data the coach plans on stays complete and true.

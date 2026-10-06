@@ -1060,7 +1060,7 @@ def unit_tests():
         if os.path.exists(os.path.join(ROOT, "RESTORE_POINT_v7.10.md")) else \
         open(sorted(glob.glob(os.path.join(ROOT, "RESTORE_POINT_v*.md")))[-1], encoding="utf-8").read()
     _manifest = _rp[_rp.index("## What the Project must contain"):_rp.index("## Machines")]
-    _search = ["generated", "Syntax", os.path.join("config", "athletes"), "Knowledge",
+    _search = ["generated", "Syntax", os.path.join("config", "templates"), "Knowledge",
                os.path.join("Knowledge", "Principles")]
     for f in _named:
         base = os.path.basename(f)
@@ -1353,7 +1353,8 @@ def unit_tests():
               "road_bike`: 'friel_cycling'" not in text)
 
         # The template itself must pass its own checks
-        with open(os.path.join(cfg_dir, "_template.yaml"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "config", "templates", "profile_template.yaml"),
+                  encoding="utf-8") as f:
             tpl = yaml.safe_load(f)
         equal("template: passes the profile check with no warnings",
               bpf.profile_warnings(tpl), [])
@@ -1886,6 +1887,57 @@ def unit_tests():
                   "durability_watts" not in res_dw["signals"]
                   and "Durability in watts" not in md_state)
     shutil.rmtree(dir_dw, ignore_errors=True)
+
+    # ── athlete folders found by id (v7.33) ──
+    import shared as _sh
+    _out = __import__("tempfile").mkdtemp(prefix="infame_out_")
+    try:
+        os.makedirs(os.path.join(_out, "Ana_Lopez"))          # a folder from before v7.33
+        _f1 = _sh.athlete_out_dir(_out, "i1", "Ana López")
+        check("folders: an existing folder named after the athlete is adopted and marked",
+              os.path.basename(_f1) == "Ana_Lopez"
+              and open(os.path.join(_f1, "athlete_id.txt")).read().strip() == "i1")
+        check("folders: a renamed athlete keeps the same folder (found by id)",
+              _sh.athlete_out_dir(_out, "i1", "Ana López Ruiz") == _f1)
+        _f2 = _sh.athlete_out_dir(_out, "i2", "Ana Lopez")
+        check("folders: another athlete with the same name gets <name>_<id>",
+              os.path.basename(_f2) == "Ana_Lopez_i2", _f2)
+        check("folders: without create, an unknown athlete makes no folder",
+              not os.path.exists(_sh.athlete_out_dir(_out, "i9", "Nadie", create=False)))
+        check("shared: one sport rule for every module",
+              _sh.sport_of("VirtualRide") == "cycling" and _sh.sport_of("TrailRun") == "running"
+              and _sh.sport_of("WeightTraining") is None)
+        check("shared: lenient dates accept ISO, header dates and nothing else",
+              _sh.as_date("2026-10-06T07:00:00") == _date(2026, 10, 6)
+              and _sh.as_date("06-10-2026") == _date(2026, 10, 6) and _sh.as_date("soon") is None)
+    finally:
+        shutil.rmtree(_out, ignore_errors=True)
+
+    # ── one config reader, no sys.exit in the engine (v7.33) ──
+    _t1 = _sh.thresholds()
+    _t1["taper"] = "changed by a caller"
+    check("config: every caller gets its own copy of the thresholds",
+          isinstance(_sh.thresholds().get("taper"), dict))
+    check("config: a missing optional file is an empty dict",
+          _sh.read_config("no_such_file.yaml", required=False) == {})
+    try:
+        _sh.read_config("no_such_file.yaml")
+        check("config: a missing required file raises EngineError", False)
+    except _sh.EngineError:
+        check("config: a missing required file raises EngineError", True)
+    import build_state as _bs_ee
+    try:
+        _bs_ee.load_athlete("_no_such_athlete_")
+        check("engine: no data raises EngineError, not SystemExit", False)
+    except _sh.EngineError as e:
+        check("engine: no data raises EngineError, not SystemExit", "No data" in str(e))
+    except SystemExit:
+        check("engine: no data raises EngineError, not SystemExit", False, "SystemExit")
+    _cli = subprocess.run([sys.executable, os.path.join(ROOT, "engine", "build_state.py"),
+                           "--athlete", "_no_such_athlete_"], capture_output=True, text=True)
+    check("engine: on the command line the same problem is one message and exit 1",
+          _cli.returncode == 1 and "No data" in _cli.stderr and "Traceback" not in _cli.stderr,
+          _cli.stderr[-300:])
 
     # ── reference files on demand (get_reference, v7.31) ──
     import reference as rf
@@ -2622,11 +2674,19 @@ def week_target_tests():
 def cleanup():
     import shutil
     data = os.path.join(ROOT, "data")
-    if not os.path.isdir(data):
-        return
-    for d in os.listdir(data):
+    for d in (os.listdir(data) if os.path.isdir(data) else []):
         if d.startswith("_test_"):
             shutil.rmtree(os.path.join(data, d), ignore_errors=True)
+    # The fixtures' declared profiles (config/athletes/_test_<name>.yaml).
+    # config/athletes/ is the head coach's synced folder: leave nothing there.
+    cfg = os.path.join(ROOT, "config", "athletes")
+    if os.path.isdir(cfg):
+        for fn in os.listdir(cfg):
+            if fn.startswith("_test_") and fn.endswith(".yaml"):
+                try:
+                    os.remove(os.path.join(cfg, fn))
+                except OSError:
+                    pass
 
 
 def main():
@@ -2653,7 +2713,18 @@ def main():
     import contextlib, io
     with contextlib.redirect_stdout(io.StringIO()):
         make_fixtures.main()
+    # The test athletes' declared profiles live in tests/profiles/
+    # (config/athletes/ is not in git since v7.33); put them in for the run.
+    import fixture_profiles
+    _profiles = fixture_profiles.install()
+    try:
+        _run_sections(args, run_all)
+    finally:
+        fixture_profiles.remove(_profiles)
+    _report(args)
 
+
+def _run_sections(args, run_all):
     if run_all or args.unit:
         print("Unit tests...")
         try:
@@ -2676,6 +2747,8 @@ def main():
         golden_tests(update=args.update)
         cleanup()
 
+
+def _report(args):
     print()
     if args.verbose:
         for name in PASSED:

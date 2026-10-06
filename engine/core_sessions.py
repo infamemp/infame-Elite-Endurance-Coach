@@ -48,19 +48,7 @@ def load_config(path=CONFIG_PATH):
         return {}
 
 
-def _as_date(raw):
-    if isinstance(raw, datetime):
-        return raw.date()
-    if isinstance(raw, date):
-        return raw
-    text = str(raw or "")[:10]
-    for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    return None
-
+from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
 
 def goal_discipline(goal):
     """The goal's discipline: `discipline`, else the first race day's."""

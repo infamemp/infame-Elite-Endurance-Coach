@@ -33,8 +33,7 @@ SECS = (300, 1200)          # 5 min, 20 min
 WINDOW_DAYS = 42
 
 
-def _d(s):
-    return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+from shared import iso_day as _d  # noqa: E402 — shared parser (v7.33)
 
 
 def rows_from_payload(payload, secs=SECS):

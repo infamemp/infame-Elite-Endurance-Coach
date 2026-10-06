@@ -68,14 +68,14 @@ SPORT_GROUP = {
 def load_athlete(aid):
     path = os.path.join(DATA, str(aid), "athlete_data.json")
     if not os.path.exists(path):
-        sys.exit(f"No data for '{aid}'. Run: python engine/fetch_athlete_data.py "
-                 f"--athlete {aid}")
+        raise EngineError(f"No data for '{aid}'. Run: python engine/fetch_athlete_data.py "
+                          f"--athlete {aid}")
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
-def d(s):
-    return datetime.strptime(s[:10], "%Y-%m-%d").date()
+from shared import iso_day as d  # noqa: E402 — shared parser (v7.33)
+from shared import EngineError, cli as _cli, read_config as _read_config  # noqa: E402
 
 
 def fmt_sec(secs):
@@ -382,12 +382,7 @@ def _load_vocab():
     """Canonical names from config, so the profile is checked against the
     same vocabulary the validator uses. Returns (disciplines, priorities,
     event_types, authors) — empty collections if config is unreadable."""
-    th = {}
-    if yaml is not None:
-        path = os.path.join(ROOT, "config", "decision_thresholds.yaml")
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                th = yaml.safe_load(f) or {}
+    th = _read_config("decision_thresholds.yaml", required=False) if yaml is not None else {}
     disciplines = (th.get("disciplines") or {}).get("canonical") or {}
     priorities = (th.get("race_priorities") or {}).get("levels") or []
     event_types = [k for k in ((th.get("taper") or {})
@@ -666,4 +661,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _cli(main)

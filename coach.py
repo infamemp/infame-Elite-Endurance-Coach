@@ -59,18 +59,7 @@ sys.path.insert(0, os.path.join(ROOT, "verify"))
 # `coach.py check` works with no key set.
 
 
-def safe_filename(name):
-    """Same normalization already fixed and verified in convert.py's
-    safe_filename — copied rather than imported, since convert.py lives in a
-    space-containing folder path and is being retired from the daily
-    workflow this script drives."""
-    normalized = unicodedata.normalize("NFKD", name or "")
-    safe = normalized.encode("ascii", "ignore").decode("ascii")
-    safe = re.sub(r"[^\w\s-]", " ", safe)
-    safe = re.sub(r"\s+", "_", safe.strip())
-    safe = re.sub(r"_+", "_", safe)
-    safe = re.sub(r"-+", "-", safe)
-    return safe.strip("-_")
+from shared import safe_filename, athlete_out_dir  # noqa: E402 — one rule (v7.33)
 
 
 def write_roster(athletes):
@@ -193,9 +182,8 @@ def prep_one(fad, bp, bs, aid, name, days, thresholds):
     except Exception as e:
         print(f"   PROFILE BUILD FAILED (non-blocking): {type(e).__name__}: {e}")
 
-    dest_name = safe_filename(name) or str(aid)
-    out_dir = os.path.join(ROOT, "out", dest_name)
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = athlete_out_dir(os.path.join(ROOT, "out"), aid, name)
+    dest_name = os.path.basename(out_dir)
     delivered = []
     for fname in ("state.md", "profile.md"):
         src = os.path.join(ROOT, "data", str(aid), fname)
@@ -277,9 +265,9 @@ def cmd_new(args):
                  f"Run 'python coach.py prep --list' to see ids.")
     aid, name = match[0]
 
-    template = os.path.join(ROOT, "config", "athletes", "_template.yaml")
+    template = os.path.join(ROOT, "config", "templates", "profile_template.yaml")
     dest = os.path.join(ROOT, "config", "athletes", f"{aid}.yaml")
-    intake = os.path.join(ROOT, "config", "athletes", "ATHLETE_INTAKE.md")
+    intake = os.path.join(ROOT, "config", "templates", "ATHLETE_INTAKE.md")
 
     if not os.path.exists(template):
         sys.exit(f"Template not found: {os.path.relpath(template, ROOT)}")
@@ -500,7 +488,8 @@ def cmd_review(args):
         sys.exit(f"--since must be YYYY-MM-DD, got '{args.since}'")
 
     name = (data.get("profile") or {}).get("name") or str(args.athlete)
-    dest_name = safe_filename(name) or str(args.athlete)
+    dest_name = os.path.basename(athlete_out_dir(os.path.join(ROOT, "out"), args.athlete, name,
+                                                 create=False))
 
     snap, snap_age = nearest_snapshot(args.athlete, since)
     curves = curve_progression(snap, data) if snap else []
@@ -617,4 +606,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from shared import cli
+    cli(main)

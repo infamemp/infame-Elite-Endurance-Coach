@@ -80,18 +80,7 @@ SUFFIX_TO_METRIC = validate_block.SUFFIX_TO_METRIC
 # approximate class is reported, never a guess.
 # ══════════════════════════════════════════════════════════════════
 
-_CYCLING_TYPES = {"ride", "virtualride", "gravelride", "mtb",
-                   "mountainbikeride", "ebikeride"}
-_RUNNING_TYPES = {"run", "virtualrun", "trailrun"}
-
-
-def _sport_from_type(event_type):
-    t = (event_type or "").strip().lower()
-    if t in _CYCLING_TYPES:
-        return "cycling"
-    if t in _RUNNING_TYPES:
-        return "running"
-    return None
+from shared import sport_of as _sport_from_type  # noqa: E402 — shared (v7.33)
 
 
 # ══════════════════════════════════════════════════════════════════

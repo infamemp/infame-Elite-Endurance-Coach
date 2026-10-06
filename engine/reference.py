@@ -9,7 +9,7 @@ not. Now the coach asks for the one part it needs:
                  sport (output format, floors, the standard classes)
   architectures  the session-shape library, filtered by class and discipline
   intake         the athlete intake script (Phase 1)
-  profile_template  the declared-profile template (config/athletes/_template.yaml)
+  profile_template  the declared-profile template (config/templates/profile_template.yaml)
 
 Nothing here computes anything: it cuts the existing files at their headings
 and returns the text as written. The files themselves are unchanged and are
@@ -26,7 +26,7 @@ import yaml
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GENERATED = os.path.join(ROOT, "generated")
 AUTHORS = os.path.join(ROOT, "config", "authors")
-ATHLETES = os.path.join(ROOT, "config", "athletes")
+TEMPLATES = os.path.join(ROOT, "config", "templates")
 
 ZONE_FILES = {"cycling": "Simple_Table_Cycling_Training_Zones.md",
               "running": "Simple_Table_Running_Training_Zones.md"}
@@ -119,8 +119,8 @@ def get(topic, methodology=None, session_class=None, discipline=None):
     if t == "architectures":
         return {"topic": "architectures", **architectures(session_class, discipline)}
     if t == "intake":
-        return {"topic": "intake", "markdown": _read(os.path.join(ATHLETES, "ATHLETE_INTAKE.md"))}
+        return {"topic": "intake", "markdown": _read(os.path.join(TEMPLATES, "ATHLETE_INTAKE.md"))}
     if t == "profile_template":
         return {"topic": "profile_template",
-                "yaml": _read(os.path.join(ATHLETES, "_template.yaml"))}
+                "yaml": _read(os.path.join(TEMPLATES, "profile_template.yaml"))}
     raise ValueError(f"Unknown topic '{topic}'. Topics: {', '.join(TOPICS)}.")

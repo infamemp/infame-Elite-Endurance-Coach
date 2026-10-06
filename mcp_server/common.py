@@ -129,11 +129,9 @@ def deliver_to_out(aid: str, name: str) -> str:
     safe_filename() rather than a second normalization rule that could
     drift from it."""
     ensure_import_paths()
-    import coach
+    import shared
 
-    dest_name = coach.safe_filename(name) or str(aid)
-    out_dir = os.path.join(OUT, dest_name)
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = shared.athlete_out_dir(OUT, aid, name)
     for fname in ("state.md", "profile.md"):
         src = os.path.join(DATA, str(aid), fname)
         if os.path.exists(src):
@@ -218,16 +216,23 @@ def safe_out_dir(aid: str, name: str | None = None) -> str:
     from the API themselves. Falls back to the raw id when no local
     profile name is on disk yet, matching coach.py's own fallback."""
     ensure_import_paths()
-    import coach
+    import shared
 
+    # v7.33: a mistyped id used to create an empty folder in silence, and the
+    # coach then believed the athlete had no #SESSION. An id is accepted only
+    # when this system already knows it: local data, a declared profile, or a
+    # folder that carries its id.
+    known = (os.path.exists(athlete_data_path(aid))
+             or os.path.exists(os.path.join(ROOT, "config", "athletes", f"{aid}.yaml"))
+             or shared.find_out_dir(OUT, aid))
+    if not known:
+        raise ToolError(f"Unknown athlete id '{aid}': there is no data, profile or folder for "
+                        f"it. Check the id with list_roster, or call get_athlete_state first. "
+                        f"Nothing was written.")
     if name is None:
         data = load_athlete_data(aid)
         name = (data or {}).get("profile", {}).get("name")
-    dest_name = coach.safe_filename(name) if name else None
-    dest_name = dest_name or str(aid)
-    out_dir = os.path.join(OUT, dest_name)
-    os.makedirs(out_dir, exist_ok=True)
-    return out_dir
+    return shared.athlete_out_dir(OUT, aid, name)
 
 
 def block_file_name(week: int | None = None) -> str:

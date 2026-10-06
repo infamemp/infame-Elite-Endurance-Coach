@@ -72,6 +72,8 @@ import core_sessions  # noqa: E402  — core sessions per discipline (v7.23), wa
 import restrictions  # noqa: E402  — injury restrictions (v7.24), HC-LIMIT / CHK-LIMIT
 import plan_checks  # noqa: E402  — the week as a whole (v7.25), warns only
 import ledger  # noqa: E402  — one line per validation in the athlete's ledger (v7.26)
+import shared as _shared  # noqa: E402  — config and errors (v7.33)
+from shared import EngineError  # noqa: E402
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
 SECTION_WORDS = {"warmup", "warm up", "main set", "main", "cooldown", "cool down"}
@@ -125,20 +127,11 @@ def language_warnings(header, code):
 
 
 def load_thresholds_only():
-    path = os.path.join(CONFIG, "decision_thresholds.yaml")
-    if not os.path.exists(path):
-        sys.exit(f"Config file not found: {path}")
-    with open(path, encoding="utf-8") as f:
-        return zone_model.with_derived_cutpoints(yaml.safe_load(f))
+    return _shared.thresholds()
 
 
 def load_config(methodology):
-    def read(path):
-        full = os.path.join(CONFIG, path)
-        if not os.path.exists(full):
-            sys.exit(f"Config file not found: {full}")
-        with open(full, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+    read = _shared.read_config
 
     # Class cutpoints are derived from config/tss_classes.yaml + crosswalk.yaml
     th = zone_model.with_derived_cutpoints(read("decision_thresholds.yaml"))
@@ -148,15 +141,15 @@ def load_config(methodology):
     if not os.path.exists(author_path):
         available = sorted(f[:-5] for f in os.listdir(os.path.join(CONFIG, "authors"))
                            if f.endswith(".yaml") and not f.startswith("_"))
-        sys.exit(f"Unknown methodology '{methodology}'.\nAvailable: {', '.join(available)}")
+        raise EngineError(f"Unknown methodology '{methodology}'.\nAvailable: {', '.join(available)}")
     with open(author_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     # The native file is resolved into the full standardized table: every
     # metric of the sport (estimates included), computed class and domain.
     author, errors, _ = zone_model.resolve_author(raw)
     if errors:
-        sys.exit(f"Methodology '{methodology}' does not resolve — run "
-                 f"`python build_zone_tables.py validate`:\n  " + "\n  ".join(errors))
+        raise EngineError(f"Methodology '{methodology}' does not resolve — run "
+                          f"`python build_zone_tables.py validate`:\n  " + "\n  ".join(errors))
 
     return author, th, tss
 
@@ -1367,6 +1360,67 @@ class _Tee:
 _CODE_RE = re.compile(r"\b(FAIL|WARN) \[([A-Z0-9-]+)\]")
 
 
+_SESSION_RE = re.compile(r"^── Session (\d+): (.*)$")
+_SECTION_RE = re.compile(r"^── (.+?)\s*$")
+_FINDING_RE = re.compile(r"^\s*(FAIL|WARN) \[([A-Z0-9-]+)\] L(\S+): (.*)$")
+_TSS_RE = re.compile(r"Computed TSS: ([\d.]+)")
+_DUR_RE = re.compile(r"Computed Duration: (\S+)")
+
+
+def parse_report(text):
+    """The validator's report as data (v7.33), for an interface that marks the
+    exact line of each finding. Read from the report this module prints, so
+    the text and the data can never disagree:
+
+      {"passed": bool | None,
+       "sessions": [{"n", "label", "computed_tss", "computed_duration",
+                     "findings": [...]}],
+       "findings": [{"severity": "block" | "warn", "code", "line" (int or None),
+                     "message", "session" (n or None), "section" (or None)}],
+       "counts": {"block": n, "warn": n}}
+
+    FAIL lines block (HC-, SYN-, DUR- …); WARN lines never block."""
+    sessions, findings = [], []
+    current, section = None, None
+    passed = None
+    for line in (text or "").splitlines():
+        m = _SESSION_RE.match(line)
+        if m:
+            current = {"n": int(m.group(1)), "label": m.group(2).strip(),
+                       "computed_tss": None, "computed_duration": None, "findings": []}
+            sessions.append(current)
+            section = None
+            continue
+        m = _SECTION_RE.match(line)
+        if m:
+            current, section = None, m.group(1)
+            continue
+        m = _FINDING_RE.match(line)
+        if m:
+            sev, code, ln, msg = m.groups()
+            f = {"severity": "block" if sev == "FAIL" else "warn", "code": code,
+                 "line": int(ln) if ln.isdigit() else None, "message": msg.strip(),
+                 "session": current["n"] if current else None, "section": section}
+            findings.append(f)
+            if current:
+                current["findings"].append(f)
+            continue
+        if current:
+            m = _TSS_RE.search(line)
+            if m:
+                current["computed_tss"] = float(m.group(1))
+            m = _DUR_RE.search(line)
+            if m:
+                current["computed_duration"] = m.group(1)
+        if line.startswith("RESULT: PASS"):
+            passed = True
+        elif line.startswith("RESULT: BLOCKED"):
+            passed = False
+    return {"passed": passed, "sessions": sessions, "findings": findings,
+            "counts": {"block": sum(1 for f in findings if f["severity"] == "block"),
+                       "warn": sum(1 for f in findings if f["severity"] == "warn")}}
+
+
 def record_validation(tee, path, result, athlete_ids, n_sessions):
     """One ledger line per athlete in the file (never raises)."""
     try:
@@ -1520,13 +1574,10 @@ def main():
 
         try:
             author, _, tssc = load_config(methodology.strip().lower())
-        except SystemExit as e:
-            # load_config() calls sys.exit() on an unknown methodology --
-            # correct for a one-shot CLI run, but fatal here: uncaught, it
-            # would abort the whole week after this one session, hiding
-            # every session that comes after it. Same fix as the
-            # missing-header case just above: report it as this session's
-            # failure and keep validating the rest of the block.
+        except EngineError as e:
+            # An unknown methodology fails this session only: report it and
+            # keep validating the rest of the block (uncaught it would hide
+            # every session after this one).
             print(f"── Session {n}: cannot validate — {e}")
             failed = True
             mono_gkey, _ = mono_key(header)
@@ -1888,4 +1939,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _shared.cli(main)
