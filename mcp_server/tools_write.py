@@ -320,6 +320,9 @@ def save_declared_profile(athlete_id: str, yaml_text: str, dry_run: bool = True,
         os.makedirs(hist, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         shutil.copy2(path, os.path.join(hist, f"{aid}_{stamp}.yaml"))
+    # config/athletes/ is gitignored, so a fresh clone has no such folder:
+    # the first profile saved on a machine must create it.
+    os.makedirs(cfg_dir, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(new)
     try:

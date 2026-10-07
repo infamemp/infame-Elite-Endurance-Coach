@@ -4,6 +4,17 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.34 (2026-10-07)
+
+Small fix after a real incident: updating the code with git replaced the `config/athletes`
+link to Google Drive with an empty folder, and `HC-ATHLETE` blocked every week.
+
+- **`HC-ATHLETE` message:** when the profile is missing, it now says to check that
+  `config/athletes` is still the link to Drive.
+- **`manual/GUIDE.md`:** an update step that checks the three Drive links
+  (`d----l` in `dir`), and the repair in the common-problems table.
+- No training rule and no number changed.
+
 ## v7.33 (2026-10-06)
 
 Batch 6 of the 2026-10-05 audit: the base for the web interface. No training rule and no

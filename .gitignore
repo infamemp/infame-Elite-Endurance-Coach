@@ -41,3 +41,5 @@ mcp_server/logs/
 # baselines next to them (expected_state.json) stay tracked.
 tests/fixtures/*/athlete_data.json
 tests/fixtures/*/declared_profile.yaml
+
+config/athletes*/

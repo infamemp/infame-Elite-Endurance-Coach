@@ -662,7 +662,10 @@ def check_athlete(header, cli_athlete, skip_existence=False):
         errors.append(("HC-ATHLETE", "-", f"no declared profile for '{aid}' "
                        f"(config/athletes/{aid}.yaml) — check the id; without the profile the "
                        "athlete's injury restrictions, metric choices and equipment cannot "
-                       "be checked"))
+                       "be checked. If the id is right and the profile did exist, check "
+                       "that config/athletes is still the link to Google Drive "
+                       "(manual/GUIDE.md, section 5): updating the code with git can "
+                       "replace it with an empty folder"))
     return errors
 
 

@@ -1,9 +1,15 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.33
+# RESTORE POINT — Infame Elite Endurance Coach v7.34
 
-**Date frozen:** 2026-10-06
-**Previous:** v7.32 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.32 (unchanged in v7.33)
+**Date frozen:** 2026-10-07
+**Previous:** v7.33 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.32 (unchanged in v7.34)
 **Tests:** `python tests/run_tests.py` → 776/776 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 187/187
+
+## What changed in v7.34
+
+`HC-ATHLETE` now tells you to check the `config/athletes` link to Drive when a profile is
+missing; `manual/GUIDE.md` has the link check and the repair. Nothing else changed.
+Deploy: restart Claude Desktop. The Project does not change.
 
 ## What changed in v7.33
 

@@ -70,6 +70,9 @@ result goes at the **end** of `race_notes.md`.
    — both must pass.
 3. Commit and push in GitHub Desktop (GitHub runs both suites again).
 4. Restart Claude Desktop. If the prompt changed, paste it into the Project.
+5. Check the three Drive links (they hold your athletes; git must never replace them):
+   `dir config | findstr athletes`, and the same for `data` and `out` in the repo
+   folder. Each line must start with `d----l`. A `d-----` means a plain folder.
 
 ## 5. Common problems
 
@@ -80,6 +83,7 @@ result goes at the **end** of `race_notes.md`.
 | Errors about "remote-devices" | you are in Cowork/Code: use a plain Chat |
 | `Missing environment variable ICU_API_KEY` | step 1.2, or the `env` block in the Desktop config |
 | `Unknown athlete id` | check the id with the roster; nothing was written |
+| `HC-ATHLETE … no declared profile` for an athlete that existed | `config\athletes` lost its link to Drive. Rename the plain folder, then `cmd /c mklink /J athletes "<Drive>\infame-coach-sync\config-athletes"` inside `config`. Copy into Drive first anything the plain folder has that Drive lacks. Same for `data` and `out` |
 | `Unknown methodology 'X'` | the `[Methodology]` field is wrong: the coach corrects the week |
 | `push_block` refuses a BLOCKED week | working as intended: correct and validate again |
 | A tool hangs for minutes | pull the latest code and restart Desktop |
