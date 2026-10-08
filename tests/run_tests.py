@@ -788,6 +788,14 @@ def unit_tests():
     check("core sessions: architecture AND class must both hold",
           _cs.matches({"architecture": "sustained_effort", "class": "threshold", "sequence": ["sustained_effort"]}, _item)
           and not _cs.matches({"architecture": "sprints", "class": "threshold", "sequence": ["sprints"]}, _item))
+    _vo2 = {"match": [{"classes": ["vo2max", "supra_threshold"]}]}
+    check("core sessions v7.35: a session whose class matches is a full match",
+          _cs.match_kind({"class": "vo2max", "sequence": []}, _vo2) == "session")
+    check("core sessions v7.35: VO2max minutes as touches still count, and say so",
+          _cs.match_kind({"class": "endurance", "touches": ["vo2max"], "sequence": []}, _vo2) == "touches"
+          and _cs.matches({"class": "endurance", "touches": ["vo2max"], "sequence": []}, _vo2))
+    check("core sessions v7.35: no class and no touch, no match",
+          _cs.match_kind({"class": "endurance", "touches": ["tempo"], "sequence": []}, _vo2) is None)
     check("core sessions: a combo matches on any shape it uses",
           _cs.matches({"architecture": "classic_intervals", "class": "vo2max",
                        "sequence": ["classic_intervals", "sprints"]}, {"match": [{"architectures": ["sprints"]}]}))
@@ -2374,6 +2382,56 @@ def architecture_tests():
     equal("class: 100-105% (above LT2/CP) reads as supra_threshold (v7.2)",
           r["class"], "supra_threshold")
 
+    # ── v7.35: the class is where the load sits; harder minutes are touches ──
+    r = classify("Main Set\n- 10m 65-70%\n\n3x\n- 3m 80-85%\n- 7m 65-70%\n\n- 5m 65-70%")
+    equal("class v7.35: aerobic ride with 3x3m tempo stays endurance", r["class"], "endurance")
+    equal("class v7.35: the tempo minutes are its touches",
+          [c for c, _s in r["touches"]], ["tempo"])
+    r = classify("Main Set\n- 45m 78-82% Pace\n\n6x\n- 20s 110-120% Pace\n- 1m40s 65-70% Pace",
+                 event_type="Run")
+    equal("class v7.35: easy run with strides stays endurance", r["class"], "endurance")
+    check("class v7.35: the strides are touches", len(r["touches"]) >= 1, r["touches"])
+    r = classify("Main Set 5x\n- 4m 106-115%\n- 4m 60-65%")
+    equal("class v7.35: a real VO2max set keeps its class (its work carries the load)",
+          r["class"], "vo2max")
+    r = classify("Main Set\n- 60m 65-70%\n- 20m 95-100%\n- 60m 65-70%")
+    equal("class v7.35: a long ride with one threshold block is an aerobic ride with a touch",
+          r["class"], "endurance")
+    r = classify("Main Set 3x\n- 12m 88-93%\n- 4m 50-55%")
+    equal("class v7.35: recovery steps never decide the class", r["class"], "sub_threshold")
+    r = classify("Main Set\n- 30m 45-54%")
+    check("class v7.35: an all-recovery Main Set is not given a harder class",
+          r["class"] in ("recovery", "endurance"), r["class"])
+    r = classify("Main Set\n- 30m 66-72% Pace\n\n6x\n- 20s 110-120% Pace\n- 1m40s 60-65% Pace",
+                 event_type="Run")
+    equal("class v7.35: a recovery jog with strides stays a recovery jog", r["class"], "recovery")
+    r = classify("Main Set 10x\n- 30s 125-135%\n- 4m30s 45-50%")
+    equal("class v7.35: long recoveries between efforts never turn intervals into recovery",
+          r["class"], "anaerobic")
+
+    import validate_block as _vbp
+    _p = _vbp.session_purpose([("endurance", 1800, 68), ("tempo", 540, 88), ("vo2max", 240, 110)])
+    equal("session_purpose: aerobic base carries the load", _p["class"], "endurance")
+    equal("session_purpose: touches listed easiest first, with their seconds",
+          _p["touches"], [("tempo", 540), ("vo2max", 240)])
+    equal("session_purpose: nothing classified -> None", _vbp.session_purpose([]), None)
+    equal("format_touches: minutes and seconds", _vbp.format_touches([("tempo", 540), ("vo2max", 90)]),
+          "tempo 9m, vo2max 1m30s")
+    _a, _th2, _t = _vbp.load_config("coggan")
+    _st, _ = _vbp.parse_block("Main Set\n- 10m 65-70%\n\n3x\n- 3m 86-90%\n- 7m 65-70%")
+    _mp = _vbp.session_monotony_profile(_st, _a, _th2)
+    equal("CHK-MONO v7.35: an aerobic session with tempo touches is endurance, not tempo",
+          _mp["class"], "endurance")
+    _st, _ = _vbp.parse_block("Main Set 4x\n- 3m 96-100%\n- 2m 106-110%")
+    _mp = _vbp.session_monotony_profile(_st, _a, _th2)
+    check("CHK-MONO v7.35: steps above the session's class are work, not rest",
+          all(role == "work" for _m, _b, role, _r in _mp["fingerprint"]), _mp)
+    _rep = _vbp.parse_report("── Session 1: x\n   Computed TSS: 50\n"
+                             "   Session class: endurance · touches: tempo 9m\nRESULT: PASS")
+    check("parse_report v7.35: reads the session class and its touches",
+          _rep["sessions"][0]["session_class"] == "endurance"
+          and _rep["sessions"][0]["touches"] == "tempo 9m", _rep)
+
     # ── Frequency tally (the idea-bank input) ───────────────────────
     rows = [
         {"architecture": "sustained_effort", "sequence": ["sustained_effort"]},
@@ -2550,6 +2608,13 @@ BLOCK_CASES = [
     # below) -- "using each session's estimated TSS plus the last few real
     # days." The blend of real + planned pushes this week over the line.
     ("load_monotony_blend.md", 0, ["CHK-LOAD-MONOTONY"]),
+    # v7.35: an aerobic ride with 3x3m of tempo is an aerobic ride with touches,
+    # not a tempo session -- repeating it is never CHK-MONO (aerobic classes are
+    # the coach's judgement), and the validator says where its load sits.
+    ("aerobic_touches_repeat.md", 0, ["Session class: endurance · touches: tempo 9m"],
+     ["CHK-MONO"]),
+    # ...while a real tempo session repeated with no progression still is.
+    ("tempo_repeat.md", 0, ["CHK-MONO"]),
 ]
 
 

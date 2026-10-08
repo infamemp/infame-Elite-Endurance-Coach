@@ -6,6 +6,7 @@
     "goal": "Test Marathon",
     "items": [
       {
+        "as_touches": false,
         "found_in": null,
         "id": "threshold",
         "label": "Threshold (T) running",
@@ -16,6 +17,7 @@
         "why": "Raises the pace that can be held for long; the core of 10K to marathon."
       },
       {
+        "as_touches": false,
         "found_in": null,
         "id": "intervals",
         "label": "VO2max (I) intervals",

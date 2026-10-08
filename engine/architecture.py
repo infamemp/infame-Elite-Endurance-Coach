@@ -31,6 +31,12 @@ architectures by rough class ("another VO2max session this week") but must
 never be read as a number to prescribe from; #STATE and the active
 author's zones remain the only authority for that, per <engine_contract>.
 
+The class is the one that carries most of the session's load, not its
+hardest step (v7.35): an aerobic ride or run with a few minutes of tempo,
+sweet spot, VO2max or strides stays aerobic, and those minutes are listed as
+its `touches`. Before v7.35 the hardest unit named the class, so any touch
+turned an aerobic session into a "tempo" or "VO2max" one in the record.
+
 Known, accepted gaps in this first version (rare in the 14-family corpus,
 each under 30 of ~1,700 real workouts -- revisit only if real use shows
 they matter):
@@ -397,9 +403,39 @@ def _class_from_cutpoints(mid, metric, sport, cutpoints):
 # PUBLIC ENTRY POINT
 # ══════════════════════════════════════════════════════════════════
 
-def _result(ok, reason, architecture=None, cls=None, combo=False, sequence=None):
+def _result(ok, reason, architecture=None, cls=None, combo=False, sequence=None,
+            touches=None):
     return {"ok": ok, "reason": reason, "architecture": architecture,
-            "class": cls, "combo": combo, "sequence": sequence or []}
+            "class": cls, "combo": combo, "sequence": sequence or [],
+            "touches": touches or []}
+
+
+def _purpose(units, event_type, thresholds):
+    """{class, touches} of the Main Set from generic cutpoints, or None.
+
+    The class is the one that carries most of the session's load
+    (validate_block.session_purpose), not the hardest unit: an aerobic
+    session with a few minutes of tempo, sweet spot or VO2max stays aerobic,
+    and those minutes are reported as its touches."""
+    sport = _sport_from_type(event_type)
+    if not thresholds or not sport:
+        return None
+    cutpoints = thresholds.get("classification_cutpoints") or {}
+    items = []
+
+    def walk(u, n=1):
+        if u["k"] == "repeat":
+            for x in u["steps"]:
+                walk(x, n * u["n"])
+        elif u["k"] in ("steady", "ramp") and u["d"]:
+            metric = SUFFIX_TO_METRIC.get(u.get("suffix", ""), "power")
+            c = _class_from_cutpoints(_avg(u), metric, sport, cutpoints)
+            if c:
+                items.append((c, u["d"] * n, _avg(u), n > 1))
+
+    for u in units:
+        walk(u)
+    return validate_block.session_purpose(items)
 
 
 def classify_session(description, event_type=None, thresholds=None):
@@ -472,19 +508,11 @@ def classify_session(description, event_type=None, thresholds=None):
     set_arch = None
     if working and all(rp in ("steady", "endurance") for rp, _sp, _n, _w in working):
         set_arch = _set_architecture(units, _sport_from_type(event_type))
+    purpose = _purpose(units, event_type, thresholds) or {}
+    cls, touches = purpose.get("class"), purpose.get("touches") or []
     if set_arch and max(loads, default=0) > 0:
-        work_leaves = [x for u in units for x in (u["steps"] if u["k"] == "repeat" else [u])
-                       if x["k"] in ("steady", "ramp")]
-        work = max(work_leaves, key=_avg)
-        cls = None
-        if thresholds:
-            sport = _sport_from_type(event_type)
-            if sport:
-                metric = SUFFIX_TO_METRIC.get(work.get("suffix", ""), "power")
-                cls = _class_from_cutpoints(_avg(work), metric, sport,
-                                            thresholds.get("classification_cutpoints") or {})
         return _result(True, None, architecture=set_arch, cls=cls,
-                       combo=False, sequence=[set_arch])
+                       combo=False, sequence=[set_arch], touches=touches)
 
     fams = [_family(rp, sp) for rp, sp, _n, _work in infos]
     # A zero-load unit (an easy filler step sitting in the Main Set between
@@ -505,15 +533,6 @@ def classify_session(description, event_type=None, thresholds=None):
 
     top = loads.index(max(loads))
     primary = fams[top]
-    _rp, _sp, _n, work = infos[top]
-
-    cls = None
-    if work and thresholds:
-        sport = _sport_from_type(event_type)
-        if sport:
-            metric = SUFFIX_TO_METRIC.get(work.get("suffix", ""), "power")
-            cutpoints = thresholds.get("classification_cutpoints") or {}
-            cls = _class_from_cutpoints(_avg(work), metric, sport, cutpoints)
 
     # The session's biggest single unit can itself be a real, deliberate
     # design that simply is not one of the named shapes (a compound
@@ -525,7 +544,7 @@ def classify_session(description, event_type=None, thresholds=None):
     reason = None if primary else ("main work does not match a named "
                                     "architecture (complex or free-form)")
     return _result(True, reason, architecture=primary, cls=cls,
-                    combo=len(sequence) > 1, sequence=sequence)
+                    combo=len(sequence) > 1, sequence=sequence, touches=touches)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -585,7 +604,8 @@ def summarize_recent(recent_sessions, thresholds):
             continue
         rows.append({"date": s.get("date"), "type": s.get("type"),
                      "architecture": r["architecture"], "class": r["class"],
-                     "combo": r["combo"], "sequence": r["sequence"]})
+                     "combo": r["combo"], "sequence": r["sequence"],
+                     "touches": [c for c, _s in r.get("touches") or []]})
     rows.sort(key=lambda x: x["date"] or "")
     return {"rows": rows}
 
@@ -602,7 +622,10 @@ def render(summary):
         "`continuity.md` when that is present and current; a backstop for "
         "when it is not, and a cross-check either way. Class is "
         "approximate (generic cutpoints, not the athlete's active author) "
-        "-- for grouping only, never a number to prescribe from. A blank "
+        "-- for grouping only, never a number to prescribe from. The class "
+        "is where most of the session's load sits; harder minutes inside it "
+        "are listed as touches (an aerobic ride with a few tempo minutes is "
+        "`endurance + tempo`, not a tempo session). A blank "
         "row is a session whose text did not parse into a named shape or "
         "had nothing to classify (a rest day, a bare imported ride).",
         "",
@@ -611,7 +634,10 @@ def render(summary):
     ]
     for r in rows:
         arch = " + ".join(r["sequence"]) if r["combo"] else (r["architecture"] or "_complex/free-form_")
-        lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {r['class'] or '-'} |")
+        cls = r["class"] or "-"
+        if r["class"] and r.get("touches"):
+            cls += " + " + ", ".join(r["touches"])
+        lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {cls} |")
 
     counts, unused = frequency(rows)
     lines += [

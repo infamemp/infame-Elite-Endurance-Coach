@@ -21,7 +21,7 @@ not name. The line says where it looked, so the coach can judge.
 
 Idea taken from Prova Endurance (archetypes tagged as core per discipline).
 
-Version: 1.0 (v7.23)
+Version: 1.1 (v7.35 — a match through touches is reported as such)
 """
 
 import os
@@ -79,11 +79,19 @@ def next_a_goal(goals, today=None):
     return found[0][1], found[0][0]
 
 
-def matches(row, item):
-    """True when a classified session (architecture.summarize_recent row, or
-    the same keys from classify_session) is this core item."""
+def match_kind(row, item):
+    """How a classified session (architecture.summarize_recent row, or the
+    same keys from classify_session) is this core item: "session" when its
+    own class or shape matches, "touches" when only its touches do (v7.35:
+    an aerobic session carrying a few VO2max minutes), None when it is not.
+
+    Touches still count, as they did before v7.35 when the hardest unit
+    named the class; the report only says so, so the head coach can judge
+    whether a touch was enough work for this core session."""
     seq = set(row.get("sequence") or ([row["architecture"]] if row.get("architecture") else []))
     cls = row.get("class")
+    touches = set(row.get("touches") or [])
+    kind = None
     for alt in item.get("match") or []:
         archs = set(alt.get("architectures") or [])
         classes = set(alt.get("classes") or [])
@@ -92,9 +100,16 @@ def matches(row, item):
         if archs and not (seq & archs):
             continue
         if classes and cls not in classes:
+            if classes & touches:
+                kind = kind or "touches"
             continue
-        return True
-    return False
+        return "session"
+    return kind
+
+
+def matches(row, item):
+    """True when a classified session is this core item (see match_kind)."""
+    return match_kind(row, item) is not None
 
 
 def check(cfg, goals, block_rows, recent_rows, today=None):
@@ -138,13 +153,15 @@ def check(cfg, goals, block_rows, recent_rows, today=None):
         in_recent = [r for r in recent if matches(r, item)]
         entry = {"id": item.get("id"), "label": item.get("label") or item.get("id"),
                  "why": item.get("why"), "source": item.get("source") or "coach judgement",
-                 "found_in": None, "date": None}
+                 "found_in": None, "date": None, "as_touches": False}
         if in_block:
             dates = [_as_date(r.get("date")) for r in in_block if _as_date(r.get("date"))]
-            entry.update(found_in="block", date=min(dates).isoformat() if dates else None)
+            entry.update(found_in="block", date=min(dates).isoformat() if dates else None,
+                         as_touches=all(match_kind(r, item) == "touches" for r in in_block))
         elif in_recent:
             entry.update(found_in="recent",
-                         date=max(_as_date(r.get("date")) for r in in_recent).isoformat())
+                         date=max(_as_date(r.get("date")) for r in in_recent).isoformat(),
+                         as_touches=all(match_kind(r, item) == "touches" for r in in_recent))
         out.append(entry)
     return {**base, "status": "checked", "items": out}
 
@@ -175,11 +192,12 @@ def validator_lines(result):
                       f"{result['applies_within_weeks']} weeks out (base work is general)"], []
     lines, warns = [head], []
     for it in result["items"]:
+        note = " (counted through its touches)" if it.get("as_touches") else ""
         if it["found_in"] == "block":
             lines.append(f"   ok  {it['label']}: in this block"
-                         + (f" ({_dmy(it['date'])})" if it["date"] else ""))
+                         + (f" ({_dmy(it['date'])})" if it["date"] else "") + note)
         elif it["found_in"] == "recent":
-            lines.append(f"   ok  {it['label']}: prescribed {_dmy(it['date'])}")
+            lines.append(f"   ok  {it['label']}: prescribed {_dmy(it['date'])}{note}")
         else:
             warns.append(f"{it['label']}: not in this block nor in the sessions prescribed "
                          f"over the last {result['look_back_weeks']} weeks — {it['why']} "
@@ -210,5 +228,7 @@ def render_state(result):
               "| Core session | Last prescribed | Why | Source |", "|:---|:---|:---|:---|"]
     for it in result["items"]:
         when = _dmy(it["date"]) if it["date"] else "**none**"
+        if it["date"] and it.get("as_touches"):
+            when += " (through touches)"
         lines.append(f"| {it['label']} | {when} | {it['why']} | {_source_text(it['source'])} |")
     return "\n".join(lines)

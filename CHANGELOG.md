@@ -4,6 +4,32 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.35 (2026-10-07)
+
+Aerobic variety, step 1 of 3: the engine no longer turns an aerobic session with a few
+harder minutes into a "tempo" or "VO2max" session. Before, the hardest step named the
+session's class, so 3x3 min of tempo inside a Z2 ride made the validator treat it as a
+tempo session (`CHK-MONO`) and `#STATE` record it as one — which pushed the coach to keep
+every aerobic session flat.
+
+- **Session class = where the load sits** (`validate_block.session_purpose`): the class
+  carrying most of the Main Set's load, weighted IF² × time like Intervals.icu's planned
+  load. Harder minutes inside it are its **touches**. Recovery steps between efforts never
+  decide the class; a continuous recovery block does (a recovery jog with strides stays a
+  recovery jog). A real interval session keeps its class, because its work carries the load.
+- **Describes, never limits.** No share, count or ceiling on touches was added anywhere:
+  how many and how hard is the coach's design decision.
+- **Validator:** prints `Session class: <class> · touches: <class> <time>` when a session
+  has touches (also in `parse_report`). `CHK-MONO` uses the new class, so it no longer
+  fires on aerobic sessions with touches; a repeated real tempo session still warns.
+- **`#STATE` → RECENT ARCHITECTURES:** the class column shows touches
+  (`endurance + tempo, vo2max`).
+- **Core sessions:** a core session met only through touches still counts, and is reported
+  as such (`counted through its touches`) for the head coach to judge.
+- Unchanged: injury restrictions (`max_class`) still check every step; plan checks
+  (hard days, easy share) still count minutes per step; TSS is untouched.
+- Tests: 801 + 187. New block fixtures `aerobic_touches_repeat.md` and `tempo_repeat.md`.
+
 ## v7.34 (2026-10-07)
 
 Small fix after a real incident: updating the code with git replaced the `config/athletes`

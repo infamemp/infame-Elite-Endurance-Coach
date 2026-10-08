@@ -39,10 +39,10 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.2 (v7.29 — HC-ATHLETE: no athlete, no PASS)
+Version: 3.3 (v7.35 — session class by where the load sits; touches)
 """
 
-VERSION = "3.2"   # keep equal to the "Version:" line above
+VERSION = "3.3"   # keep equal to the "Version:" line above
 
 
 import argparse
@@ -527,6 +527,60 @@ def classify(mid, metric, author, thresholds):
 CLASS_ORDER = zone_model.CLASS_ORDER
 CLASS_RANK = {c: i for i, c in enumerate(CLASS_ORDER)}
 
+
+def session_purpose(items):
+    """The session's class and its touches, from its Main Set steps.
+
+    `items` -- (class, seconds, mid_pct[, in_repeat]) per Main Set step,
+    with seconds already multiplied by the step's repeat count; in_repeat is
+    True for a step written inside an `Nx` repeat. Steps with no class are
+    left out by the caller.
+
+    A session's class is the class that carries most of its load, not its
+    single hardest step. Load is weighted as seconds x (mid_pct/100)^2, the
+    same IF^2 x time that Intervals.icu uses for planned load, so a few
+    minutes of tempo, sweet spot or VO2max inside an aerobic ride leave it
+    an aerobic ride: those minutes are its touches. A real interval session
+    keeps its class, because its work carries the load. Recovery-class
+    steps inside a repeat (the easy minutes between efforts) never decide
+    the class unless nothing else is there; a continuous recovery block does
+    (a recovery jog with strides is still a recovery jog).
+
+    This describes what was written; it never limits it. How many touches a
+    session carries, and how hard, is the coach's design decision.
+
+    Returns None when nothing is classified, otherwise
+      {"class": <class>, "touches": [(class, seconds), ...]}
+    with touches being the classes above the session's class, easiest first.
+    """
+    load, deciding, secs = {}, {}, {}
+    for it in items:
+        cls, s, mid = it[0], it[1], it[2]
+        in_repeat = bool(it[3]) if len(it) > 3 else False
+        if cls not in CLASS_RANK or not s:
+            continue
+        w = s * (mid / 100.0) ** 2
+        load[cls] = load.get(cls, 0.0) + w
+        secs[cls] = secs.get(cls, 0) + s
+        if not (cls == "recovery" and in_repeat):
+            deciding[cls] = deciding.get(cls, 0.0) + w
+    if not load:
+        return None
+    candidates = deciding or load
+    purpose = max(candidates, key=lambda c: (candidates[c], CLASS_RANK[c]))
+    touches = sorted(((c, secs[c]) for c in secs if CLASS_RANK[c] > CLASS_RANK[purpose]),
+                     key=lambda x: CLASS_RANK[x[0]])
+    return {"class": purpose, "touches": touches}
+
+
+def format_touches(touches):
+    """'tempo 6m, vo2max 3m' -- for the validator's and #STATE's text."""
+    out = []
+    for cls, s in touches:
+        m, r = divmod(int(round(s)), 60)
+        out.append(f"{cls} {m}m" + (f"{r:02d}s" if r else ""))
+    return ", ".join(out)
+
 # Seconds -> a coarse duration bucket. A structural comparison, not a
 # prescription: two segments a minute apart are "the same length" here.
 _DURATION_BUCKETS = [90, 180, 300, 600, 1200, 2400, 4800]
@@ -556,11 +610,13 @@ def session_monotony_profile(steps, author, th):
 
     Returns None when the Main Set has nothing classifiable (no session to
     compare). Otherwise a dict with:
-      class:       the session's physiological class -- the highest-ranked
-                   class found among its Main Set steps.
+      class:       the session's physiological class -- the class that
+                   carries most of its load (session_purpose), so an aerobic
+                   session with a few harder minutes stays aerobic.
+      touches:     [(class, seconds)] of the classes above it (its touches).
       fingerprint: tuple of (mult, duration_bucket, role, is_ramp) per Main
-                   Set step, in order. role is "work" for a step at the
-                   session's own class, "rest" for anything lower (or
+                   Set step, in order. role is "work" for a step at or above
+                   the session's class, "rest" for anything lower (or
                    unclassifiable, e.g. an RPE-only or freeride step).
       dose:        total work-role seconds (mult * duration), the quantity a
                    progression must increase to avoid the flag.
@@ -569,29 +625,34 @@ def session_monotony_profile(steps, author, th):
     if not main:
         return None
 
-    classified = []
+    classified, items = [], []
     for s in main:
         cls = None
         if "pct" in s:
             lo, hi = s["pct"]
+            mid = (lo + hi) / 2
             metric = SUFFIX_TO_METRIC.get(s["suffix"], "power")
-            cls, _ = classify((lo + hi) / 2, metric, author, th)
+            cls, _ = classify(mid, metric, author, th)
+            if cls and s["secs"]:
+                items.append((cls, s["mult"] * s["secs"], mid, s["mult"] > 1))
         classified.append(cls)
 
-    ranked = [c for c in classified if c in CLASS_RANK]
-    if not ranked:
+    purpose = session_purpose(items)
+    if not purpose:
         return None
-    session_class = max(ranked, key=lambda c: CLASS_RANK[c])
+    session_class = purpose["class"]
 
     fingerprint, dose = [], 0
     for s, cls in zip(main, classified):
         secs = s["secs"] if s["secs"] is not None else 0
-        role = "work" if cls == session_class else "rest"
+        role = ("work" if cls in CLASS_RANK and CLASS_RANK[cls] >= CLASS_RANK[session_class]
+                else "rest")
         fingerprint.append((s["mult"], _duration_bucket(s["secs"]), role, s["ramp"]))
         if role == "work":
             dose += s["mult"] * secs
 
-    return {"class": session_class, "fingerprint": tuple(fingerprint), "dose": dose}
+    return {"class": session_class, "touches": purpose["touches"],
+            "fingerprint": tuple(fingerprint), "dose": dose}
 
 
 def resolve_discipline(raw, sport, th):
@@ -1247,7 +1308,7 @@ def _architecture_module():
 
 
 def classify_for_core(code, sport, th):
-    """{architecture, class, sequence} of one session, or None."""
+    """{architecture, class, sequence, touches} of one session, or None."""
     try:
         r = _architecture_module().classify_session(
             code, event_type={"cycling": "Ride", "running": "Run"}.get(sport), thresholds=th)
@@ -1256,7 +1317,8 @@ def classify_for_core(code, sport, th):
     if not r.get("ok"):
         return None
     return {"architecture": r["architecture"], "class": r["class"],
-            "sequence": r["sequence"]}
+            "sequence": r["sequence"],
+            "touches": [c for c, _s in r.get("touches") or []]}
 
 
 def load_recent_classified(athlete_id, th):
@@ -1368,6 +1430,7 @@ _SECTION_RE = re.compile(r"^── (.+?)\s*$")
 _FINDING_RE = re.compile(r"^\s*(FAIL|WARN) \[([A-Z0-9-]+)\] L(\S+): (.*)$")
 _TSS_RE = re.compile(r"Computed TSS: ([\d.]+)")
 _DUR_RE = re.compile(r"Computed Duration: (\S+)")
+_CLASS_RE = re.compile(r"Session class: (\S+) · touches: (.*)$")
 
 
 def parse_report(text):
@@ -1377,7 +1440,7 @@ def parse_report(text):
 
       {"passed": bool | None,
        "sessions": [{"n", "label", "computed_tss", "computed_duration",
-                     "findings": [...]}],
+                     "session_class", "touches", "findings": [...]}],
        "findings": [{"severity": "block" | "warn", "code", "line" (int or None),
                      "message", "session" (n or None), "section" (or None)}],
        "counts": {"block": n, "warn": n}}
@@ -1390,7 +1453,8 @@ def parse_report(text):
         m = _SESSION_RE.match(line)
         if m:
             current = {"n": int(m.group(1)), "label": m.group(2).strip(),
-                       "computed_tss": None, "computed_duration": None, "findings": []}
+                       "computed_tss": None, "computed_duration": None,
+                       "session_class": None, "touches": None, "findings": []}
             sessions.append(current)
             section = None
             continue
@@ -1415,6 +1479,9 @@ def parse_report(text):
             m = _DUR_RE.search(line)
             if m:
                 current["computed_duration"] = m.group(1)
+            m = _CLASS_RE.search(line)
+            if m:
+                current["session_class"], current["touches"] = m.group(1), m.group(2).strip()
         if line.startswith("RESULT: PASS"):
             passed = True
         elif line.startswith("RESULT: BLOCKED"):
@@ -1657,6 +1724,7 @@ def main():
         # Tempo-and-above is checked: whether a flat Recovery/Endurance
         # session was the right call is a coaching judgement, not something
         # this validator has the context to verify.
+        mprof = None
         if header.get("Category", "Training") == "Training":
             warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps))
             mprof = session_monotony_profile(steps, author, th)
@@ -1722,6 +1790,11 @@ def main():
                                    f"({div:.1f}% > {tol}%)"))
             else:
                 print(" · no declared TSS to compare")
+            # Information only: the session's class by where its load sits,
+            # and the harder minutes it carries as touches (v7.35).
+            if mprof and mprof["touches"]:
+                print(f"   Session class: {mprof['class']} · touches: "
+                      f"{format_touches(mprof['touches'])}")
 
         if steps:
             declared_secs = parse_header_duration_secs(header.get("Duration"))
