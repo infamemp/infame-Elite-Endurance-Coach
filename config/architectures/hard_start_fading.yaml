@@ -1,6 +1,7 @@
 name: hard_start_fading
 display_name: Hard start, then fading
 frequency_in_corpus: 19
+sources: [WKOC-L2-022, WKOC-L2-017]
 
 intent: >
   The inverse of stepped_build: the rep opens at its hardest and steps down
@@ -11,7 +12,7 @@ intent: >
 rep_shape: hard_start_fading
 set_shape: identical
 
-applicable_classes: [threshold, supra_threshold, vo2max, anaerobic]
+applicable_classes: [sub_threshold, threshold, supra_threshold, vo2max, anaerobic]
 disciplines: [trainer, road_bike, road_run]
 
 progression_levers: [reps, bout_duration, intensity]
@@ -19,7 +20,10 @@ progression_levers: [reps, bout_duration, intensity]
 notes: >
   Easy to confuse with stepped_build read backwards — the distinguishing
   fact is which end of the rep is hardest, since that changes what's being
-  trained (starting hard vs. finishing hard).
+  trained (starting hard vs. finishing hard). Sweet spot uses it too (v7.36):
+  Cusick's Hard Start SST opens each sweet-spot interval with a short spike
+  above threshold to force better lactate management; the session is still
+  sweet spot, and the spike is its touch.
 
 combinable: [standalone, pre_fatigue]
 

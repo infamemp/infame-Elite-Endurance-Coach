@@ -106,20 +106,28 @@ _RPM_RE = re.compile(r"(\d{2,3})\s*rpm\b", re.I)
 # text is the only evidence -- documented as a heuristic, not a measurement.
 _HILL_RE = re.compile(r"\b(hill|uphill|climb|incline|gradient|grade|subida|cuesta|"
                       r"pendiente|repecho|ascenso|inclinaci[oó]n)\b", re.I)
+# Words that mark a step as a technique drill (v7.36). A drill session cannot be
+# read from its targets (they sit in the easy zones), so the cue is the only
+# evidence -- the architecture file asks the coach to name the drill there.
+_DRILL_RE = re.compile(r"\b(drills?|t[eé]cnica|technique|isolated[ -]leg|single[ -]leg|"
+                       r"one[ -]leg|pierna (aislada|sola|derecha|izquierda)|spin[ -]?ups?|"
+                       r"skips?|skipping|9[ -]?(to|a)[ -]?3)\b", re.I)
 
 
 def _leaf(step):
     """One parse_block() step -> the small shape this module reasons about."""
     raw = step.get("raw", "") or ""
     if step.get("freeride"):
-        return {"k": "free", "d": step["secs"] or 0, "suffix": "", "rpm": None, "hill": False}
+        return {"k": "free", "d": step["secs"] or 0, "suffix": "", "rpm": None, "hill": False,
+                "drill": bool(_DRILL_RE.search(raw))}
     lo, hi = step["pct"]
     m = _RPM_RE.search(raw)
     return {"k": "ramp" if step["ramp"] else "steady",
             "d": step["secs"] or 0, "lo": lo, "hi": hi,
             "suffix": step.get("suffix", ""),
             "rpm": int(m.group(1)) if m else None,
-            "hill": bool(_HILL_RE.search(raw))}
+            "hill": bool(_HILL_RE.search(raw)),
+            "drill": bool(_DRILL_RE.search(raw))}
 
 
 def _build_units(main_steps):
@@ -250,7 +258,7 @@ _DIRECT_FAMILY = {
     "ramp down": "descending_ramp",
     "stepped build": "stepped_build",
     "hard start, fading": "hard_start_fading",
-    "endurance": "endurance_cadence",
+    "endurance": "steady_aerobic",
 }
 
 
@@ -490,9 +498,9 @@ def classify_session(description, event_type=None, thresholds=None):
         all_units = _build_units(classifiable)
         all_loads = [_load_of(u) for u in all_units]
         if max(all_loads, default=0) == 0:
-            return _result(True, None, architecture="endurance_cadence",
+            return _result(True, None, architecture="steady_aerobic",
                             cls="endurance", combo=False,
-                            sequence=["endurance_cadence"])
+                            sequence=["steady_aerobic"])
         top_i = all_loads.index(max(all_loads))
         thresh = 0.25 * all_loads[top_i]
         idx = [i for i, load in enumerate(all_loads) if load >= thresh]
@@ -511,6 +519,8 @@ def classify_session(description, event_type=None, thresholds=None):
     purpose = _purpose(units, event_type, thresholds) or {}
     cls, touches = purpose.get("class"), purpose.get("touches") or []
     if set_arch and max(loads, default=0) > 0:
+        if cls in _AEROBIC_CLASSES:
+            return _aerobic(units, cls, touches, event_type, thresholds, set_arch, [set_arch])
         return _result(True, None, architecture=set_arch, cls=cls,
                        combo=False, sequence=[set_arch], touches=touches)
 
@@ -526,10 +536,9 @@ def classify_session(description, event_type=None, thresholds=None):
 
     if max(loads, default=0) == 0:
         # Nothing in the Main Set reaches work intensity -- a legitimate
-        # architecture (endurance_cadence), not "no Main Set."
-        return _result(True, None, architecture="endurance_cadence",
-                        cls="endurance", combo=False,
-                        sequence=["endurance_cadence"])
+        # architecture, not "no Main Set."
+        return _aerobic(units, cls or "endurance", touches, event_type, thresholds,
+                        None, [])
 
     top = loads.index(max(loads))
     primary = fams[top]
@@ -541,10 +550,92 @@ def classify_session(description, event_type=None, thresholds=None):
     # ok stays True, but architecture is honestly None rather than a
     # smaller classifiable fragment standing in for what was actually the
     # main work.
+    if cls in _AEROBIC_CLASSES:
+        return _aerobic(units, cls, touches, event_type, thresholds, primary, sequence)
     reason = None if primary else ("main work does not match a named "
                                     "architecture (complex or free-form)")
     return _result(True, reason, architecture=primary, cls=cls,
                     combo=len(sequence) > 1, sequence=sequence, touches=touches)
+
+
+# ══════════════════════════════════════════════════════════════════
+# AEROBIC SESSIONS (v7.36)
+# A session whose load sits in recovery or endurance is an aerobic session,
+# whatever its hardest step. It takes one of the aerobic shapes, and the
+# shapes found inside it (sprints, surges, a tempo block...) follow it in
+# `sequence`, so core sessions and the frequency tally still see them.
+# ══════════════════════════════════════════════════════════════════
+
+_AEROBIC_CLASSES = ("recovery", "endurance")
+_TOUCH_SHAPES_ONLY = ("steady_aerobic",)
+
+
+def _leaves(units):
+    out = []
+    for u in units:
+        if u["k"] == "repeat":
+            for _ in range(u["n"]):
+                out += u["steps"]
+        else:
+            out.append(u)
+    return out
+
+
+def _aerobic(units, cls, touches, event_type, thresholds, inner, inner_seq):
+    """The aerobic shape of a session whose load is aerobic."""
+    leaves = _leaves(units)
+    inside = [f for f in (inner_seq or []) if f and f not in _TOUCH_SHAPES_ONLY]
+    if any(x.get("drill") for x in leaves):
+        fam = "technique_drills"
+    elif not touches:
+        fam = ("progression_run" if inner == "progression_run" or _rising(units)
+               else "steady_aerobic")
+        inside = []
+    elif _rolling(leaves, event_type, thresholds):
+        fam = "rolling_aerobic"
+    elif inner == "progression_run":
+        fam = "progression_run"
+        inside = []
+    else:
+        fam = "aerobic_touches"
+    seq = [fam] + [f for f in inside if f != fam]
+    return _result(True, None, architecture=fam, cls=cls, combo=len(seq) > 1,
+                   sequence=seq, touches=touches)
+
+
+def _rising(units):
+    """Two or more plain steady blocks of 5 min or more, each a little higher
+    than the last (Cusick's progressive base miles), with nothing else."""
+    if any(u["k"] != "steady" for u in units):
+        return False
+    blocks = [u for u in units if u["d"] >= 300]
+    if len(blocks) < 2 or len(blocks) != len(units):
+        return False
+    a = [round(_avg(u)) for u in blocks]
+    return _mono(a, 1) == "up"
+
+
+def _rolling(leaves, event_type, thresholds):
+    """The whole Main Set undulates: many changes of level, the base never
+    drops to recovery, and nothing goes past sweet spot."""
+    sport = _sport_from_type(event_type)
+    cut = (thresholds or {}).get("classification_cutpoints") or {}
+    steps = [x for x in leaves if x["k"] in ("steady", "ramp") and x["d"]]
+    if len(steps) < 6 or not sport:
+        return False
+    classes = []
+    for x in steps:
+        metric = SUFFIX_TO_METRIC.get(x.get("suffix", ""), "power")
+        classes.append(_class_from_cutpoints(_avg(x), metric, sport, cut))
+    if any(c in (None, "recovery") for c in classes):
+        return False
+    if any(c not in ("endurance", "tempo", "sub_threshold") for c in classes):
+        return False
+    # Undulating, not a repeat of one effort on one base: several different
+    # levels, changing often.
+    levels = {round(_avg(x) / 4) for x in steps}
+    changes = sum(1 for a, b in zip(steps, steps[1:]) if abs(_avg(a) - _avg(b)) >= 4)
+    return len(levels) >= 4 and changes >= 5
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -553,16 +644,17 @@ def classify_session(description, event_type=None, thresholds=None):
 # the same two-line way it already wires those.
 # ══════════════════════════════════════════════════════════════════
 
-# The 16 architecture slugs in config/architectures/*.yaml, kept here as
+# The 19 architecture slugs in config/architectures/*.yaml, kept here as
 # plain data so the frequency tally below can report a zero count for one
 # that never appeared -- this module does not read those YAML files (see
 # module docstring), so this list is kept in sync by convention, the same
 # way _DIRECT_FAMILY's slugs already are.
 ALL_ARCHITECTURES = [
-    "classic_intervals", "sustained_effort", "endurance_cadence", "single_ramp",
+    "classic_intervals", "sustained_effort", "steady_aerobic", "single_ramp",
     "surges_on_base", "sprints", "stepped_build", "hard_start_fading",
     "over_unders", "descending_ramp", "progressive_intervals", "cadence_contrast",
     "climb_simulation", "pyramid", "duration_ladder", "progression_run",
+    "aerobic_touches", "rolling_aerobic", "technique_drills",
 ]
 
 

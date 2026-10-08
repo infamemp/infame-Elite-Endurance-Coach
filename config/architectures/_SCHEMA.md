@@ -38,6 +38,15 @@ An architecture answers three questions:
   `finisher` (used after it), or both. See Combinations below.
 - `notes` — anything a coach should know before prescribing this (fatigue
   profile, equipment needs, athlete population).
+- `category` — `aerobic` for the shapes of aerobic sessions (`steady_aerobic`,
+  `aerobic_touches`, `rolling_aerobic`), `technique` for drill sessions; absent
+  for the interval shapes. A technique session is never counted as aerobic
+  variety. (v7.36)
+- `on_request` — `true` when the shape is used only if the head coach or the
+  athlete asks for it (`technique_drills`). (v7.36)
+- `sources` — the Knowledge entries the shape rests on (KB entry IDs, or
+  `<author> §N` for files in the older numbered format). Every ID must exist in
+  `Knowledge/`; the tests check it. (v7.36)
 - `example_shapes` — 1–3 structural illustrations using relative notation only
   (e.g. "3–5 × (work bout / recovery ≥ work duration)"), never % or absolute
   power. These exist to make the shape unambiguous, not to hand back numbers.
@@ -67,3 +76,23 @@ See `_combinations.yaml` for the combination patterns actually observed.
 - No file encodes a ranking of "creative" vs "boring" architectures. The
   picker's job (a separate, later piece of work) is to avoid repeating the
   same architecture recently, not to prefer rare ones for their own sake.
+
+## Session class and touches (v7.36)
+A session's class is the purpose the coach declares in `[Zone]`, not its
+hardest step, in every class. Harder minutes inside it are its **touches**:
+the validator lists them beside the class and warns (`CHK-PURPOSE`, never
+blocks) only when most of the load sits in a harder class than the one
+declared. No file here sets how many touches a session may carry or how hard
+they may be. The Oct 2026 re-analysis of the 1,694 distinct library workouts:
+
+| Session class | Sessions | With touches | Typical touch time |
+| :--- | ---: | ---: | ---: |
+| Aerobic (recovery, endurance) | 401 | 81% | a few minutes |
+| Tempo | 456 | 81% | ~7 min |
+| Sub-threshold (sweet spot) | 269 | 81% | ~5 min |
+| Threshold | 212 | 67% | ~4 min |
+| VO2max | 183 | 40% | ~1 min |
+| Anaerobic | 137 | 22% | ~1 min |
+
+Only 25 of the 401 aerobic sessions are one flat level with no touch and no
+cadence work. All of this is context for the coach, not a target.

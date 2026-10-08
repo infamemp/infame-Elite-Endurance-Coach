@@ -30,7 +30,7 @@ patterns:
       combination — it is one longer set of a single architecture.
 
   - name: sandwich
-    shape: "[sustained_effort or endurance_cadence] -> [a different architecture] -> [sustained_effort or endurance_cadence]"
+    shape: "[sustained_effort or steady_aerobic] -> [a different architecture] -> [sustained_effort or steady_aerobic]"
     example: "sustained_effort -> classic_intervals -> sustained_effort"
     purpose: >
       A repeated running pattern (Hansons' P-017 "2 miles / 8x800 / 2 miles",
@@ -47,6 +47,14 @@ patterns:
       blocks rather than a flat one.
 
 notes: >
+  Touches are not a combination: a few harder minutes inside a session of any
+  class (bursts in a tempo ride, a spike opening a sweet-spot interval,
+  strides in an easy run) leave it one architecture of its declared class,
+  and the validator lists them as touches. The harder the session, the more a
+  touch has to earn its place, since it competes with the quality of the key
+  work: in the library, 81% of tempo and sweet-spot sessions carry touches,
+  67% of threshold, 40% of VO2max and 22% of anaerobic ones, and they get
+  shorter as the class rises. Context, not a rule.
   A combination is described as an ordered list of architecture names plus
   their role (pre_fatigue / standalone / finisher — see each architecture's
   `combinable` field for which roles it can take). The picker should treat a

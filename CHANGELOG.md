@@ -4,6 +4,52 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.36 (2026-10-08)
+
+Aerobic variety, step 2 of 3: the shape library for aerobic sessions, a technique category,
+and a fix to v7.35.
+
+- **Fix to v7.35 — the declared purpose wins.** v7.35 took a session's class from where its
+  load sits. Checked against the real library, that misreads short, deliberate sessions: five
+  30 s anaerobic efforts inside an hour of easy riding carry little load, so they read as
+  "endurance". Now the class the coach writes first in `[Zone]` (English or Spanish:
+  `Endurance`, `Resistencia aeróbica`, `Fondo aeróbico`, `Umbral`…) is the session's class;
+  the load reading is the fallback (history, or no `[Zone]`) and the cross-check.
+- **`CHK-PURPOSE`** (warns, never blocks): `[Zone]` declares a class but most of the Main
+  Set's load sits in a harder one from Tempo up — a mislabel, or a hard session called easy.
+- **Aerobic shapes** (`category: aerobic`), built from a re-analysis of the 1,694 distinct
+  MyWhoosh / What's on Zwift workouts (401 aerobic: 326 with touches, 75 without, only 25 one
+  flat level) and from the authors in the KB:
+  - `aerobic_touches` (new) — aerobic base with tempo, sweet-spot, threshold, VO2max or
+    anaerobic touches, sprints, strides or pick-ups. Sources: Allen & Coggan's endurance rides
+    with bursts, tempo drill, FTP hills, VO2max intervals, hill jams; Palladino's easy and
+    long runs; Uphill Athlete's pick-ups and tempo segments; Daniels' and Koop's strides.
+  - `rolling_aerobic` (new) — continuous undulation, fartlek, terrain (Allen & Coggan, Friel).
+  - `steady_aerobic` — was `endurance_cadence`. Simple is a decision with a reason (recovery,
+    AeT rides tracked by EF, aerobic deficiency, the day before a key session, traffic).
+    Cadence is one modifier among several, no longer the shape's name.
+  - `progression_run` now covers the bike too (Cusick's progressive base miles, Friel's
+    easy-hard ride, Uphill Athlete's progressive distance).
+- **`technique_drills`** (new, `category: technique`, `on_request: true`) — pedalling and
+  running drills as their own category, only when the head coach or the athlete asks
+  (Friel SS1–SS3 and high-cadence pedalling, Allen & Coggan, Palladino §10). Never counted as
+  aerobic variety.
+- **Touches in every class, not only aerobic.** The declared class and the touches apply to
+  Tempo, sweet spot, threshold and above too. In the library 81% of tempo and sweet-spot
+  sessions carry touches, 67% of threshold, 40% of VO2max and 22% of anaerobic ones, shorter
+  as the class rises. `surges_on_base` was declared by its bursts' class; it now also serves
+  tempo and sweet-spot sessions with bursts as their touches (Allen & Coggan's tempo rides
+  with anaerobic-capacity bursts, Cusick's EPD and FTP-surge sweet spot), and
+  `hard_start_fading` covers Cusick's Hard Start SST.
+- **No limits added.** No file sets how many touches a session may carry or how hard; the
+  corpus figures are context in the files, not targets.
+- Every architecture now lists its `sources`; the tests check that each KB ID exists.
+- History classifier (`#STATE` → RECENT ARCHITECTURES): a session whose load is aerobic gets
+  an aerobic shape, with the shapes inside it (sprints, surges…) kept in its sequence so core
+  sessions still see them; a drill named in a cue reads as `technique_drills`.
+- Prompt: only the library count (19 shapes). The design guidance comes in step 3.
+- Tests: 833 + 187. New fixture `purpose_mismatch.md`.
+
 ## v7.35 (2026-10-07)
 
 Aerobic variety, step 1 of 3: the engine no longer turns an aerobic session with a few

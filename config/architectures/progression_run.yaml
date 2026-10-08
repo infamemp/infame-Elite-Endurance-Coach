@@ -1,6 +1,7 @@
 name: progression_run
-display_name: Progression run
-frequency_in_corpus: 0   # not in the original cycling corpus; added from the running catalog analysis (Sep 2026)
+display_name: Progression (run or ride)
+frequency_in_corpus: 50   # aerobic cycling library sessions whose thirds rise in load (Oct 2026 re-analysis); first added from the running catalogs (Sep 2026)
+sources: [WKOC-L2-006, WKOC-L2-020, HPC-L2-004, TUA-L2-006]
 
 intent: >
   One continuous effort split into two or more discrete segments, each
@@ -18,7 +19,7 @@ rep_shape: progression_run
 set_shape: single
 
 applicable_classes: [endurance, tempo, sub_threshold, threshold]
-disciplines: [road_run, trail_run, treadmill, track_run]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
 
 progression_levers: [bout_duration, intensity, reps]
 
@@ -33,11 +34,21 @@ notes: >
   strong"). Four independent sources, one shape.
   `reps` as a progression lever here means the number of discrete segments
   (2 vs. 3), not repeated bouts -- there is still only one continuous run.
-  This architecture has not yet been evaluated against a cycling corpus;
-  `disciplines` is running-only until it is.
+  Cycling has the same shape (v7.36): the Oct 2026 re-analysis of the
+  library found 50 aerobic rides that rise through the session, and Cusick
+  prescribes it outright: base miles that start lower and finish equal or
+  slightly higher, never softer, and an aerobic endurance session in three
+  steady blocks, each a little higher. It is also how an aerobic session can
+  end with a harder part: Friel's easy-hard ride keeps the steady zone 2 part
+  first and raises the intensity in the last part, and Uphill Athlete's
+  progressive distance workout climbs from zone 1 to a short time near
+  threshold. A progression that stays inside the aerobic zone is an aerobic
+  session (declare Endurance); one that ends at tempo or above is declared
+  by its purpose.
 
 combinable: [standalone]
 
 example_shapes:
   - "One continuous run: an easier first segment, then 1-2 more segments each harder than the last, no recovery between them"
   - "A long run whose final third or quarter rises to a faster, sustained pace"
+  - "An aerobic ride in two or three steady blocks, each a little higher than the last, finishing equal or stronger, never softer"

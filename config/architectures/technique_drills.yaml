@@ -1,0 +1,37 @@
+name: technique_drills
+display_name: Technique drills (pedalling or running)
+frequency_in_corpus: 0   # its own category: not part of the aerobic analysis
+category: technique
+on_request: true
+sources: [CTB-L2-011, CTB-L2-012, CTB-L2-013, HPC-L2-008, TRPM-L2-038, TRPM-L2-064, TUA-C04-009, "Palladino §10"]
+
+intent: >
+  A session whose purpose is skill, not metabolic load: pedalling drills
+  (spin-ups, isolated leg, high-cadence pedalling, the 9-to-3 stroke) or
+  running form work (form drills, quick-step and posture cues). Its own
+  category, apart from the aerobic shapes: a drill session is not how an
+  aerobic session gets its variety, and it is not counted as one.
+
+rep_shape: drill
+set_shape: [identical, single]
+
+applicable_classes: [recovery, endurance]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, track_run]
+
+progression_levers: [reps, bout_duration]
+
+notes: >
+  Only when the head coach or the athlete asks for it. It belongs mostly to
+  the start of the season or of the base, and to the first years of
+  structured training: Friel places speed skills in Base and says they matter
+  most in the first three years. Effort stays low; for the drills themselves
+  Friel says power and heart rate are not meaningful, so the step targets stay
+  in the recovery or aerobic zone and the cue carries the drill. Write the
+  drill's name in the cue (drill, técnica, pierna aislada, spin-up) so the
+  engine records the session as technique.
+
+combinable: [standalone]
+
+example_shapes:
+  - "Easy aerobic riding with N drill sets (spin-ups, isolated leg, high cadence), easy riding between sets"
+  - "Easy running with form drills, then a few relaxed strides to fix the pattern at speed"

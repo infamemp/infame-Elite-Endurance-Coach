@@ -1,0 +1,42 @@
+name: steady_aerobic
+display_name: Steady aerobic
+frequency_in_corpus: 75   # aerobic sessions with no touch at all, of 401 aerobic sessions in the 1,694 distinct library workouts (Oct 2026 re-analysis)
+category: aerobic
+sources: [HPC-L2-004, CTB-L2-005, CTB-L2-006, CTB-L2-007, WKOC-L2-006, WKOC-L2-020, TUA-C08-002, "Palladino §7 (EZ Aerobic Run)"]
+
+intent: >
+  Aerobic work with nothing above the aerobic zone: one continuous effort, or
+  several blocks placed at different points of the zone. It is the simple
+  session, and simple is a decision with a reason, never the default. Good
+  reasons are specific: a recovery day; an aerobic-threshold ride whose
+  steadiness is the point and whose drift or efficiency factor is being
+  tracked (Friel's AE2 asks to avoid surges into zone 3 for exactly this); an
+  athlete with a large aerobic deficiency early in base (Uphill Athlete); the
+  day before a key session or race; outdoors when traffic or a group decide
+  the ride. Without such a reason, an aerobic session is better built with
+  `aerobic_touches`, `rolling_aerobic` or a progression.
+
+rep_shape: steady
+set_shape: [single, identical]
+
+applicable_classes: [recovery, endurance]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [bout_duration, reps, intensity]
+
+notes: >
+  Even with nothing above the zone, the session can still change shape:
+  blocks at different points of the aerobic zone, a progressive ride that
+  starts lower and finishes equal or slightly higher, never softer (Cusick's
+  base miles), gear changes that simulate terrain (Friel AE3), or a cadence
+  section. Cadence is one modifier among several, not the default way to make
+  an aerobic session different: if every steady session of a block varies
+  only cadence, the block is still monotonous. Until v7.36 this file was
+  `endurance_cadence`; its name made cadence look like the only lever.
+
+combinable: [standalone, pre_fatigue]
+
+example_shapes:
+  - "One long block in the aerobic zone"
+  - "Two or three blocks at different points of the aerobic zone, no rest between them"
+  - "N x (aerobic block at one cadence / aerobic block at another), same intensity"

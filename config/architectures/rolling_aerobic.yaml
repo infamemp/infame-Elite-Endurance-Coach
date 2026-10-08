@@ -1,0 +1,39 @@
+name: rolling_aerobic
+display_name: Rolling aerobic (fartlek)
+frequency_in_corpus: 130   # aerobic sessions whose main set changes level at least 8 times across 3+ classes, of 401 (Oct 2026); overlaps aerobic_touches
+category: aerobic
+sources: [TRPM-L2-003, HPC-L2-013, CTB-L2-007, TRPM-L2-042, TUA-L2-004]
+
+intent: >
+  Continuous aerobic work whose intensity keeps moving, with no stop: it rolls
+  between the low and the high part of the aerobic zone and rises briefly into
+  tempo or sweet spot, like rolling terrain, a group ride or a run by feel.
+  There are no recovery steps and the base never drops to recovery. Distinct
+  from `aerobic_touches`, where discrete efforts sit on a steady base: here
+  the whole session undulates. Distinct from `over_unders`, where both sides
+  sit around threshold.
+
+rep_shape: undulating
+set_shape: [single, identical]
+
+applicable_classes: [endurance, tempo]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [bout_duration, intensity, reps]
+
+notes: >
+  Allen and Coggan's fartlek accelerates and varies power at random to
+  simulate a mass-start race, and they shorten the ride because the stress is
+  higher than steady work; Friel's fartlek lets feel choose the durations and
+  stops well before fatigue; on the trainer Friel shifts gears to simulate
+  hills. Outdoors this is often what the terrain already gives: describe it in
+  words and RPE (rise on the climbs, settle on the flats) rather than as
+  steps the road will not allow. On the trainer or treadmill, write the
+  undulation out so it is not a guess.
+
+combinable: [standalone, pre_fatigue]
+
+example_shapes:
+  - "One continuous block whose intensity rolls between the low and high aerobic zone with brief rises into tempo, no recovery"
+  - "N x (aerobic segment / short rise / aerobic segment at another level), continuous"
+  - "A run or ride by feel over rolling terrain: rise on each climb, settle on the flats"

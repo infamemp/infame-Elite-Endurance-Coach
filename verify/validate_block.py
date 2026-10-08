@@ -39,10 +39,10 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.3 (v7.35 — session class by where the load sits; touches)
+Version: 3.4 (v7.36 — the class declared in [Zone] is the session's class; CHK-PURPOSE)
 """
 
-VERSION = "3.3"   # keep equal to the "Version:" line above
+VERSION = "3.4"   # keep equal to the "Version:" line above
 
 
 import argparse
@@ -528,6 +528,36 @@ CLASS_ORDER = zone_model.CLASS_ORDER
 CLASS_RANK = {c: i for i, c in enumerate(CLASS_ORDER)}
 
 
+# Names a coach writes for a class in [Zone], in English and in the Spanish of
+# config/language/es_mx.yaml. Folded (lowercase, no accents, '-'/' ' -> '_').
+_CLASS_WORDS = {
+    "resistencia_aerobica": "endurance", "fondo_aerobico": "endurance",
+    "trote_aerobico": "endurance", "aerobic": "endurance", "aerobico": "endurance",
+    "recuperacion": "recovery", "sub_umbral": "sub_threshold", "sweet_spot": "sub_threshold",
+    "umbral": "threshold", "supra_umbral": "supra_threshold", "anaerobico": "anaerobic",
+    "vo2": "vo2max", "vo2_max": "vo2max",
+}
+
+
+def declared_class(header):
+    """The class the coach declared as the session's purpose: the first part of
+    [Zone] ("Endurance · Coggan L2 + toques de Tempo" -> endurance). None when
+    [Zone] is missing or its first part names no class."""
+    first = re.split(r"[·+(]", str((header or {}).get("Zone", "")))[0]
+    key = re.sub(r"[\s\-]+", "_", _fold(first)).strip("_")
+    if key in CLASS_RANK:
+        return key
+    if key in _CLASS_WORDS:
+        return _CLASS_WORDS[key]
+    for word, cls in _CLASS_WORDS.items():
+        if key.startswith(word + "_"):
+            return cls
+    for cls in CLASS_RANK:
+        if key.startswith(cls + "_"):
+            return cls
+    return None
+
+
 def session_purpose(items):
     """The session's class and its touches, from its Main Set steps.
 
@@ -550,8 +580,16 @@ def session_purpose(items):
     session carries, and how hard, is the coach's design decision.
 
     Returns None when nothing is classified, otherwise
-      {"class": <class>, "touches": [(class, seconds), ...]}
-    with touches being the classes above the session's class, easiest first.
+      {"class": <class>, "touches": [(class, seconds), ...], "secs": {...}}
+    with touches being the classes above the session's class, easiest first,
+    and secs the seconds per class.
+
+    When the coach declared the session's purpose in [Zone], that class is the
+    session's class (declared_class); this load reading is then only the
+    cross-check behind CHK-PURPOSE, and the fallback for history, which has no
+    [Zone]. A load reading alone cannot tell "an aerobic ride with five 30 s
+    efforts" from "a short anaerobic session done on an aerobic day": the
+    purpose can.
     """
     load, deciding, secs = {}, {}, {}
     for it in items:
@@ -568,9 +606,13 @@ def session_purpose(items):
         return None
     candidates = deciding or load
     purpose = max(candidates, key=lambda c: (candidates[c], CLASS_RANK[c]))
-    touches = sorted(((c, secs[c]) for c in secs if CLASS_RANK[c] > CLASS_RANK[purpose]),
-                     key=lambda x: CLASS_RANK[x[0]])
-    return {"class": purpose, "touches": touches}
+    return {"class": purpose, "touches": touches_above(secs, purpose), "secs": secs}
+
+
+def touches_above(secs, cls):
+    """[(class, seconds)] of the classes above `cls`, easiest first."""
+    return sorted(((c, s) for c, s in secs.items() if CLASS_RANK[c] > CLASS_RANK[cls]),
+                  key=lambda x: CLASS_RANK[x[0]])
 
 
 def format_touches(touches):
@@ -605,8 +647,12 @@ def outdoor_bike_mtb_exempt(discipline, cls):
             and cls in ("recovery", "endurance", "tempo"))
 
 
-def session_monotony_profile(steps, author, th):
+def session_monotony_profile(steps, author, th, declared=None):
     """Reduce one session's Main Set to what monotony detection needs.
+
+    `declared` -- the class the coach wrote in [Zone] (declared_class), or
+    None. When given it is the session's class; the load reading stays in
+    `load_class` for CHK-PURPOSE.
 
     Returns None when the Main Set has nothing classifiable (no session to
     compare). Otherwise a dict with:
@@ -640,7 +686,7 @@ def session_monotony_profile(steps, author, th):
     purpose = session_purpose(items)
     if not purpose:
         return None
-    session_class = purpose["class"]
+    session_class = declared if declared in CLASS_RANK else purpose["class"]
 
     fingerprint, dose = [], 0
     for s, cls in zip(main, classified):
@@ -651,7 +697,9 @@ def session_monotony_profile(steps, author, th):
         if role == "work":
             dose += s["mult"] * secs
 
-    return {"class": session_class, "touches": purpose["touches"],
+    return {"class": session_class, "declared": declared in CLASS_RANK,
+            "load_class": purpose["class"],
+            "touches": touches_above(purpose["secs"], session_class),
             "fingerprint": tuple(fingerprint), "dose": dose}
 
 
@@ -1430,7 +1478,7 @@ _SECTION_RE = re.compile(r"^── (.+?)\s*$")
 _FINDING_RE = re.compile(r"^\s*(FAIL|WARN) \[([A-Z0-9-]+)\] L(\S+): (.*)$")
 _TSS_RE = re.compile(r"Computed TSS: ([\d.]+)")
 _DUR_RE = re.compile(r"Computed Duration: (\S+)")
-_CLASS_RE = re.compile(r"Session class: (\S+) · touches: (.*)$")
+_CLASS_RE = re.compile(r"Session class: (\S+)(?: \((?:declared|by load)\))? · touches: (.*)$")
 
 
 def parse_report(text):
@@ -1727,7 +1775,17 @@ def main():
         mprof = None
         if header.get("Category", "Training") == "Training":
             warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps))
-            mprof = session_monotony_profile(steps, author, th)
+            mprof = session_monotony_profile(steps, author, th, declared_class(header))
+            # CHK-PURPOSE — never blocks. The coach declared a class, but most
+            # of the Main Set's load sits in a harder one from Tempo up: either
+            # [Zone] is mislabelled or a hard session is being called easy.
+            if (mprof and mprof["declared"]
+                    and CLASS_RANK[mprof["load_class"]] > CLASS_RANK[mprof["class"]]
+                    and CLASS_RANK[mprof["load_class"]] >= CLASS_RANK["tempo"]):
+                warns.append(("CHK-PURPOSE", "-",
+                              f"[Zone] declares {mprof['class']}, but most of the Main Set's "
+                              f"load sits in {mprof['load_class']} — check the label or "
+                              f"the session"))
             if (mprof and CLASS_RANK[mprof["class"]] >= CLASS_RANK["tempo"]
                     and not outdoor_bike_mtb_exempt(discipline, mprof["class"])):
                 key = (author["sport"], mprof["class"])
@@ -1793,7 +1851,8 @@ def main():
             # Information only: the session's class by where its load sits,
             # and the harder minutes it carries as touches (v7.35).
             if mprof and mprof["touches"]:
-                print(f"   Session class: {mprof['class']} · touches: "
+                print(f"   Session class: {mprof['class']} "
+                      f"({'declared' if mprof['declared'] else 'by load'}) · touches: "
                       f"{format_touches(mprof['touches'])}")
 
         if steps:
@@ -1848,6 +1907,11 @@ def main():
                 core_row = classify_for_core(code, author.get("sport"), th)
                 if core_row:
                     core_row["date"] = parse_header_date(header.get("Date", ""))
+                    # The declared purpose wins over the history reading here,
+                    # exactly as it does for CHK-MONO.
+                    if mprof and mprof["declared"]:
+                        core_row["class"] = mprof["class"]
+                        core_row["touches"] = [c for c, _s in mprof["touches"]]
                     core_blocks.setdefault(race_aid, []).append(core_row)
 
         for c, ln, msg in errors:

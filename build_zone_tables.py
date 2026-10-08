@@ -840,6 +840,12 @@ def build_architectures():
          "athlete has used in the last 8 weeks and which not at all.", "",
          "**Progression levers** (the only four): `reps`, `bout_duration`, "
          "`recovery_duration`, `intensity`. A week-to-week change names one or two.", "",
+         "**Session class and touches.** In every class, a session's class is the "
+         "purpose declared in [Zone]; harder minutes inside it are touches and do not "
+         "change it (bursts in a tempo ride, a spike opening a sweet-spot interval, "
+         "strides in an easy run). **Aerobic sessions** take one of the aerobic shapes "
+         "(`steady_aerobic`, `aerobic_touches`, `rolling_aerobic`, or a progression). "
+         "`technique_drills` is its own category, on request only.", "",
          "| Architecture | Classes | Disciplines | Levers | Role |",
          "| :--- | :--- | :--- | :--- | :--- |"]
     for a in archs:
@@ -853,8 +859,12 @@ def build_architectures():
               f"**Purpose.** {flat(a['intent'])}", "",
               f"**Rep shape:** {a['rep_shape']} · **Set shape:** "
               f"{', '.join(ss) if isinstance(ss, list) else ss}", ""]
+        if a.get("on_request"):
+            L += ["**On request only** — when the head coach or the athlete asks for it.", ""]
         if a.get("notes"):
             L += [f"**Coach notes.** {flat(a['notes'])}", ""]
+        if a.get("sources"):
+            L += [f"**Sources:** {', '.join(str(x) for x in a['sources'])}", ""]
         L += ["**Shape (relative notation only):**"]
         L += [f"- {flat(x)}" for x in a.get("example_shapes", [])] + [""]
     L += ["---", "", "## Combining architectures in one Main Set", "",

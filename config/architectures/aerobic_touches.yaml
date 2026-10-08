@@ -1,0 +1,54 @@
+name: aerobic_touches
+display_name: Aerobic with touches
+frequency_in_corpus: 326   # aerobic sessions with at least one step above the aerobic zone, of 401 aerobic sessions in the 1,694 distinct library workouts (Oct 2026)
+category: aerobic
+sources: [TRPM-L2-036, TRPM-L2-037, TRPM-L2-039, TRPM-L2-040, TRPM-L2-042, TRPM-L2-002, HPC-L2-004, TUA-L2-004, TUA-L2-005, DRF-C05-019, TEU-C05-038, "Palladino §7 (EZ Aerobic Run, EZ Long Run)"]
+
+intent: >
+  An aerobic session whose purpose and most of whose load stay aerobic, with
+  small doses of harder work placed inside it: tempo or sweet-spot blocks,
+  short threshold, VO2max or anaerobic efforts, sprints or bursts on the bike,
+  strides or pick-ups on the run. The touches keep the session alive, rehearse
+  other gears and give the athlete something to look forward to; they do not
+  change the session's class. The class is the purpose the coach declares in
+  [Zone], and the validator lists the touches beside it. The libraries build
+  most aerobic sessions this way, and so do the authors: Allen and Coggan's
+  endurance rides with bursts, a tempo drill, threshold hills, VO2max
+  intervals or anaerobic hill jams; Palladino's easy and long runs with
+  accelerations, fartlek or half-marathon blocks; Uphill Athlete's pick-ups
+  and tempo segments inside long aerobic runs; Daniels' strides.
+
+rep_shape: touches_on_base
+set_shape: [single, identical, progressive]
+
+applicable_classes: [recovery, endurance]
+disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
+
+progression_levers: [reps, bout_duration, intensity, recovery_duration]
+
+notes: >
+  The touch follows the purpose of the day, not a quota. An easy run leaves
+  room only for brief accelerations (Palladino keeps excursions short there,
+  Daniels' strides are light with full recovery); a long run or ride can carry
+  substantial touches (fartlek or half-marathon blocks in Palladino's long
+  run, a tempo segment in the middle of Uphill Athlete's long run, Allen and
+  Coggan's long endurance rides). Where the touches go is a design choice:
+  early, while fresh, for speed and strength; late, on tired legs, for
+  endurance (Friel's easy-hard variation keeps the steady part first); or
+  spread as terrain and feel invite (Uphill Athlete). Between touches the
+  athlete returns to the aerobic base, not to recovery. Touches can mix
+  classes in one session (a tempo block early, short spikes later). Cadence
+  can shape a touch, but a touch is a change of intensity, not only of
+  cadence. In the libraries, the time above tempo in these sessions is
+  usually a few minutes, context and not a limit; when the touches become
+  the main work, the session has changed: declare that class instead. Plan
+  checks still count every step at its own class, so heavy touches show in
+  the week's picture.
+
+combinable: [standalone]
+
+example_shapes:
+  - "Long aerobic block with N short touches spread through it, each followed by a return to the aerobic base"
+  - "Aerobic base, a set of touches in the middle or in the last third, then aerobic to the end"
+  - "Aerobic run with N strides or pick-ups, early (fresh) or late (on tired legs)"
+  - "Aerobic ride with touches of two classes: a tempo or sweet-spot block early, short efforts later"

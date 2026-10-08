@@ -2325,11 +2325,11 @@ def architecture_tests():
     equal("architecture: combo sequence keeps only real-load shapes, in order",
           r["sequence"], ["sprints", "classic_intervals"])
     check("architecture: a zero-load filler step between shapes is not its own entry",
-          "endurance_cadence" not in r["sequence"])
+          "steady_aerobic" not in r["sequence"])
 
     r = classify("- 20m 55-70%")
-    equal("architecture: nothing reaches work intensity -> endurance_cadence",
-          r["architecture"], "endurance_cadence")
+    equal("architecture: nothing reaches work intensity -> steady_aerobic",
+          r["architecture"], "steady_aerobic")
 
     r = classify("# Descanso\n")
     check("architecture: a rest-day note has nothing classifiable",
@@ -2373,7 +2373,7 @@ def architecture_tests():
 
     r = classify("Main Set\n- 120m 55-75% Pace", event_type="Run")
     equal("architecture: %Pace classifies the same way as %power",
-          r["architecture"], "endurance_cadence")
+          r["architecture"], "steady_aerobic")
 
     r = classify("Main Set 5x\n- 8m 95-100%\n- 4m 50-55%")
     equal("class: a threshold interval reads as threshold from generic cutpoints",
@@ -2426,8 +2426,26 @@ def architecture_tests():
     _mp = _vbp.session_monotony_profile(_st, _a, _th2)
     check("CHK-MONO v7.35: steps above the session's class are work, not rest",
           all(role == "work" for _m, _b, role, _r in _mp["fingerprint"]), _mp)
+    for _z, _want in [("Endurance · Coggan L2 + toques de Tempo", "endurance"),
+                      ("Resistencia aeróbica · Daniels E", "endurance"),
+                      ("Fondo aeróbico con strides", "endurance"),
+                      ("Sub-threshold · Friel Zona 4", "sub_threshold"),
+                      ("Umbral · Daniels T", "threshold"), ("VO2max · Coggan L5", "vo2max"),
+                      ("z", None), ("", None)]:
+        equal(f"declared_class v7.36: {_z!r}", _vbp.declared_class({"Zone": _z}), _want)
+    _st, _ = _vbp.parse_block("Main Set\n- 20m 65-70%\n\n5x\n- 30s 125-135%\n- 4m30s 60-65%")
+    _mp = _vbp.session_monotony_profile(_st, _a, _th2, "anaerobic")
+    check("declared v7.36: the class written in [Zone] is the session's class",
+          _mp["class"] == "anaerobic" and _mp["declared"] and _mp["load_class"] == "endurance", _mp)
+    _st2, _ = _vbp.parse_block("Main Set 2x\n- 20m 80-85%\n- 5m 50-55%\n\n6x\n- 15s 150-170%\n- 2m 80-85%")
+    _mp2 = _vbp.session_monotony_profile(_st2, _a, _th2, "tempo")
+    check("declared v7.36: a tempo session with bursts stays tempo, bursts are touches",
+          _mp2["class"] == "tempo" and _mp2["touches"] and _mp2["load_class"] == "tempo", _mp2)
+    _mp = _vbp.session_monotony_profile(_st, _a, _th2, None)
+    check("declared v7.36: no [Zone] class, the load decides",
+          _mp["class"] == "endurance" and not _mp["declared"], _mp)
     _rep = _vbp.parse_report("── Session 1: x\n   Computed TSS: 50\n"
-                             "   Session class: endurance · touches: tempo 9m\nRESULT: PASS")
+                             "   Session class: endurance (declared) · touches: tempo 9m\nRESULT: PASS")
     check("parse_report v7.35: reads the session class and its touches",
           _rep["sessions"][0]["session_class"] == "endurance"
           and _rep["sessions"][0]["touches"] == "tempo 9m", _rep)
@@ -2469,13 +2487,83 @@ def architecture_tests():
     equal("architecture: set-level pass leaves identical reps as classic_intervals",
           r["architecture"], "classic_intervals")
 
+    # ── v7.36: aerobic shapes and technique ──
+    r = classify("Main Set\n- 10m 65-70%\n\n3x\n- 3m 80-85%\n- 7m 65-70%\n\n- 5m 65-70%")
+    equal("aerobic v7.36: aerobic ride with tempo touches -> aerobic_touches",
+          r["architecture"], "aerobic_touches")
+    check("aerobic v7.36: the inner shape stays in the sequence",
+          r["sequence"][0] == "aerobic_touches" and len(r["sequence"]) >= 2, r["sequence"])
+    r = classify("Main Set\n- 30m 62-70%\n\n6x\n- 10s 180-200%\n- 4m50s 62-70%\n\n- 10m 62-70%")
+    equal("aerobic v7.36: aerobic ride with sprints -> aerobic_touches", r["architecture"], "aerobic_touches")
+    check("aerobic v7.36: bursts inside an aerobic ride still count as their own shape",
+          {"sprints", "surges_on_base"} & set(r["sequence"]), r["sequence"])
+    r = classify("Main Set\n- 40m 70-76% Pace\n\n6x\n- 20s 110-120% Pace\n- 1m40s 70-75% Pace",
+                 event_type="Run")
+    equal("aerobic v7.36: easy run with strides -> aerobic_touches", r["architecture"], "aerobic_touches")
+    r = classify("Main Set\n- 6m 63-67%\n- 3m 78-82%\n- 5m 68-72%\n- 2m 84-88%\n- 6m 63-67%"
+                 "\n- 3m 80-84%\n- 4m 70-74%\n- 2m 86-90%\n- 6m 64-68%")
+    equal("aerobic v7.36: continuous undulation with no recovery -> rolling_aerobic",
+          r["architecture"], "rolling_aerobic")
+    r = classify("Main Set\n- 20m 60-64%\n- 20m 64-68%\n- 20m 68-72%")
+    equal("aerobic v7.36: aerobic ride in rising steady blocks -> progression_run",
+          r["architecture"], "progression_run")
+    r = classify("Main Set\n- 60m 65-70%")
+    equal("aerobic v7.36: one flat aerobic block -> steady_aerobic", r["architecture"], "steady_aerobic")
+    r = classify('Main Set 6x\n- 1m 55-65% "spin-up"\n- 2m 55-60%')
+    equal("technique v7.36: a drill named in the cue -> technique_drills",
+          r["architecture"], "technique_drills")
+    r = classify('Main Set 4x\n- 2m 55-60% "pierna aislada"\n- 2m 55-60%')
+    equal("technique v7.36: Spanish drill cue -> technique_drills", r["architecture"], "technique_drills")
+    r = classify("Main Set 5x\n- 4m 106-115%\n- 4m 50-55%")
+    equal("aerobic v7.36: a real VO2max set is not an aerobic shape",
+          r["architecture"], "classic_intervals")
+    counts, _u = architecture.frequency([{"architecture": "aerobic_touches",
+                                          "sequence": ["aerobic_touches", "sprints"]}])
+    check("aerobic v7.36: the tally counts the aerobic shape and the sprints inside it",
+          counts["aerobic_touches"] == 1 and counts["sprints"] == 1)
+
+    # Every source an architecture cites exists in Knowledge/ (KB entry IDs only;
+    # "<author> §N" references to the older numbered files are free text).
+    import re as _re2
+    import glob as _g2
+    import yaml
+    _kb_text = "\n".join(open(f, encoding="utf-8").read()
+                         for f in _g2.glob(os.path.join(ROOT, "Knowledge", "**", "*.md"), recursive=True))
+    _bad = []
+    for f in _g2.glob(os.path.join(ROOT, "config", "architectures", "[!_]*.yaml")):
+        d = yaml.safe_load(open(f, encoding="utf-8"))
+        for src in d.get("sources") or []:
+            if _re2.fullmatch(r"[A-Z]+-[A-Z]\d+-\d+", str(src)) and f"[{src}]" not in _kb_text:
+                _bad.append(f"{os.path.basename(f)}: {src}")
+    check("library v7.36: every cited KB entry exists", not _bad, _bad)
+    _tech = yaml.safe_load(open(os.path.join(ROOT, "config", "architectures", "technique_drills.yaml"),
+                                encoding="utf-8"))
+    check("library v7.36: technique drills are their own category, on request only",
+          _tech.get("category") == "technique" and _tech.get("on_request") is True)
+    _aer = [os.path.basename(f)[:-5] for f in _g2.glob(os.path.join(ROOT, "config", "architectures", "[!_]*.yaml"))
+            if (yaml.safe_load(open(f, encoding="utf-8")).get("category") == "aerobic")]
+    equal("library v7.36: the aerobic shapes", sorted(_aer),
+          ["aerobic_touches", "rolling_aerobic", "steady_aerobic"])
+    _sob = yaml.safe_load(open(os.path.join(ROOT, "config", "architectures", "surges_on_base.yaml"),
+                               encoding="utf-8"))
+    check("library v7.36: surges on a tempo or sweet-spot base are that class (touches, any class)",
+          {"tempo", "sub_threshold"} <= set(_sob["applicable_classes"]))
+    r = classify("Main Set\n- 60m 80-85%\n\n10x\n- 20s 120-130%\n- 4m40s 80-85%")
+    check("touches v7.36: a tempo ride with bursts reads as tempo, bursts as touches",
+          r["class"] == "tempo" and r["touches"] and r["architecture"] != "aerobic_touches", r)
+    _pr_run = yaml.safe_load(open(os.path.join(ROOT, "config", "architectures", "progression_run.yaml"),
+                                  encoding="utf-8"))
+    check("library v7.36: progressions are available on the bike too",
+          {"trainer", "road_bike"} <= set(_pr_run["disciplines"]))
+
     import glob as _glob
     lib = {os.path.basename(f)[:-5] for f in _glob.glob(os.path.join(ROOT, "config", "architectures", "[!_]*.yaml"))}
     equal("architecture: engine knows exactly the library's architectures",
           sorted(architecture.ALL_ARCHITECTURES), sorted(lib))
     reachable = set(architecture._DIRECT_FAMILY.values()) | {
         "classic_intervals", "sustained_effort", "pyramid", "progressive_intervals",
-        "duration_ladder", "progression_run", "climb_simulation", "cadence_contrast", "stepped_build"}
+        "duration_ladder", "progression_run", "climb_simulation", "cadence_contrast", "stepped_build",
+        "aerobic_touches", "rolling_aerobic", "technique_drills"}
     check("architecture: every library shape can be produced by the classifier",
           lib <= reachable, sorted(lib - reachable))
     gen = open(os.path.join(ROOT, "generated", "Session_Architectures.md"), encoding="utf-8").read()
@@ -2611,8 +2699,10 @@ BLOCK_CASES = [
     # v7.35: an aerobic ride with 3x3m of tempo is an aerobic ride with touches,
     # not a tempo session -- repeating it is never CHK-MONO (aerobic classes are
     # the coach's judgement), and the validator says where its load sits.
-    ("aerobic_touches_repeat.md", 0, ["Session class: endurance · touches: tempo 9m"],
-     ["CHK-MONO"]),
+    ("aerobic_touches_repeat.md", 0, ["Session class: endurance (declared) · touches: tempo 9m"],
+     ["CHK-MONO", "CHK-PURPOSE"]),
+    # v7.36: a hard session labelled as aerobic is pointed out, never blocked.
+    ("purpose_mismatch.md", 0, ["CHK-PURPOSE"]),
     # ...while a real tempo session repeated with no progression still is.
     ("tempo_repeat.md", 0, ["CHK-MONO"]),
 ]

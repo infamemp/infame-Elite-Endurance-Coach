@@ -1,31 +1,42 @@
 name: surges_on_base
 display_name: Surges on a base
 frequency_in_corpus: 83
+sources: [TRPM-L2-045, TRPM-L2-047, TRPM-L2-048, TRPM-L2-037, WKOC-L2-017, WKOC-L2-022]
 
 intent: >
-  A sustained sub-maximal base (tempo/sweet-spot/endurance) with short, much
-  harder bursts layered inside it. Trains the ability to produce a hard
-  effort without a preceding recovery — arriving at the burst already
-  working — which is the closest simulation of race-day accelerations out of
-  a paceline or on a climb.
+  A sustained base (tempo, sweet spot or threshold) with short, much harder
+  bursts layered inside it, and no easy recovery after each burst: the
+  athlete returns to the base. Trains producing a hard effort without a
+  preceding recovery, and clearing it while still working: the closest
+  simulation of race accelerations out of a paceline or on a climb. The
+  session's class is its declared purpose: usually the base (a tempo or
+  sweet-spot session with bursts as its touches, as in Allen and Coggan's
+  tempo rides with anaerobic-capacity bursts or Cusick's sweet spot with FTP
+  surges), and the bursts' class when they are the point of the day
+  (race-like accelerations).
 
 rep_shape: surge_on_base
 set_shape: [identical, single]
 
-applicable_classes: [anaerobic, vo2max, neuromuscular]   # class = the burst; the base stays tempo/sub_threshold
+applicable_classes: [tempo, sub_threshold, threshold, vo2max, anaerobic, neuromuscular]
 disciplines: [trainer, road_bike, mtb, gravel, road_run, trail_run]
 
 progression_levers: [reps, bout_duration, intensity]
 
 notes: >
   Two numbers move somewhat independently: the base intensity (usually fixed
-  around tempo/sweet-spot for the session) and the burst intensity/duration
-  (the actual progression lever). Don't let the base drift — if the base
-  itself becomes the thing progressing, this has turned into
-  classic_intervals with a longer "recovery" that isn't really recovery.
+  for the session) and the bursts' intensity, length and count (the usual
+  progression lever). After each burst the athlete comes back to the base,
+  not lower: Allen and Coggan say to recover at tempo and no lower. Don't let
+  the base drift: if the base itself becomes the thing progressing, this has
+  turned into classic_intervals with a longer "recovery" that isn't really
+  recovery. Before v7.36 the class was always the bursts'; with the class
+  declared in [Zone], a tempo or sweet-spot session with bursts is declared
+  by its base and the bursts are its touches.
 
 combinable: [standalone, finisher]
 
 example_shapes:
   - "Base effort held continuously, with N short bursts (5-30s) inserted at intervals, no return to easy between them"
   - "N x (base segment / burst), base and burst both continuous — no easy recovery step"
+  - "Each base block opened by a few short maximal bursts, then straight into the base with no rest"
