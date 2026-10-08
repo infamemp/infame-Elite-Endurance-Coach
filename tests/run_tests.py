@@ -2583,6 +2583,26 @@ def architecture_tests():
     check("prompt: Pass 1 gathers ideas from the catalogs and the library",
           "**Gather ideas before filling the table**" in _pr and "`catalog=true`" in _pr
           and "`topic='architectures'`" in _pr)
+    check("prompt v7.37: the session's class is its purpose, touches in every class",
+          "### A session's purpose and its touches" in _pr
+          and "**The class is the purpose, not the hardest step.**" in _pr
+          and "This holds in every class." in _pr)
+    check("prompt v7.37: aerobic sessions are not caged, and steady needs a reason",
+          "**An aerobic session is not caged in its zone.**" in _pr
+          and "the reason goes in the table" in _pr)
+    check("prompt v7.37: cadence is one tool, drills on request, CHK-PURPOSE explained",
+          "**Cadence is one tool among several.**" in _pr
+          and "**Technique drills are their own session, on request.**" in _pr
+          and "`CHK-PURPOSE` (most of the load sits in a harder class" in _pr)
+    check("prompt v7.37: [Zone] starts with the purpose class",
+          "the session's purpose class first, then the active author's own zone" in _pr)
+    for _sp in ("cycling", "running"):
+        _d = yaml.safe_load(open(os.path.join(ROOT, "config", "doctrine", _sp + ".yaml"), encoding="utf-8"))
+        check(f"doctrine v7.37: {_sp} has the session purpose and touches row",
+              any(r["key"] == "session_purpose_and_touches" for r in _d["decisions"]))
+    _lg = open(os.path.join(ROOT, "config", "language", "es_mx.yaml"), encoding="utf-8").read()
+    check("language v7.37: Spanish terms for touches, bursts, pick-ups and technique",
+          all(w in _lg for w in ("toques", "arranques", "cambios de ritmo", "técnica de pedaleo")))
     check("prompt: architecture count matches the library",
           f"{len(lib)} pre-vetted session shapes" in _pr, len(lib))
     check("prompt: trail defaults to Koop, Palladino with power, Olbrich for flat road ultras",

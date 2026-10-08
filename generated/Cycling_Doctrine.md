@@ -1,6 +1,6 @@
-# Cycling Doctrine — v1.1
+# Cycling Doctrine — v1.2
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/cycling.yaml`. Built 2026-10-04 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/cycling.yaml`. Built 2026-10-08 by `python build_zone_tables.py build`.
 
 How the three cycling sources work as one system. Coggan and Allen give the language (levels, TSS, the Performance Manager), Friel gives the season (periods, annual volume, limiters), Mujika gives the taper, and Cusick gives the diagnosis and the fine control of training (the power-duration model, time to exhaustion, optimized intervals, intensity distribution). Use this file to decide which source answers a question; open the cited entries when you need the detail. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged. The zone table of the athlete's declared methodology always governs zone boundaries.
 
@@ -27,6 +27,7 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 | Load progression — CTL ramp rate | `coggan` | `cusick` | Engine → #STATE |
 | Threshold and sub-threshold progression | `cusick` | `friel_tb`, `friel_hpc`, `coggan` | This doctrine |
 | Above-threshold interval design (VO2max, anaerobic) | `cusick` | `coggan` | This doctrine |
+| Session purpose and variety inside a session (touches, aerobic rides, technique) | `coggan` | `cusick`, `friel_tb`, `friel_hpc` | This doctrine |
 | Intensity distribution across the season | `cusick` | `coggan`, `friel_tb` | This doctrine |
 | Testing — protocol and cadence | `coggan` | `cusick`, `friel_tb` | Engine → #STATE |
 | Cost and benefit of a training emphasis | `cusick` | `friel_tb` | This doctrine |
@@ -96,6 +97,16 @@ How the three cycling sources work as one system. Coggan and Allen give the lang
 **Governs — Tim Cusick.** Optimized intervals prescribe work from FTP to Pmax: rep length and power come from the athlete's own curve, so a more anaerobic rider does longer max aerobic reps. Round sensibly, and progress reps one step at a time. [`WKOC-C08-001`, `WKOC-C06-006`, `WKOC-C09-002`]
 
 - **Refines — Hunter Allen, Andrew Coggan & Stephen McGregor.** Levels 5-7 name the target band and the expected adaptation. [`TRPM-C06-001`, `TRPM-C06-002`]
+
+## Session purpose and variety inside a session (touches, aerobic rides, technique)
+
+*Executed in: This doctrine*
+
+**Governs — Hunter Allen, Andrew Coggan & Stephen McGregor.** A session is named by the work it is built around, not by its average or its single hardest moment: an hour of tempo inside easy riding is a Tempo session. Variability is part of the definition of Endurance and Tempo, so an aerobic or tempo ride can carry harder moments (bursts, a tempo block, efforts on the hills, short VO2max or anaerobic efforts) and stay what it is; the catalog's endurance and tempo rides with bursts, tempo, FTP hills, VO2max and hill jams are the worked examples. Declare the purpose as the first part of [Zone]; the harder minutes are its touches. [`TRPM-C09-009`, `TRPM-C05-080`]
+
+- **Refines — Tim Cusick.** Aerobic work is easy to get wrong: ride the base in a tight range, not too hard and not too easy, and progress it over time. Touches give an aerobic ride life; they never excuse junk miles in between. [`WKOC-C02-007`]
+- **Refines — Joe Friel.** Aerobic endurance is the most important basic ability and is tracked with the efficiency factor of steady aerobic-threshold rides: when that ride's steadiness is the point, keep it steady and say so. [`CTB-C09-012`, `CTB-C05-008`]
+- **Refines — Joe Friel.** Technique (speed skills) belongs to the Base period and matters most in the first years of racing, best early in a ride while fresh. In Infame it is its own session type and is planned only when the head coach or the athlete asks for it. [`HPC-C08-022`]
 
 ## Intensity distribution across the season
 

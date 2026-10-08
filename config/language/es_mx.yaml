@@ -26,6 +26,11 @@ glossary:
     - {when: "endurance class on any other bike or mixed session", write: "resistencia aeróbica"}
     - {when: "muscular endurance work (e.g. tempo on climbs)", write: "resistencia muscular"}
     - {when: "strides", write: "strides (e.g. '6 strides de 20 s')"}
+    - {when: "harder minutes inside a session (touches)", write: "toques (e.g. 'Fondo aeróbico con toques de tempo', 'Tempo con arranques'); the session keeps its own class name"}
+    - {when: "short bursts on the bike", write: "arranques"}
+    - {when: "pick-ups on a run", write: "cambios de ritmo"}
+    - {when: "rolling aerobic / fartlek session", write: "fartlek, or 'terreno ondulado' when the terrain sets it"}
+    - {when: "technique drill session", write: "técnica de pedaleo / técnica de carrera (drills keep their own names: spin-ups, pierna aislada, skipping)"}
     - {when: "stride form", write: "zancada fluida (never 'zancada suelta')"}
     - {when: "minutes and seconds in [Focus], [Execution], [Nutrition]", write: "'10 min', '30 s' — never '10m' or '30s' (that is Intervals.icu syntax and reads as metres). Inside the code block the syntax stays '10m', '30s'"}
     - {when: "author zone codes (Friel Zona 3, Daniels E, Koop ER...)", write: "never in athlete text: they go in the coach-only [Zone] field"}

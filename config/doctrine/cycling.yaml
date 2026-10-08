@@ -6,7 +6,7 @@
 # never override it. Every statement cites KB entry IDs that the build checks exist.
 
 sport: cycling
-version: "1.1"
+version: "1.2"
 title: Cycling Doctrine
 purpose: >-
   How the three cycling sources work as one system. Coggan and Allen give the language
@@ -178,6 +178,40 @@ decisions:
       - source: coggan
         rule: Levels 5-7 name the target band and the expected adaptation.
         refs: [TRPM-C06-001, TRPM-C06-002]
+
+  - key: session_purpose_and_touches
+    decision: Session purpose and variety inside a session (touches, aerobic rides, technique)
+    lives_in: doctrine
+    governs:
+      source: coggan
+      rule: >-
+        A session is named by the work it is built around, not by its average or its single
+        hardest moment: an hour of tempo inside easy riding is a Tempo session. Variability is
+        part of the definition of Endurance and Tempo, so an aerobic or tempo ride can carry
+        harder moments (bursts, a tempo block, efforts on the hills, short VO2max or
+        anaerobic efforts) and stay what it is; the catalog's endurance and tempo rides with
+        bursts, tempo, FTP hills, VO2max and hill jams are the worked examples. Declare the
+        purpose as the first part of [Zone]; the harder minutes are its touches.
+      refs: [TRPM-C09-009, TRPM-C05-080]
+    refines:
+      - source: cusick
+        rule: >-
+          Aerobic work is easy to get wrong: ride the base in a tight range, not too hard and
+          not too easy, and progress it over time. Touches give an aerobic ride life; they
+          never excuse junk miles in between.
+        refs: [WKOC-C02-007]
+      - source: friel_tb
+        rule: >-
+          Aerobic endurance is the most important basic ability and is tracked with the
+          efficiency factor of steady aerobic-threshold rides: when that ride's steadiness is
+          the point, keep it steady and say so.
+        refs: [CTB-C09-012, CTB-C05-008]
+      - source: friel_hpc
+        rule: >-
+          Technique (speed skills) belongs to the Base period and matters most in the first
+          years of racing, best early in a ride while fresh. In Infame it is its own session
+          type and is planned only when the head coach or the athlete asks for it.
+        refs: [HPC-C08-022]
 
   - key: intensity_distribution
     decision: Intensity distribution across the season

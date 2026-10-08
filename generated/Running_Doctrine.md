@@ -1,6 +1,6 @@
-# Running Doctrine — v1.1
+# Running Doctrine — v1.2
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/running.yaml`. Built 2026-10-04 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/doctrine/running.yaml`. Built 2026-10-08 by `python build_zone_tables.py build`.
 
 How the running sources work as one system. Palladino is the spine: the intensity language, the load guardrails and the testing logic, anchored to tested fitness and usable with power, pace or heart rate. Daniels governs road training structure and session doses, Koop governs trail and ultra, and Training for the Uphill Athlete governs vertical, muscular-endurance and strength work. Mujika governs the taper; Hansons, Hudson, Rosario and Olbrich refine inside those rules; Run Less, Run Faster is a mode used only on request. The methodology the athlete declared still supplies the zone table; this file decides which source answers each question. Statements here are Infame doctrine: attribute them to Infame doctrine and name the source behind each one. Outside this file the one-author attribution rule applies unchanged.
 
@@ -31,6 +31,7 @@ How the running sources work as one system. Palladino is the spine: the intensit
 | Load progression — ramp rate and weekly volume | `palladino` | `daniels`, `koop` | This doctrine |
 | Intensity distribution | `palladino` | `rosario`, `uphill` | This doctrine |
 | Dose per session for each intensity | `daniels` | `palladino` | This doctrine |
+| Session purpose and variety inside a run (touches, easy and long runs, technique) | `palladino` | `daniels`, `uphill`, `koop`, `palladino` | This doctrine |
 | Road season structure (5K to marathon) | `daniels` | `hansons_marathon`, `hansons_half`, `hudson` | This doctrine |
 | Trail and ultra season structure | `koop` | `uphill`, `olbrich` | This doctrine |
 | Vertical, muscular endurance and strength | `uphill` | `koop` | This doctrine |
@@ -84,6 +85,17 @@ How the running sources work as one system. Palladino is the spine: the intensit
 **Governs — Jack Daniels.** Per-session ceilings by type: long run, M, T, I and R each limited by a share of weekly volume and by time per bout. [`DRF-C06-004`, `DRF-C06-007`]
 
 - **Refines — Steve Palladino.** Workout protocols and execution rules by zone. [`§7`]
+
+## Session purpose and variety inside a run (touches, easy and long runs, technique)
+
+*Executed in: This doctrine*
+
+**Governs — Steve Palladino.** Easy and long runs are designed, not just run. The easy run stays easy on average and keeps its excursions brief: accelerations of a few seconds fit, longer surges do not. The long run has room for real work inside it: accelerations, fartlek segments in its last part, or blocks at half-marathon power, and the run stays a long run. Declare the purpose as the first part of [Zone]; the faster minutes are its touches. [`§7`]
+
+- **Refines — Jack Daniels.** Strides are light, quick runs of 15-20 seconds with full recovery, not sprints. [`DRF-C05-019`]
+- **Refines — Steve House, Scott Johnston & Kilian Jornet.** Pick-ups or strides spread through a zone 1-2 run; continuous tempo or a tempo segment inside a long run for well-conditioned athletes. An athlete with aerobic deficiency does nearly all base work in zone 2 and delays zone 3: a reason for steady runs, stated as such. [`TUA-C08-021`, `TUA-C03-001`, `TUA-C05-006`]
+- **Refines — Jason Koop, Jim Rutberg & Corrine Malcolm.** Strides also build the neuromuscular pattern for faster running before the athlete can sustain it. [`TEU-C05-038`]
+- **Refines — Steve Palladino.** Form and technique work (quick steps, posture, drills) is its own session type in Infame, planned only when the head coach or the athlete asks for it. [`§10`]
 
 ## Road season structure (5K to marathon)
 

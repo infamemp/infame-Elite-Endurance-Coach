@@ -4,6 +4,34 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.37 (2026-10-08)
+
+Aerobic variety, step 3 of 3: the coach's criteria. Prompt v7.37.
+
+- **Prompt — "A session's purpose and its touches"** (in `<session_design>`), written as
+  criteria, not rules: the class is the purpose declared first in `[Zone]`, in every class;
+  an aerobic session is not caged in its zone (touches, rolling, progressions), the touch
+  follows the day's purpose and its placement is a design choice; steady aerobic is right
+  with a reason, and the reason goes in the table; the harder the session, the more a touch
+  must earn its place; touches are real load (read `CHK-SPACING` / `CHK-EASY` with that in
+  mind); cadence is one tool among several, never the only change; technique drills are their
+  own session, on request. `touches` added to the design variables; `[Zone]` and
+  `CHK-PURPOSE` documented.
+- **Doctrines 1.2:** a `session_purpose_and_touches` row in each. Cycling governed by Allen &
+  Coggan (a session is named by the work it is built around; variability is part of
+  Endurance and Tempo), refined by Cusick (no junk miles between touches), Friel (steady AeT
+  rides tracked by EF; speed skills in Base). Running governed by Palladino §7 (easy run with
+  brief accelerations, long run with fartlek or HMP blocks), refined by Daniels and Koop
+  (strides), Uphill Athlete (pick-ups, tempo inside the long run; aerobic deficiency as a
+  reason for steady runs) and Palladino §10 (technique on request).
+- **Language guide:** toques, arranques, cambios de ritmo, fartlek / terreno ondulado,
+  técnica de pedaleo / de carrera.
+- `RESTORE_POINT_v7.37.md` replaces v7.34.
+- **Deploy:** paste the prompt into the Project's Instructions; replace the knowledge files
+  `Cycling_Doctrine.md`, `Running_Doctrine.md`, `Language_Guide_es-MX.md`; restart Claude
+  Desktop.
+- Tests: 840 + 187.
+
 ## v7.36 (2026-10-08)
 
 Aerobic variety, step 2 of 3: the shape library for aerobic sessions, a technique category,

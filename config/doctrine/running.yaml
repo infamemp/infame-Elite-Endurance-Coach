@@ -7,7 +7,7 @@
 # never override it. Every statement cites references that the build checks exist.
 
 sport: running
-version: "1.1"
+version: "1.2"
 title: Running Doctrine
 purpose: >-
   How the running sources work as one system. Palladino is the spine: the intensity
@@ -173,6 +173,38 @@ decisions:
       - source: palladino
         rule: Workout protocols and execution rules by zone.
         refs: ["§7"]
+
+  - key: session_purpose_and_touches
+    decision: Session purpose and variety inside a run (touches, easy and long runs, technique)
+    lives_in: doctrine
+    governs:
+      source: palladino
+      rule: >-
+        Easy and long runs are designed, not just run. The easy run stays easy on average and
+        keeps its excursions brief: accelerations of a few seconds fit, longer surges do not.
+        The long run has room for real work inside it: accelerations, fartlek segments in its
+        last part, or blocks at half-marathon power, and the run stays a long run. Declare
+        the purpose as the first part of [Zone]; the faster minutes are its touches.
+      refs: ["§7"]
+    refines:
+      - source: daniels
+        rule: Strides are light, quick runs of 15-20 seconds with full recovery, not sprints.
+        refs: [DRF-C05-019]
+      - source: uphill
+        rule: >-
+          Pick-ups or strides spread through a zone 1-2 run; continuous tempo or a tempo
+          segment inside a long run for well-conditioned athletes. An athlete with aerobic
+          deficiency does nearly all base work in zone 2 and delays zone 3: a reason for
+          steady runs, stated as such.
+        refs: [TUA-C08-021, TUA-C03-001, TUA-C05-006]
+      - source: koop
+        rule: Strides also build the neuromuscular pattern for faster running before the athlete can sustain it.
+        refs: [TEU-C05-038]
+      - source: palladino
+        rule: >-
+          Form and technique work (quick steps, posture, drills) is its own session type in
+          Infame, planned only when the head coach or the athlete asks for it.
+        refs: ["§10"]
 
   - key: road_season_structure
     decision: Road season structure (5K to marathon)

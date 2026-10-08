@@ -1,6 +1,6 @@
 # Language Guide — Mexican Spanish (athlete-facing text)
 
-> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. Built 2026-10-04 by `python build_zone_tables.py build`.
+> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. Built 2026-10-08 by `python build_zone_tables.py build`.
 
 Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code block when the athlete's language is Spanish. The vocabulary and phrases are the head coach's own. Tempo, strides, VO2max and neuromuscular are universal and stay as written. Register: professional, direct, *tú*. `verify/validate_block.py` warns on the patterns in **Never write**.
 
@@ -27,6 +27,11 @@ Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code 
 | endurance class on any other bike or mixed session | resistencia aeróbica |
 | muscular endurance work (e.g. tempo on climbs) | resistencia muscular |
 | strides | strides (e.g. '6 strides de 20 s') |
+| harder minutes inside a session (touches) | toques (e.g. 'Fondo aeróbico con toques de tempo', 'Tempo con arranques'); the session keeps its own class name |
+| short bursts on the bike | arranques |
+| pick-ups on a run | cambios de ritmo |
+| rolling aerobic / fartlek session | fartlek, or 'terreno ondulado' when the terrain sets it |
+| technique drill session | técnica de pedaleo / técnica de carrera (drills keep their own names: spin-ups, pierna aislada, skipping) |
 | stride form | zancada fluida (never 'zancada suelta') |
 | minutes and seconds in [Focus], [Execution], [Nutrition] | '10 min', '30 s' — never '10m' or '30s' (that is Intervals.icu syntax and reads as metres). Inside the code block the syntax stays '10m', '30s' |
 | author zone codes (Friel Zona 3, Daniels E, Koop ER...) | never in athlete text: they go in the coach-only [Zone] field |

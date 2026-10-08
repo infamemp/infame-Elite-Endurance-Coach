@@ -1,9 +1,31 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.34
+# RESTORE POINT — Infame Elite Endurance Coach v7.37
 
-**Date frozen:** 2026-10-07
-**Previous:** v7.33 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.32 (unchanged in v7.34)
-**Tests:** `python tests/run_tests.py` → 776/776 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 187/187
+**Date frozen:** 2026-10-08
+**Previous:** v7.34 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.37
+**Tests:** `python tests/run_tests.py` → 840/840 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 187/187
+
+## What changed in v7.35–v7.37 — aerobic variety
+
+Aerobic sessions were caged in their zone: the hardest step named a session's class, so any
+touch of tempo turned an aerobic ride into a "tempo session", and the coach kept them flat.
+
+- **v7.35/v7.36 — engine.** A session's class is the purpose declared first in `[Zone]`
+  (English or Spanish); without it, where the load sits. Harder minutes are **touches**, in
+  every class; the validator lists them and warns with `CHK-PURPOSE` when most of the load
+  sits in a harder class than the one declared.
+- **v7.36 — library.** Aerobic shapes (`steady_aerobic`, was `endurance_cadence`;
+  `aerobic_touches`; `rolling_aerobic`; progressions on the bike), `technique_drills` as its
+  own category on request, `surges_on_base` and `hard_start_fading` for tempo and sweet
+  spot. Built from a re-analysis of the 1,694 library workouts and the KB authors; every
+  shape cites its sources. No limits on touches anywhere.
+- **v7.37 — prompt and doctrine.** The prompt's "A session's purpose and its touches"
+  (criteria, not rules), a `session_purpose_and_touches` row in both doctrines (cycling
+  governed by Allen & Coggan, running by Palladino), Spanish terms (toques, arranques,
+  cambios de ritmo, técnica de pedaleo / de carrera).
+- **Deploy:** paste the prompt into the Project's Instructions; replace the three knowledge
+  files `Cycling_Doctrine.md`, `Running_Doctrine.md`, `Language_Guide_es-MX.md`; restart
+  Claude Desktop.
 
 ## What changed in v7.34
 
@@ -53,7 +75,7 @@ number changed — the golden outputs are identical.
 
 ## What the Project must contain
 
-- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.32).
+- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.37).
 - **Knowledge files (flat, no folders):** `generated/Cycling_Doctrine.md`,
   `generated/Running_Doctrine.md`, `generated/Language_Guide_es-MX.md`,
   `Syntax/Intervals Workout Builder Syntax.md`.
