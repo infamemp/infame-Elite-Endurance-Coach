@@ -901,16 +901,53 @@ def test_tools_push():
             calls.append({"url": url, "params": params, "json": json})
             return _FakeResponse()
 
+        gets = []
+
+        class _FakeGetResponse:
+            status_code = 200
+
+            def __init__(self, body):
+                self._body = body
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._body
+
+        def _fake_get(self, url, params=None, timeout=None):
+            # The load check reads the events back when the bulk response
+            # carries no loads. Intervals.icu's load for each = ours + 1.
+            gets.append({"url": url, "params": params})
+            sent = calls[-1]["json"] if calls else []
+            return _FakeGetResponse([
+                {"external_id": e["external_id"], "icu_training_load": 0}
+                for e in sent])
+
         original_post = requests.Session.post
+        original_get = requests.Session.get
         requests.Session.post = _fake_post
+        requests.Session.get = _fake_get
         try:
             with _placeholder_key():
                 r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
         finally:
             requests.Session.post = original_post
+            requests.Session.get = original_get
 
         equal("tools_push: both gates open actually sends (against the mock)",
               r.get("sent"), True)
+        lc = r.get("load_check") or {}
+        equal("tools_push: no loads in the bulk response -> one read-back of the "
+              "events (v7.38)", len(gets), 1)
+        check("tools_push: the read-back asks for the uploaded dates",
+              gets and gets[0]["url"].endswith(f"/athlete/{AID}/events")
+              and set(gets[0]["params"]) == {"oldest", "newest"})
+        check("tools_push: a load far from ours is reported as a mismatch",
+              lc.get("checked", 0) >= 1 and len(lc.get("mismatches") or []) == lc["checked"])
+        check("tools_push: our load and method never travel in the payload",
+              calls and all("infame_load" not in e and "load_method" not in e
+                            for e in calls[0]["json"]))
         equal("tools_push: exactly one bulk-events POST was made", len(calls), 1)
         check("tools_push: the mocked call hit the documented bulk-events endpoint",
               calls and calls[0]["url"] == f"{fad.BASE_URL}/athlete/{AID}/events/bulk")
@@ -919,6 +956,72 @@ def test_tools_push():
         check("tools_push: internal 'type_inferred' annotation is stripped "
               "from the actual wire payload",
               calls and all("type_inferred" not in e for e in calls[0]["json"]))
+
+
+def test_tools_push_load_check():
+    """v7.38: after a live send, each session's load is compared with the
+    load Intervals.icu computed. Loads in the bulk response are used
+    directly (no read-back); within tolerance is not reported; a check that
+    cannot run never fails the upload."""
+    from mcp_server import tools_push as tp
+
+    events = [
+        {"start_date_local": "2026-10-12T00:00:00", "name": "A",
+         "external_id": "infame-X-2026-10-12-w01", "infame_load": 50,
+         "load_method": "np_30s"},
+        {"start_date_local": "2026-10-13T00:00:00", "name": "B",
+         "external_id": "infame-X-2026-10-13-w01", "infame_load": 40,
+         "load_method": "np_30s"},
+    ]
+
+    class _Resp:
+        def __init__(self, body):
+            self._body = body
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self._body
+
+    class _Fad:
+        BASE_URL = "https://intervals.icu/api/v1"
+
+        class SESSION:
+            gets = 0
+
+            @classmethod
+            def get(cls, *a, **k):
+                cls.gets += 1
+                raise AssertionError("no read-back expected")
+
+    resp = _Resp([{"external_id": "infame-X-2026-10-12-w01", "icu_training_load": 51},
+                  {"external_id": "infame-X-2026-10-13-w01", "icu_training_load": 46}])
+    # The suite already points the ledger at a temporary folder.
+    lc = tp._check_uploaded_loads("X", events, resp, _Fad)
+    equal("load check: loads in the bulk response need no read-back",
+          _Fad.SESSION.gets, 0)
+    equal("load check: both sessions checked", lc["checked"], 2)
+    equal("load check: 1 TSS apart is within tolerance", lc["within_tolerance"], 1)
+    equal("load check: 6 TSS apart is reported",
+          [(m["date"], m["difference"]) for m in lc["mismatches"]], [("2026-10-13", 6.0)])
+
+    class _BadResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            raise ValueError("no body")
+
+    class _FadDown(_Fad):
+        class SESSION:
+            @staticmethod
+            def get(*a, **k):
+                raise ConnectionError("offline")
+
+    lc2 = tp._check_uploaded_loads("X", events, _BadResp(), _FadDown)
+    check("load check: a check that cannot run says why and never raises",
+          "error" in lc2 and lc2["checked"] == 0)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1361,7 +1464,7 @@ def main():
         for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_services, test_fetch_robustness, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
-                   test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
+                   test_tools_push_load_check, test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
             fn()
     finally:
         _cleanup()

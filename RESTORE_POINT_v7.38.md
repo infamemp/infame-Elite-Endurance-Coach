@@ -1,9 +1,21 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.37
+# RESTORE POINT — Infame Elite Endurance Coach v7.38
 
 **Date frozen:** 2026-10-08
-**Previous:** v7.34 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.37
-**Tests:** `python tests/run_tests.py` → 840/840 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 187/187
+**Previous:** v7.37 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.37 (unchanged in v7.38)
+**Tests:** `python tests/run_tests.py` → 858/858 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 196/196
+
+## What changed in v7.38 — load as Intervals.icu computes it
+
+Session TSS now follows the method Intervals.icu uses for each target, measured against
+the loads it stored for real planned workouts: Normalized Power for cycling power (largest
+gap 1.0 TSS on 74 sessions, was 11 and always low on intervals), HRSS for heart rate (was
+up to twice the stored load), and the per-step IF² unchanged for running pace and power
+(already within 1 TSS). `push_block` checks every uploaded session against the load
+Intervals.icu computed and reports differences beyond 2 TSS (`load_check`, also in the
+ledger). Details in `CHANGELOG.md` and `engine/planned_load.py`.
+
+- **Deploy:** restart Claude Desktop. The Project does not change.
 
 ## What changed in v7.35–v7.37 — aerobic variety
 

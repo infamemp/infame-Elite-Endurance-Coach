@@ -4,6 +4,55 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.38 (2026-10-08)
+
+Session load (TSS) computed as Intervals.icu computes planned load, by target, and checked
+after every upload. Prompt, doctrines and knowledge files unchanged.
+
+- **Why.** v7.x costed every target as hours × IF² × 100 per step. Measured against the
+  loads Intervals.icu stored for the head coach's real planned workouts, that was right
+  for running and wrong for cycling power and heart rate:
+
+  | Target | Sessions | Before (largest gap) | v7.38 (largest gap) |
+  | --- | --- | --- | --- |
+  | Cycling power | 74 | 11 TSS, always low on intervals (13–21% on the hardest) | 1.0 TSS |
+  | Running pace | 44 | 1.0 TSS | 1.0 TSS, unchanged |
+  | Running power | 11 | 0.6 TSS | 0.6 TSS, unchanged |
+  | Heart rate | 6 | up to 2× the stored load | far closer, not exact |
+
+  The October check that moved Infame to IF² used a steady 3h45 endurance ride, where
+  IF² and Normalized Power agree; it could not show the gap on intervals. The workouts
+  measured are athletes' data and are not stored in the repository.
+- **`engine/planned_load.py` (new).** Normalized Power: a 1 Hz stream, ramps linear,
+  30 s rolling average, repeats in riding order. HRSS (normalised TRIMP): each second in
+  whole bpm, LTHR / max HR from the sport's Intervals.icu settings and resting HR from the
+  athlete record in `data/<id>/athlete_data.json`, else the median of 14 days of wellness,
+  else 60 bpm — Intervals.icu's own default, which reproduced both HR workouts of an
+  athlete with no resting HR on record.
+- **`config/decision_thresholds.yaml` → `tss_rules.method_by_target`:** `cycling_power:
+  np_30s`, `running_power: if_squared`, `pace: if_squared`, `heart_rate: hrss`; a
+  session mixing target families keeps `method` (if_squared). `np_window_seconds`,
+  `upload_check_tolerance_tss: 2`.
+- **`verify/validate_block.py`:** `compute_tss` applies the method of the session's
+  target (the per-step detail is still listed; under np_30s and hrss each step shows its
+  share of the total). The computed line names the method when it is not if_squared
+  (`Computed TSS: 52 (np_30s)`). `parse_block` gives each repeat block an id so the
+  stream is ridden in order.
+- **`push_block` → `load_check`.** After a live send, each session's load is compared with
+  the load Intervals.icu computed for the event (read from the bulk response, else read
+  back once for those dates). Differences beyond 2 TSS are listed in the result and
+  written to the ledger (`upload_load_mismatch`). It reports only: it never undoes an
+  upload, and a check that cannot run says why. The dry run shows each session's
+  `infame_load` and `load_method`; neither is sent.
+- **What is not guaranteed.** Intervals.icu stores whole numbers and keeps the thresholds
+  of the day a workout was planned, so a later threshold change separates its number
+  from this one; on heart rate the formula is close but not exact on every workout. The
+  upload check is what shows each case.
+- `RESTORE_POINT_v7.38.md` replaces v7.37.
+- **Deploy:** restart Claude Desktop (the MCP server code changed). The Project does not
+  change.
+- Tests: 858 + 196.
+
 ## v7.37 (2026-10-08)
 
 Aerobic variety, step 3 of 3: the coach's criteria. Prompt v7.37.

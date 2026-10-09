@@ -154,6 +154,80 @@ def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
     return fallback, True
 
 
+
+# Fields that annotate an event for the head coach and are never sent.
+_LOCAL_ONLY = {"type_inferred", "infame_load", "load_method"}
+
+
+def _intervals_load(event: dict):
+    """The planned load Intervals.icu computed for an event, or None."""
+    for key in ("icu_training_load", "training_load"):
+        v = event.get(key)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return float(v)
+    return None
+
+
+def _check_uploaded_loads(athlete_id: str, events: list, resp, fad) -> dict:
+    """After a live send, compare the load this system computed for each
+    session with the load Intervals.icu computed for the event it created
+    (v7.38). The bulk response is read first; when it does not carry the
+    loads, the events of those dates are read back once. Reports only —
+    never undoes the upload — and never raises: a check that cannot run says
+    why. Differences beyond tss_rules.upload_check_tolerance_tss are listed
+    and written to the athlete's ledger."""
+    try:
+        import validate_block as vb
+        th = vb.load_thresholds_only()
+        tol = float((th.get("tss_rules") or {}).get("upload_check_tolerance_tss", 2))
+    except Exception:  # noqa: BLE001
+        tol = 2.0
+    result = {"tolerance_tss": tol, "checked": 0, "within_tolerance": 0,
+              "mismatches": [], "not_available": []}
+    try:
+        by_id = {}
+        try:
+            body = resp.json()
+        except Exception:  # noqa: BLE001 — no JSON body
+            body = None
+        for e in body if isinstance(body, list) else []:
+            if isinstance(e, dict) and e.get("external_id"):
+                by_id[e["external_id"]] = _intervals_load(e)
+        missing = [e for e in events if by_id.get(e["external_id"]) is None]
+        if missing:
+            dates = sorted(e["start_date_local"][:10] for e in missing)
+            url = f"{fad.BASE_URL}/athlete/{athlete_id}/events"
+            got = fad.SESSION.get(url, params={"oldest": dates[0], "newest": dates[-1]},
+                                  timeout=45)
+            got.raise_for_status()
+            for e in got.json() or []:
+                if isinstance(e, dict) and e.get("external_id") in {m["external_id"] for m in missing}:
+                    by_id[e["external_id"]] = _intervals_load(e)
+        for e in events:
+            ours, theirs = e.get("infame_load"), by_id.get(e["external_id"])
+            if ours is None or theirs is None:
+                result["not_available"].append(e["external_id"])
+                continue
+            result["checked"] += 1
+            diff = round(theirs - float(ours), 1)
+            if abs(diff) > tol:
+                result["mismatches"].append({
+                    "date": e["start_date_local"][:10], "name": e.get("name"),
+                    "external_id": e["external_id"], "infame_load": ours,
+                    "intervals_load": theirs, "difference": diff,
+                    "method": e.get("load_method")})
+            else:
+                result["within_tolerance"] += 1
+    except Exception as exc:  # noqa: BLE001 — the upload already happened
+        result["error"] = f"load check could not run: {exc}"
+    if result["mismatches"]:
+        ledger_record(athlete_id, "upload_load_mismatch",
+                      sessions=[{k: m[k] for k in ("date", "infame_load",
+                                                   "intervals_load", "method")}
+                                for m in result["mismatches"]])
+    return result
+
+
 # Maintainer notes (the docstring below is the description the model reads):
 # Build the Intervals.icu bulk-events payload for a saved block and,
 # only when explicitly told twice (dry_run=False AND confirm=True), POST
@@ -195,7 +269,9 @@ def push_block(
     (override_validation=true only when the head coach explicitly asks). It refuses
     a file with cards for another athlete. Re-pushing a corrected week updates the
     same events. Race days are skipped; workouts already planned on those dates are
-    not removed. include_notes=false sends only the steps."""
+    not removed. include_notes=false sends only the steps. After a live send,
+    `load_check` compares each session's load with the one Intervals.icu computed
+    and lists any difference beyond the tolerance: tell the head coach."""
     ensure_import_paths()
     import validate_block as vb
 
@@ -264,7 +340,7 @@ def push_block(
             skipped.append({"reason": "missing [Methodology] or [Discipline]", "header": header})
             continue
         try:
-            author, _th, _tssc = vb.load_config(methodology.strip().lower())
+            author, th, tssc = vb.load_config(methodology.strip().lower())
         except Exception as exc:  # noqa: BLE001 — EngineError: unknown methodology
             skipped.append({"reason": f"unknown methodology: {exc}", "header": header})
             continue
@@ -277,6 +353,15 @@ def push_block(
         base_id = f"infame-{athlete_id}-{iso}-w{_week_tag(header.get('Week'))}"
         same_day[base_id] = same_day.get(base_id, 0) + 1
         external_id = base_id if same_day[base_id] == 1 else f"{base_id}-{same_day[base_id]}"
+        # The load this system computed for the session (v7.38), kept beside
+        # the event so the live send can compare it with the load
+        # Intervals.icu computes. Never part of the wire payload.
+        steps, _ = vb.parse_block(code)
+        try:
+            infame_load, _d, _s = vb.compute_tss(steps, author, th, tssc, athlete_id)
+            load_method = vb.compute_tss.last_method
+        except Exception:  # noqa: BLE001 — a load we cannot compute is not checked
+            infame_load, load_method = None, None
         events.append({
             "start_date_local": f"{iso}T00:00:00",
             "category": "WORKOUT",
@@ -285,6 +370,8 @@ def push_block(
             "name": header.get("Focus") or f"{author['name']} session",
             "description": _description(header, code, language, include_notes),
             "external_id": external_id,
+            "infame_load": infame_load,
+            "load_method": load_method,
         })
 
     if not events:
@@ -328,12 +415,13 @@ def push_block(
     # for unrecognized fields is unverified (this path itself is
     # unexercised, per this module's own docstring), so it's stripped
     # rather than trusted to be ignored.
-    wire_events = [{k: v for k, v in e.items() if k != "type_inferred"} for e in events]
+    wire_events = [{k: v for k, v in e.items() if k not in _LOCAL_ONLY} for e in events]
 
     fad.SESSION = fad.make_session()
     url = f"{fad.BASE_URL}/athlete/{athlete_id}/events/bulk"
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)
     resp.raise_for_status()
+    load_check = _check_uploaded_loads(athlete_id, events, resp, fad)
     ledger_record(athlete_id, "block_uploaded", file=os.path.basename(str(file_path or "")) or None,
                   sessions=len(events), override_validation=bool(override_validation),
                   dates=sorted({str(e.get("start_date_local") or "")[:10] for e in events}))
@@ -343,4 +431,5 @@ def push_block(
         "sent": True,
         "status_code": resp.status_code,
         **payload,
+        "load_check": load_check,
     }

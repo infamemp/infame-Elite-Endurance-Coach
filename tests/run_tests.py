@@ -2235,6 +2235,107 @@ def unit_tests():
 
 
 # ══════════════════════════════════════════════════════════════════
+# PLANNED LOAD — TSS as Intervals.icu computes it (v7.38)
+# ══════════════════════════════════════════════════════════════════
+
+def planned_load_tests():
+    import json as _json
+    import math as _math
+    import tempfile
+    sys.path.insert(0, os.path.join(ROOT, "verify"))
+    sys.path.insert(0, os.path.join(ROOT, "engine"))
+    import validate_block as vb
+    import planned_load as pl
+
+    # The stream and NP, by hand
+    equal("planned load: a constant hour at FTP is 100 TSS",
+          pl.np_tss([(3600, 1.0, 1.0)]), 100.0, tolerance=1e-9)
+    want4 = (600 * 0.6 ** 4 + sum((0.6 + 0.4 * k / 30) ** 4 for k in range(1, 30))
+             + 571 * 1.0) / 1200
+    equal("planned load: NP of 600 s at 60% then 600 s at 100%, the 29 "
+          "transition seconds summed by hand",
+          pl.np_fraction([(600, 0.6, 0.6), (600, 1.0, 1.0)]), want4 ** 0.25,
+          tolerance=1e-12)
+    equal("planned load: a ramp is linear second by second",
+          sum(pl.stream([(10, 0.5, 1.0)])) / 10, 0.75, tolerance=1e-12)
+
+    # Repeat blocks are ridden in order: A B A B, never A A B B
+    steps, _ = vb.parse_block("- 5m 50%\n\n3x\n- 1m 120%\n- 1m 50%\n\n- 5m 50%")
+    segs = pl.ordered_segments(steps, lambda st: ((st["pct"][0] / 100,) * 2))
+    equal("planned load: a repeat block is expanded in riding order",
+          [round(f, 2) for _, f, _ in segs],
+          [0.5, 1.2, 0.5, 1.2, 0.5, 1.2, 0.5, 0.5])
+
+    # Method per target
+    author, th_, tss_ = vb.load_config("coggan")
+    steps, _ = vb.parse_block("- 10m ramp 45-75%\n\n4x\n- 3m 106-115%\n- 3m 50-60%\n\n"
+                              "- 5m ramp 60-40%")
+    total, detail, _ = vb.compute_tss(steps, author, th_, tss_)
+    equal("planned load: cycling power uses np_30s", vb.compute_tss.last_method, "np_30s")
+    per_step = sum(d[5] / 60 * (d[1] / 100) ** 2 * 100 for d in detail)
+    check("planned load: on intervals NP reads more than the per-step IF^2 sum",
+          total > round(per_step), f"{total} vs {per_step:.1f}")
+    equal("planned load: per-step shares still add up to the session total",
+          round(sum(d[6] for d in detail)), total)
+
+    author, th_, tss_ = vb.load_config("daniels")
+    steps, _ = vb.parse_block("- 10m 72-78% Pace\n- 35m 78-83% Pace\n- 5m 70-76% Pace")
+    total, _, _ = vb.compute_tss(steps, author, th_, tss_)
+    equal("planned load: running pace keeps the per-step method",
+          vb.compute_tss.last_method, "if_squared")
+    equal("planned load: and its value (Intervals.icu stored 52 for this session)",
+          total, 52)
+
+    # Heart rate: HRSS from the athlete's Intervals.icu values
+    with tempfile.TemporaryDirectory() as tmp:
+        def write(aid, profile, wellness=()):
+            d = os.path.join(tmp, "data", aid)
+            os.makedirs(d)
+            with open(os.path.join(d, "athlete_data.json"), "w", encoding="utf-8") as f:
+                _json.dump({"profile": profile, "wellness": list(wellness)}, f)
+        run = {"types": ["Run", "VirtualRun", "TrailRun"], "lthr": 160, "max_hr": 180}
+        write("A1", {"resting_hr": 60, "sport_settings": [run]})
+        write("A2", {"resting_hr": None, "sport_settings": [run]},
+              [{"resting_hr": 50}, {"resting_hr": 52}])
+        write("A3", {"resting_hr": None, "sport_settings": [run]})
+        write("A4", {"resting_hr": 60, "sport_settings": [{"types": ["Run"], "lthr": 160}]})
+        pl.clear_cache()
+        equal("planned load: HR profile read from athlete_data.json",
+              {k: v for k, v in pl.hr_profile("A1", "running", tmp).items() if k != "source"},
+              {"lthr": 160.0, "max_hr": 180.0, "resting_hr": 60.0})
+        equal("planned load: no resting HR on the athlete -> median of wellness",
+              pl.hr_profile("A2", "running", tmp)["resting_hr"], 51.0)
+        equal("planned load: no resting HR anywhere -> Intervals.icu's 60",
+              pl.hr_profile("A3", "running", tmp)["resting_hr"], 60.0)
+        equal("planned load: no max HR -> no profile", pl.hr_profile("A4", "running", tmp), None)
+        pl.clear_cache()
+
+    author, th_, tss_ = vb.load_config("friel_running")
+    pl._PROFILE_CACHE[("HRTEST", "running")] = {"lthr": 160.0, "max_hr": 180.0,
+                                                "resting_hr": 60.0, "source": "test"}
+    steps, _ = vb.parse_block("- 60m 100% LTHR")
+    total, _, _ = vb.compute_tss(steps, author, th_, tss_, "HRTEST")
+    equal("planned load: heart rate uses hrss", vb.compute_tss.last_method, "hrss")
+    equal("planned load: one hour at LTHR is 100", total, 100)
+    steps, _ = vb.parse_block("- 30m 80% LTHR")
+    total, _, _ = vb.compute_tss(steps, author, th_, tss_, "HRTEST")
+    hrr, lt = (128 - 60) / 120, 100 / 120
+    want = 100 * 30 * hrr * _math.exp(1.92 * hrr) / (60 * lt * _math.exp(1.92 * lt))
+    equal("planned load: HRSS of 30 min at 80% LTHR, by hand", total, round(want))
+    total, _, _ = vb.compute_tss(steps, author, th_, tss_, None)
+    equal("planned load: without the athlete's values the method says typical",
+          vb.compute_tss.last_method, "hrss_typical")
+    pl.clear_cache()
+
+    # A session mixing target families keeps the legacy per-step method
+    author, th_, tss_ = vb.load_config("coggan")
+    steps, _ = vb.parse_block("- 20m 70%\n- 20m 85% LTHR")
+    vb.compute_tss(steps, author, th_, tss_)
+    equal("planned load: mixed power + HR uses the fallback",
+          vb.compute_tss.last_method, "if_squared")
+
+
+# ══════════════════════════════════════════════════════════════════
 # GOLDEN TESTS — full state engine per fixture
 # ══════════════════════════════════════════════════════════════════
 
@@ -2910,6 +3011,10 @@ def _run_sections(args, run_all):
             architecture_tests()
         except Exception as e:
             FAILED.append(("architecture tests", f"raised {type(e).__name__}: {e}"))
+        try:
+            planned_load_tests()
+        except Exception as e:
+            FAILED.append(("planned load tests", f"raised {type(e).__name__}: {e}"))
 
     if run_all or args.blocks:
         print("Block validation...")

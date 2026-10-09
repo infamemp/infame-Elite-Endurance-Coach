@@ -180,15 +180,30 @@ metric_equipment:
 # Multipliers live in config/tss_classes.yaml; these are the procedural rules.
 
 tss_rules:
-  method: if_squared                # if_squared | class_multiplier
-  # if_squared: each step costs hours x IF^2 x 100, IF = target / threshold —
-  # the same definition Intervals.icu uses for planned load, so the header TSS
-  # matches the athlete's calendar and PMC. class_multiplier (flat tss_per_min
-  # per class) is kept only as legacy: it charged 56% and 74% FTP the same
-  # 60 TSS/h, overestimating easy rides by up to ~65% (Oct 2026: a 3h45 MTB
-  # ride at 55-64% read 215 here vs 128 in Intervals.icu).
+  method: if_squared                # if_squared | class_multiplier — legacy / fallback
+  # if_squared: each step costs hours x IF^2 x 100, IF = target / threshold.
+  # class_multiplier (flat tss_per_min per class) is kept only as legacy: it
+  # charged 56% and 74% FTP the same 60 TSS/h, overestimating easy rides by
+  # up to ~65% (Oct 2026: a 3h45 MTB ride at 55-64% read 215 here vs 128 in
+  # Intervals.icu).
+  method_by_target:                 # v7.38 — how Intervals.icu costs each target
+    cycling_power: np_30s           # Normalized Power, 30 s rolling average
+    running_power: if_squared
+    pace: if_squared
+    heart_rate: hrss                # normalised TRIMP (LTHR, max HR, resting HR)
+  # Measured 2026-10-08 against the loads Intervals.icu stored for the head
+  # coach's real planned workouts (largest gap): cycling power 74 sessions,
+  # np_30s 1.4 TSS (if_squared was 11, always low on intervals); running
+  # pace 44 sessions, if_squared 1.0; running power 11 sessions, if_squared
+  # 0.6; heart rate 6 sessions, if_squared up to 2x the stored load, hrss far
+  # closer but not exact (Intervals.icu keeps the thresholds of the day).
+  # A session mixing target families (power + LTHR) uses `method`.
+  # Details and formulas: engine/planned_load.py.
+  np_window_seconds: 30
+  upload_check_tolerance_tss: 2     # push_block: report a session whose load
+                                    # Intervals.icu computed differs by more
   range_cost_point: midpoint        # midpoint | low | high — how a target range is costed
-  ramp_cost_point: midpoint         # a ramp is costed at the midpoint of its start/end
+  ramp_cost_point: midpoint         # if_squared: a ramp is costed at its midpoint; np_30s and hrss follow it second by second
   repeats_multiply: true            # a repeat block multiplies its steps by the count
   count_recovery_intervals: true    # recovery steps inside repeats are costed, not skipped
   straddling_range_rule: midpoint_class

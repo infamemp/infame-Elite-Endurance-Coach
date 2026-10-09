@@ -31,7 +31,7 @@ that makes it safe to exist.
 | `save_availability` | writes | `out/<athlete>/availability.md` — the head coach's stated daily maximums, returned by `get_athlete_state` |
 | `save_block` | writes | `out/<athlete>/blocks/<today>_bloque.md` |
 | `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess |
-| `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** |
+| `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** After a live send it compares each session's load with the load Intervals.icu computed (`load_check`, v7.38) and lists any difference beyond `tss_rules.upload_check_tolerance_tss`. |
 
 Since prompt v7.3 (2026-09-26) the coach calls every tool itself,
 `push_block` included — but only through the prompt's upload gate: a

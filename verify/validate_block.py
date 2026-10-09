@@ -73,6 +73,7 @@ import restrictions  # noqa: E402  — injury restrictions (v7.24), HC-LIMIT / C
 import plan_checks  # noqa: E402  — the week as a whole (v7.25), warns only
 import ledger  # noqa: E402  — one line per validation in the athlete's ledger (v7.26)
 import shared as _shared  # noqa: E402  — config and errors (v7.33)
+import planned_load  # noqa: E402  — TSS as Intervals.icu computes it (v7.38)
 from shared import EngineError  # noqa: E402
 
 VALID_CATEGORIES = {"Training", "Rest", "Race"}
@@ -324,6 +325,7 @@ def parse_block(text):
     """Parse one code block into steps plus structural findings."""
     steps, findings = [], []
     in_repeat, mult, prev_blank = False, 1, True
+    block_id = 0  # one id per repeat block, so its steps are ridden in order (v7.38)
     seen_any_line = False
     section = "warmup"  # steps before any header are treated as warmup
 
@@ -368,6 +370,7 @@ def parse_block(text):
                 if in_repeat:
                     findings.append(("HC-NESTED", ln, "Nested repeat"))
                 in_repeat, mult = True, int(sec.group(2))
+                block_id += 1
                 if not prev_blank:
                     findings.append(("FMT-BLANK", ln, "Repeat header needs a blank line above"))
             else:
@@ -380,6 +383,7 @@ def parse_block(text):
             if in_repeat:
                 findings.append(("HC-NESTED", ln, "Nested repeat"))
             in_repeat, mult = True, int(rep.group(1))
+            block_id += 1
             if not prev_blank:
                 findings.append(("FMT-BLANK", ln, "Repeat line needs a blank line above"))
             prev_blank = False
@@ -399,6 +403,7 @@ def parse_block(text):
             tgt = TARGET_RE.search(rest_nocue)
             step = {"line": ln, "raw": s, "secs": secs, "dist": dist, "ramp": is_ramp,
                     "mult": mult if in_repeat else 1, "section": section,
+                    "block": block_id if in_repeat else None,
                     "rpe": bool(RPE_RE.search(s)), "cue": bool(CUE_RE.search(s)),
                     "rpe_range": _rpe_range(s),
                     "freeride": "freeride" in s.lower()}
@@ -1193,18 +1198,49 @@ def check_header(header):
 # TSS
 # ══════════════════════════════════════════════════════════════════
 
-def compute_tss(steps, author, th, tssc):
-    """Recompute session TSS. Rules come from tss_rules. Default method is
-    if_squared (hours x IF^2 x 100 per step), the definition Intervals.icu
-    applies to the planned workout, so the number written in the header is
-    the load the athlete's calendar and PMC will show. The legacy method
-    `class_multiplier` (flat tss_per_min per class) overestimated low
-    endurance by up to ~65% because it costs 56% and 74% FTP the same.
-    The class is still resolved for every step and shown in the detail."""
+def session_load_method(detail, author, th):
+    """Which method costs this session (v7.38): the one tss_rules.
+    method_by_target names for its targets — every costed step must share
+    one target family, else the legacy per-step method applies. Families:
+    cycling_power, running_power, pace, heart_rate."""
+    rules = th["tss_rules"]
+    by_target = rules.get("method_by_target") or {}
+    fallback = rules.get("method", "if_squared")
+    sport = author.get("sport")
+    families = set()
+    for _s, _mid, metric, *_rest in detail:
+        if metric == "power":
+            families.add(f"{sport}_power")
+        elif metric in ("lthr", "hrmax"):
+            families.add("heart_rate")
+        else:
+            families.add(metric)
+    if len(families) != 1:
+        return fallback
+    return by_target.get(families.pop(), fallback)
+
+
+def compute_tss(steps, author, th, tssc, athlete_id=None):
+    """Recompute session TSS as Intervals.icu computes a planned workout's
+    load (v7.38, engine/planned_load.py for the evidence):
+
+      np_30s      cycling power — Normalized Power, 30 s rolling average,
+                  repeats in the order they are ridden
+      hrss        heart rate — normalised TRIMP with the athlete's LTHR, max
+                  HR and resting HR (data/<athlete_id>/athlete_data.json)
+      if_squared  running pace and power, and mixed sessions — hours x IF^2
+                  x 100 per step (before v7.38 the only method)
+
+    The method comes from tss_rules.method_by_target. Every step is still
+    classed and listed in `detail`; for np_30s and hrss each step's cost is
+    its share of the session total (its IF^2 cost scaled to the total), so
+    the per-step print still adds up. `athlete_id` is needed only for hrss;
+    without the athlete's values a typical profile stands in, and the
+    method in the result says so (hrss_typical)."""
     rules = th["tss_rules"]
     mults = {k: v["tss_per_min"] for k, v in tssc["classes"].items()}
     point = rules.get("range_cost_point", "midpoint")
-    method = rules.get("method", "if_squared")
+    legacy = rules.get("method", "if_squared")
 
     total, detail, skipped = 0.0, [], []
     for s in steps:
@@ -1223,20 +1259,58 @@ def compute_tss(steps, author, th, tssc):
             continue
         mult = s["mult"] if rules.get("repeats_multiply", True) else 1
         minutes = s["secs"] / 60 * mult
-        if method == "if_squared":
-            # Same definition Intervals.icu uses for planned load:
+        if legacy == "class_multiplier":
+            cost = minutes * mults[cls]
+        else:
+            # Same definition Intervals.icu uses for planned pace load:
             # TSS = hours x IF^2 x 100, IF = target as a fraction of threshold.
             # A block target is always on the threshold scale (anchored authors
             # are converted only for classification), so IF = mid / 100.
             cost = minutes / 60 * (mid / 100) ** 2 * 100
-        else:
-            cost = minutes * mults[cls]
         total += cost
         detail.append((s, mid, metric, cls, src, minutes, cost))
+
+    method = session_load_method(detail, author, th) if detail else legacy
+    costed = {id(d[0]) for d in detail}
+    session_total = None
+    if method == "np_30s":
+        def frac(st):
+            if id(st) not in costed:
+                return None
+            lo, hi = st["pct"]
+            return (lo / 100, hi / 100) if st["ramp"] else ((lo + hi) / 200,) * 2
+        segs = planned_load.ordered_segments(steps, frac)
+        session_total = planned_load.np_tss(segs, rules.get("np_window_seconds", 30))
+    elif method == "hrss":
+        prof = (planned_load.hr_profile(athlete_id, author.get("sport"), ROOT)
+                if athlete_id else None)
+        if prof is None:
+            prof = planned_load.typical_profile()
+            method = "hrss_typical"
+
+        def bpm(st):
+            if id(st) not in costed:
+                return None
+            ref = prof["max_hr"] if st["suffix"] in ("HR", "HRMAX") else prof["lthr"]
+            lo, hi = st["pct"]
+            return ((lo / 100 * ref, hi / 100 * ref) if st["ramp"]
+                    else ((lo + hi) / 200 * ref,) * 2)
+        segs = planned_load.ordered_segments(steps, bpm)
+        session_total = planned_load.hrss(segs, prof["lthr"], prof["max_hr"],
+                                          prof["resting_hr"])
+    if session_total is not None and total > 0:
+        k = session_total / total
+        detail = [(s, mid, m, c, src, mins, cost * k)
+                  for s, mid, m, c, src, mins, cost in detail]
+        total = session_total
+    compute_tss.last_method = method
 
     if rules.get("rounding") == "nearest_integer":
         total = round(total)
     return total, detail, skipped
+
+
+compute_tss.last_method = None
 
 
 def compute_total_duration(steps):
@@ -1438,12 +1512,12 @@ def uploaded_rows(athlete_id, file_dates, th, tssc, today):
     return rows
 
 
-def plan_session_row(steps, author, th, tssc, header, discipline):
+def plan_session_row(steps, author, th, tssc, header, discipline, athlete_id=None):
     """One session as engine/plan_checks.py reads it."""
     pc = th.get("plan_checks") or {}
     top = (pc.get("hard_session") or {}).get("at_or_above", "threshold")
     top_rank = CLASS_RANK.get(top, CLASS_RANK.get("threshold", 4))
-    load, detail, _skipped = compute_tss(steps, author, th, tssc)
+    load, detail, _skipped = compute_tss(steps, author, th, tssc, athlete_id)
     minutes = sum(d[5] for d in detail)
     easy = sum(d[5] for d in detail if d[3] in ("recovery", "endurance"))
     hard = sum(d[5] for d in detail if CLASS_RANK.get(d[3], -1) >= top_rank)
@@ -1760,7 +1834,8 @@ def main():
         mono_gkey, mono_dt = mono_key(header)
         if mono_gkey:
             if steps and category in ("Training", "Race"):
-                mono_load, _, _ = compute_tss(steps, author, th, tssc)
+                mono_load, _, _ = compute_tss(steps, author, th, tssc,
+                                              header.get("Athlete ID") or args.athlete)
             else:
                 mono_load = 0.0
             week_days.setdefault(mono_gkey, {})[mono_dt] = mono_load
@@ -1800,7 +1875,9 @@ def main():
                                   "dose": mprof["dose"], "label": label}
 
         if steps and header.get("Category", "Training") == "Training":
-            computed, detail, skipped = compute_tss(steps, author, th, tssc)
+            computed, detail, skipped = compute_tss(
+                steps, author, th, tssc, header.get("Athlete ID") or args.athlete)
+            load_method = compute_tss.last_method
             if not args.quiet:
                 for s, mid, metric, cls, src, minutes, cost in detail:
                     rep = f"{s['mult']}x " if s["mult"] > 1 else ""
@@ -1826,6 +1903,8 @@ def main():
                 if m:
                     declared = float(m.group(0))
             print(f"   Computed TSS: {computed}", end="")
+            if load_method and load_method != "if_squared":
+                print(f" ({load_method})", end="")
             if declared is None and raw_field in ("pending", "tbd"):
                 print(" · header marked pending"
                       + (" — will be filled" if args.fill_tss else
@@ -1902,7 +1981,7 @@ def main():
             plan_rows.setdefault(race_aid, []).append(
                 plan_session_row(steps if header.get("Category", "Training") in
                                  ("Training", "Race") else [], author, th, tssc, header,
-                                 discipline))
+                                 discipline, race_aid))
             if header.get("Category", "Training") in ("Training", "Race") and steps:
                 core_row = classify_for_core(code, author.get("sport"), th)
                 if core_row:
