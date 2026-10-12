@@ -891,32 +891,46 @@ def build_language_guide():
     L = ["# Language Guide — Mexican Spanish (athlete-facing text)", "",
          f"> GENERATED FILE — DO NOT EDIT. Source: `config/language/es_mx.yaml`. "
          f"Built {_dt.date.today().isoformat()} by `python build_zone_tables.py build`.", "",
-         "Applies to `[Focus]`, `[Execution]`, `[Nutrition]` and the cue text in the code "
-         "block when the athlete's language is Spanish. The vocabulary and phrases are the "
-         "head coach's own. Tempo, strides, VO2max and neuromuscular are universal and stay "
-         "as written. Register: professional, direct, *tú*. `verify/validate_block.py` warns "
-         "on the patterns in **Never write**.", "",
+         "Applies to `[Focus]`, `[Why]`, `[Execution]`, `[Nutrition]` and the cue text in the "
+         "code block when the athlete's language is Spanish. The vocabulary and phrases are the "
+         "head coach's own. Tempo, strides, openers, sweet spot, sprints, VO2max, FTP and "
+         "neuromuscular are universal and stay as written; so does any other technical term "
+         "this guide gives no translation for. Register: professional, direct, *tú*. "
+         "**A cycling session never uses running words and a running session never uses cycling "
+         "words: the validator BLOCKS the week (`HC-SPORT`) until it is corrected.** "
+         "`verify/validate_block.py` warns on the patterns in **Never write**.", "",
          "## Class names", "", "| Class | Write |", "| :--- | :--- |"]
     for k, v in d["glossary"]["classes"].items():
         L.append(f"| `{k}` | {v} |")
-    L += ["", "## Terms and rules of use", "", "| When | Write |", "| :--- | :--- |"]
+    L += ["", "## Terms and rules of use", "", "| Sport | When | Write |", "| :--- | :--- | :--- |"]
     for t in d["glossary"]["terms"]:
-        L.append(f"| {t['when']} | {t['write']} |")
+        L.append(f"| {t.get('sport', 'both')} | {t['when']} | {t['write']} |")
     L += ["", "## How each field is written", ""]
     for k in ("focus", "zone", "execution", "nutrition"):
         L.append(f"- **`[{k.capitalize()}]`** — {' '.join(str(d['structure'][k]).split())}")
     L += ["", "## The head coach's phrases", "",
-          "Use them as the base and adapt to the step. A phrase may repeat across "
-          "sessions: consistent wording for the same kind of step is the house style.", ""]
-    for k, v in d["cues"].items():
-        L += [f"**{k.replace('_', ' ')}**"] + [f'- "{x}"' for x in v] + [""]
+          "Use them as the base and adapt to the step. Take the phrases of the session's "
+          "sport and the ones marked *both*. A phrase may repeat across sessions: consistent "
+          "wording for the same kind of step is the house style.", ""]
+    for k, groups in d["cues"].items():
+        L.append(f"**{k.replace('_', ' ')}**")
+        for sport in ("both", "cycling", "running"):
+            for x in groups.get(sport, []):
+                L.append(f'- ({sport}) "{x}"')
+        L.append("")
     L += ["## Failure-condition sentences (`[Execution]`, part 3)", "",
-          "`{n}` is an RPE taken from the code block.", ""]
-    L += [f"- {x}" for x in d["fallbacks"]]
-    L += ["", "## Never write", "", "| Pattern | Write instead |", "| :--- | :--- |"]
+          "`{n}` is an RPE taken from the code block. Pick the one that fits the session's "
+          "sport and structure.", ""]
+    for sport in ("both", "cycling", "running"):
+        L += [f"- ({sport}) {x}" for x in d["fallbacks"].get(sport, [])]
+    L += ["", "## Words of the other sport (the week is BLOCKED, `HC-SPORT`)", "",
+          "| Session sport | Pattern | Write instead |", "| :--- | :--- | :--- |"]
+    for sport, v in (d.get("sport_vocabulary") or {}).items():
+        L.append(f"| {sport} | `{v['pattern'].replace('|', chr(92) + '|')}` | {v['fix']} |")
+    L += ["", "## Never write", "", "| Pattern | Sport | Write instead |", "| :--- | :--- | :--- |"]
     for b in d["banned"]:
         pat = b["pattern"].replace("|", "\\|")
-        L.append(f"| `{pat}` | {b['fix']} |")
+        L.append(f"| `{pat}` | {b.get('sport', 'both')} | {b['fix']} |")
     path = os.path.join(OUTPUT_DIR, LANG_FILE)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(L).rstrip() + "\n")

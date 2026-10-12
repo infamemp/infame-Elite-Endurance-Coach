@@ -39,10 +39,10 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.4 (v7.36 — the class declared in [Zone] is the session's class; CHK-PURPOSE)
+Version: 3.5 (v7.39 — HC-SPORT: a session never carries the other sport's words)
 """
 
-VERSION = "3.4"   # keep equal to the "Version:" line above
+VERSION = "3.5"   # keep equal to the "Version:" line above
 
 
 import argparse
@@ -87,33 +87,64 @@ FOREIGN_SECTIONS = {"calentamiento", "principal", "enfriamiento", "enfriar",
 # ══════════════════════════════════════════════════════════════════
 
 _LANG_RULES = None
+_SPORT_VOCAB = None
 _ES_STOP = re.compile(r"\b(de|la|el|y|con|en|que|los|las|una|un|por|para|tu|si)\b", re.I)
+_PROSE_FIELDS = ("Focus", "Why", "Execution", "Nutrition")
+
+
+def _language_file():
+    """config/language/es_mx.yaml, or {} when it is missing or unreadable (the
+    language checks then do nothing: they never stop a week on their own file)."""
+    try:
+        with open(os.path.join(CONFIG, "language", "es_mx.yaml"), encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _language_rules():
-    """config/language/es_mx.yaml's banned patterns, compiled once. Missing or
-    unreadable -> no language warnings (they are advisory, never a gate)."""
+    """The banned patterns of es_mx.yaml, compiled once:
+    (regex, where, fix, sport or None)."""
     global _LANG_RULES
     if _LANG_RULES is None:
         try:
-            with open(os.path.join(CONFIG, "language", "es_mx.yaml"), encoding="utf-8") as f:
-                raw = (yaml.safe_load(f) or {}).get("banned", [])
-            _LANG_RULES = [(re.compile(b["pattern"]), b.get("where", "prose"), b["fix"]) for b in raw]
+            _LANG_RULES = [(re.compile(b["pattern"]), b.get("where", "prose"), b["fix"],
+                            b.get("sport")) for b in _language_file().get("banned", [])]
         except Exception:  # noqa: BLE001
             _LANG_RULES = []
     return _LANG_RULES
 
 
-def language_warnings(header, code):
+def _sport_vocabulary():
+    """The words of each sport that must not appear in the other one's sessions
+    (es_mx.yaml `sport_vocabulary`): {sport: (regex, fix)}."""
+    global _SPORT_VOCAB
+    if _SPORT_VOCAB is None:
+        try:
+            _SPORT_VOCAB = {sp: (re.compile(v["pattern"]), v["fix"])
+                            for sp, v in (_language_file().get("sport_vocabulary") or {}).items()}
+        except Exception:  # noqa: BLE001
+            _SPORT_VOCAB = {}
+    return _SPORT_VOCAB
+
+
+def _cue_texts(code):
+    return re.findall(r'"([^"\n]+)"', code or "")
+
+
+def language_warnings(header, code, sport=None):
     """Advisory findings on the athlete-facing text of one session. Only for
     Spanish text (three or more Spanish stop-words in the prose), so an English
-    block is never checked against Spanish patterns. Never blocks."""
-    prose = " ".join(str(header.get(k, "")) for k in ("Focus", "Why", "Execution", "Nutrition"))
-    cues = re.findall(r'"([^"\n]+)"', code or "")
+    block is never checked against Spanish patterns. Never blocks. `sport`
+    (cycling | running) switches on the patterns that belong to one sport."""
+    prose = " ".join(str(header.get(k, "")) for k in _PROSE_FIELDS)
+    cues = _cue_texts(code)
     out = []
     if len(_ES_STOP.findall(prose)) < 3:
         return out
-    for rx, where, fix in _language_rules():
+    for rx, where, fix, only in _language_rules():
+        if only and only != sport:
+            continue
         if where in ("prose", "both"):
             m = rx.search(prose)
             if m:
@@ -124,6 +155,36 @@ def language_warnings(header, code):
                 if m:
                     out.append(("CHK-LANG", "-", f"cue \"{c}\": '{m.group(0)}' — {fix}"))
                     break
+    # Intervals.icu reads a line that starts with "- " as a workout step: no text
+    # field may carry one (v7.35).
+    for k in _PROSE_FIELDS:
+        if re.search(r"(?m)^\s*-\s", str(header.get(k, ""))):
+            out.append(("CHK-LANG", "-", f"[{k}] has a line that starts with '- ': Intervals.icu "
+                        "would read it as a workout step. Write it as a sentence"))
+    return out
+
+
+def sport_vocabulary_errors(header, code, sport):
+    """HC-SPORT (v7.35). A session of one sport that uses the other sport's
+    words (a bike session with "zancada fluida", a run with "pedaleo") is
+    BLOCKED until it is corrected: the athlete would receive instructions for
+    the wrong sport. Checks [Focus], [Why], [Execution], [Nutrition] and the cue
+    text. Only Spanish text, and only the words in es_mx.yaml `sport_vocabulary`."""
+    rule = _sport_vocabulary().get(sport)
+    if not rule:
+        return []
+    rx, fix = rule
+    prose = " ".join(str(header.get(k, "")) for k in _PROSE_FIELDS)
+    if len(_ES_STOP.findall(prose)) < 3:
+        return []
+    out, seen = [], set()
+    for where, text in [("text", prose)] + [("cue", c) for c in _cue_texts(code)]:
+        for m in rx.finditer(text):
+            word = m.group(0).lower()
+            if word in seen:
+                continue
+            seen.add(word)
+            out.append(("HC-SPORT", "-", f"'{m.group(0)}' ({where}) in a {sport} session — {fix}"))
     return out
 
 
@@ -1800,6 +1861,8 @@ def main():
         errors += e
         warns += w
         errors += check_athlete(header, args.athlete, args.skip_athlete_check)
+        if category in ("Training", "Race"):
+            errors += sport_vocabulary_errors(header, code, author.get("sport"))
 
         # Injury restrictions (v7.24): limitations.restrictions in the profile
         lim_aid = header.get("Athlete ID") or args.athlete
@@ -1849,7 +1912,8 @@ def main():
         # this validator has the context to verify.
         mprof = None
         if header.get("Category", "Training") == "Training":
-            warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps))
+            warns += language_warnings(header, "\n".join(s.get("raw", "") for s in steps),
+                                       author.get("sport"))
             mprof = session_monotony_profile(steps, author, th, declared_class(header))
             # CHK-PURPOSE — never blocks. The coach declared a class, but most
             # of the Main Set's load sits in a harder one from Tempo up: either

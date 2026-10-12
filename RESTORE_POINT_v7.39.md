@@ -1,9 +1,33 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.38
+# RESTORE POINT — Infame Elite Endurance Coach v7.39
 
-**Date frozen:** 2026-10-08
-**Previous:** v7.37 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.37 (unchanged in v7.38)
-**Tests:** `python tests/run_tests.py` → 858/858 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 196/196
+**Date frozen:** 2026-10-12
+**Previous:** v7.38 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.39 (the Spanish-text paragraph and the list of `HC-` codes changed)
+**Tests:** `python tests/run_tests.py` → 892/892 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 199/199
+
+## What changed in v7.39 — the head coach's language review
+
+From the 2026-10-11 review. No training rule and no number changed.
+
+- **Sport vocabulary, `HC-SPORT`** (validator 3.5). A bike session that uses running words
+  (*trote*, *zancada*, *strides*, *caminata*) or a run that uses cycling words (*pedaleo*,
+  *rodillo*, *vatios*, *bici*) is **blocked** until it is corrected. Cause of the case of
+  2026-10-14: the glossary and the cue bank were one list for both sports.
+- **`config/language/es_mx.yaml` by sport**: every term, cue and failure sentence says
+  `cycling`, `running` or `both`. In a bike session *potencia* or *intensidad* replaces
+  "ritmo". *openers* stays in English (never "aperturas" or "piernas abiertas"); *strides* and
+  *carbohidratos* always plural; *establecer* (not "asentar"); *constante* by default
+  (*parejo* only for a run's pace); "esfuerzo en el que puedes hablar con frases completas"
+  (not "ritmo conversable"); *repeticiones*; *carbohidratos durante la sesión*. `CHO` stays
+  valid. A technical term with no agreed translation stays in English.
+- **Percentages** in athlete text carry their reference ("60-68% del FTP"); a text line that
+  starts with "- " is flagged (Intervals.icu reads it as a workout step).
+- **No vowel accents on upload.** `push_block` and `post_activity_comment` remove á é í ó ú ü
+  from everything Intervals.icu receives. ñ, ¿ and ¡ stay. The saved week keeps normal spelling.
+- **Deploy:** (1) restart Claude Desktop; (2) in the Claude Project replace
+  `Language_Guide_es-MX.md` with the new file from `generated/` and paste the new prompt;
+  (3) ask the coach to regenerate the weeks already written with the old words and upload them
+  again (the same sessions are updated).
 
 ## What changed in v7.38 — load as Intervals.icu computes it
 

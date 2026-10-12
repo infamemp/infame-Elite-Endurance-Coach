@@ -587,13 +587,24 @@ def unit_tests():
     # ── v7.9/7.10: nutrition reaches Intervals.icu; Spanish text is controlled ──
     import yaml as _yl, re as _re2
     _lang = _yl.safe_load(open(os.path.join(ROOT, "config", "language", "es_mx.yaml"), encoding="utf-8"))
-    _rules = [(_re2.compile(b["pattern"]), b["fix"]) for b in _lang["banned"]]
-    _own = [c for v in _lang["cues"].values() for c in v] + list(_lang["fallbacks"])
-    _hits = [c for c in _own for rx, _f in _rules if rx.search(c)]
-    check("language: the head coach's own phrases break none of the rules", not _hits, _hits)
+    _rules = [(_re2.compile(b["pattern"]), b["fix"], b.get("sport")) for b in _lang["banned"]]
+    _vocab = {sp: _re2.compile(v["pattern"]) for sp, v in _lang["sport_vocabulary"].items()}
+    _own = []     # (phrase, sport of the phrase)
+    for _grp in _lang["cues"].values():
+        for _sp, _items in _grp.items():
+            _own += [(c, _sp) for c in _items]
+    for _sp, _items in _lang["fallbacks"].items():
+        _own += [(c, _sp) for c in _items]
+    _hits = []
+    for _c, _sp in _own:
+        for _s in (("cycling", "running") if _sp == "both" else (_sp,)):
+            _hits += [(_c, _s) for rx, _f, only in _rules if rx.search(_c) and only in (None, _s)]
+            _other = "running" if _s == "cycling" else "cycling"
+            _hits += [(_c, _s) for sp2, rx in _vocab.items() if sp2 == _s and rx.search(_c)]
+    check("language: the head coach's own phrases break none of the rules (by sport)", not _hits, _hits)
     _gl = open(os.path.join(ROOT, "generated", "Language_Guide_es-MX.md"), encoding="utf-8").read()
     check("generated: Language_Guide_es-MX.md is current with the YAML (run build)",
-          all(c in _gl for v in _lang["cues"].values() for c in v))
+          all(c in _gl for c, _sp in _own) and "HC-SPORT" in _gl)
     check("prompt: Spanish text follows Language_Guide_es-MX.md", "read `Language_Guide_es-MX.md` and follow it" in _pr)
     check("prompt: Execution does not re-list the structure", "it does not re-list the structure" in _pr)
     check("prompt: Nutrition is uploaded with Execution", "It is uploaded to Intervals.icu together with `[Execution]`" in _pr)
@@ -609,12 +620,111 @@ def unit_tests():
         check(f"validator: Spanish check flags '{needle}'", needle in _got, _got[:160])
     _ok = _vb2.language_warnings({"Focus": "Fondo aeróbico con subidas de resistencia muscular (Tempo)",
                                   "Execution": "Tres bloques de tempo sentado en subida, con 6 strides de 20 s y zancada fluida. Si no sostienes el ritmo, reduce la intensidad y termina en fondo aeróbico.",
-                                  "Nutrition": "Toma 500 ml de agua antes de salir y 60 g de carbohidrato por hora."},
-                                 '- 15m 78-85% 75-90rpm [RPE 5-6] "Cadencia controlada"')
+                                  "Nutrition": "Toma 500 ml de agua antes de salir y 60 g de carbohidratos por hora."},
+                                 '- 15m 78-85% 75-90rpm [RPE 5-6] "Cadencia controlada"', "running")
     check("validator: the head coach's own vocabulary raises no warning", _ok == [], _ok)
     check("validator: an English block gets no Spanish warnings",
           _vb2.language_warnings({"Focus": "Endurance", "Execution": "Run 10m at an easy effort and stay relaxed.",
                                   "Nutrition": "Drink water."}, "") == [])
+    # ── v7.35: vocabulary, sport words, percentages, accents ──
+    def _lw_text(execution, sport=None, nutrition="Toma agua antes de salir y bebe a sorbos.", focus="Resistencia aeróbica con calma de la sesión"):
+        return " ".join(m for _c, _l, m in _vb2.language_warnings(
+            {"Focus": focus, "Execution": execution, "Nutrition": nutrition}, "", sport))
+    for _needle, _txt in (
+            ("aperturas", "Haz tres aperturas cortas en la sesión de la tarde para despertar las piernas."),
+            ("Piernas abiertas", "Piernas abiertas con tres efforts cortos en la sesión de la tarde para la etapa."),
+            ("asentar", "Hay que asentar la potencia en el primer bloque de la sesión de la tarde."),
+            ("potencia pareja", "Sostén una potencia pareja en todo el bloque de la sesión de la tarde."),
+            ("conversable", "Mantén un ritmo conversable en la sesión de la tarde para recuperar."),
+            ("conversación fluida", "Mantén una conversación fluida en la sesión de la tarde para recuperar."),
+            ("stride", "Termina con un stride corto al final de la sesión de la tarde para soltar."),
+            ("carbohidrato", "Toma un carbohidrato simple antes de la sesión de la tarde para rendir."),
+            ("repeat", "Cierra con un repeat más al final de la sesión de la tarde si te sientes bien."),
+            ("fuel", "Lleva fuel para la sesión de la tarde y toma cada 20 min para sostener el esfuerzo."),
+            ("intra-entrenamiento", "Toma carbohidratos intra-entrenamiento en la sesión de la tarde para sostener el esfuerzo.")):
+        check(f"language v7.35: '{_needle}' is flagged", _needle.lower() in _lw_text(_txt).lower(), _lw_text(_txt)[:200])
+    check("language v7.35: 'strides' (plural) and 'openers' are not flagged",
+          _lw_text("Haz 6 strides de 20 s y tres openers en la sesión de la tarde para despertar las piernas.") == "")
+    check("language v7.35: 'CHO' is a valid abbreviation",
+          _lw_text("Come con calma antes de la sesión de la tarde.", nutrition="Toma 6-7 g CHO/kg repartidos en el día de la sesión.") == "")
+    check("language v7.35: 'parejo' is allowed for a run's pace",
+          _lw_text("Corre con paso parejo en toda la sesión de la tarde para terminar bien.", "running") == "")
+    check("language v7.35: 'ritmo' in a bike session is flagged, in a run it is not",
+          "ritmo" in _lw_text("Mantén el ritmo en todo el bloque de la sesión de la tarde.", "cycling")
+          and "ritmo" not in _lw_text("Mantén el ritmo en todo el bloque de la sesión de la tarde.", "running"))
+    check("language v7.35: a percentage with no reference is flagged",
+          "%" in _lw_text("Mantén 60-68% en todo el bloque de la sesión de la tarde para terminar bien."))
+    for _ref in ("del FTP", "del umbral", "de la FC máx"):
+        check(f"language v7.35: a percentage '{_ref}' is not flagged",
+              _lw_text(f"Mantén 60-68% {_ref} en todo el bloque de la sesión de la tarde para terminar bien.") == "")
+    _ln = _vb2.language_warnings({"Focus": "Sesión de la tarde con calma", "Execution": "Haz la sesión de la tarde con calma.\n- 10m 60% de lo que puedas",
+                                  "Nutrition": "Agua con calma de la sesión"}, "")
+    check("language v7.35: a text line that starts with '- ' is flagged", any("starts with '- '" in m for _c, _l, m in _ln), _ln)
+
+    _hc = _vb2.sport_vocabulary_errors
+    _bike = {"Focus": "Activación de piernas con tres openers", "Why": "Para llegar con las piernas despiertas a la etapa de la semana.",
+             "Execution": "Es resistencia aeróbica con tres openers y pedaleo fluido, con la postura de la sesión.",
+             "Nutrition": "Después: cena con carbohidratos y buena hidratación."}
+    check("HC-SPORT: a clean bike session is not blocked", _hc(_bike, '- 10m 55-65% "Pedaleo suave"', "cycling") == [])
+    _bad = dict(_bike, Execution="Es resistencia aeróbica con tres openers y zancada fluida, con la postura de la sesión.")
+    _e = _hc(_bad, '- 10m 55-65% "Pedaleo suave"', "cycling")
+    check("HC-SPORT: 'zancada' in a bike session is blocked", [x[0] for x in _e] == ["HC-SPORT"] and "zancada" in _e[0][2], _e)
+    _e = _hc(_bike, '- 10m 55-65% "Trote suave de calentamiento"', "cycling")
+    check("HC-SPORT: a running cue in a bike session is blocked", [x[0] for x in _e] == ["HC-SPORT"] and "Trote" in _e[0][2], _e)
+    _e = _hc(dict(_bike, Execution="Haz 6 strides de 20 s al final de la sesión de la semana con calma."), "", "cycling")
+    check("HC-SPORT: 'strides' in a bike session is blocked", any("strides" in x[2] for x in _e), _e)
+    _run = {"Focus": "Trote aeróbico con strides", "Why": "Para mantener la base aeróbica durante la semana de la carrera.",
+            "Execution": "Es trote aeróbico con 6 strides de 20 s y zancada fluida, con la postura de la sesión.",
+            "Nutrition": "Agua antes de salir y de la sesión."}
+    check("HC-SPORT: a clean running session is not blocked", _hc(_run, '- 10m 65-72% Pace "Trote suave"', "running") == [])
+    _e = _hc(dict(_run, Execution="Es trote aeróbico y pedaleo suave, con la postura de la sesión de la semana."), "", "running")
+    check("HC-SPORT: 'pedaleo' in a running session is blocked", [x[0] for x in _e] == ["HC-SPORT"], _e)
+    check("HC-SPORT: an English session is never checked",
+          _hc({"Focus": "Run", "Execution": "Stride and jog, then pedal."}, "", "cycling") == [])
+    check("HC-SPORT: 'carrera' (a race) and 'paso' are not blocked in a bike session",
+          _hc(dict(_bike, Execution="Es la víspera de la carrera, un paso por la subida de la sesión con calma."), "", "cycling") == [])
+
+    import shared as _sh7
+    equal("accents: vowel accents and the diaeresis are removed, ñ ¿ ¡ stay",
+          _sh7.strip_accents("Resistencia aeróbica: mantén la cadencia ¿está listo? ¡Año con pingüino! ÁÉÍÓÚ"),
+          "Resistencia aerobica: manten la cadencia ¿esta listo? ¡Año con pinguino! AEIOU")
+    equal("accents: a decomposed accent (e + combining mark) is removed too",
+          _sh7.strip_accents("aero\u0301bica"), "aerobica")
+    equal("accents: text with no accents is unchanged", _sh7.strip_accents("Tempo 6 strides"), "Tempo 6 strides")
+    check("accents: something that is not text passes through", _sh7.strip_accents(None) is None)
+
+    # The validator as a program: a bike week with a running word is BLOCKED until corrected
+    _sp_dir = __import__("tempfile").mkdtemp(prefix="infame_sp_")
+    _sp_card = ("[Week] 42 | [Date] 14-10-2099\n[Category]: Training\n[Methodology]: friel_cycling\n"
+                "[Discipline]: trainer\n[Focus]: Activación de piernas con tres openers\n"
+                "[Why]: Para llegar a la etapa con las piernas despiertas y sin sumar fatiga.\n"
+                "[Zone]: Resistencia aeróbica · Friel Zona 2\n[Source]: coach judgement\n"
+                "[Duration] pending | [Estimated TSS] pending\n"
+                "[Execution]: Es resistencia aeróbica con tres openers cortos. Mantén 60-68% del FTP con @@FORM@@ y buena postura. "
+                "Si las piernas se sienten pesadas desde el primer esfuerzo, acorta la sesión y termina en resistencia aeróbica.\n"
+                "[Nutrition]: Después: cena con carbohidratos y buena hidratación.\n\n```text\nWarmup\n\n"
+                '- 10m 55-65% [RPE 2] "Pedaleo suave"\n\nMain Set\n\n- 15m 60-68% [RPE 3-4] "Potencia constante"\n'
+                '\n3x\n- 30s 105-110% [RPE 8] "Opener"\n- 3m 50-55% [RPE 1] "Recupera"\n\nCooldown\n\n- 5m 50-55% [RPE 1] "Pedaleo suave"\n```\n')
+
+    def _sp_run(form):
+        _f = os.path.join(_sp_dir, "sp.md")
+        with open(_f, "w", encoding="utf-8") as fh:
+            fh.write(_sp_card.replace("@@FORM@@", form))
+        _p = subprocess.run([sys.executable, os.path.join(ROOT, "verify", "validate_block.py"), _f,
+                             "--quiet", "--skip-athlete-check"],
+                            capture_output=True, text=True, encoding="utf-8",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        return _p.returncode, _p.stdout + _p.stderr
+    try:
+        _c, _o = _sp_run("pedaleo fluido")
+        check("HC-SPORT end to end: the corrected bike week passes with no language warning",
+              _c == 0 and "PASS" in _o and "CHK-LANG" not in _o and "HC-SPORT" not in _o, _o[-500:])
+        _c, _o = _sp_run("zancada fluida")
+        check("HC-SPORT end to end: a bike week with 'zancada' is BLOCKED",
+              _c == 1 and "HC-SPORT" in _o and "BLOCKED" in _o, _o[-500:])
+    finally:
+        shutil.rmtree(_sp_dir, ignore_errors=True)
+
     _h = _vb2.check_header({"Week": "01", "Date": "28-09-2026", "Category": "Training", "Focus": "x"})[1]
     check("validator: a Training session without [Zone] gets an advisory", any("[Zone]" in m for _c, _l, m in _h))
     _h = _vb2.check_header({"Week": "01", "Date": "28-09-2026", "Category": "Rest", "Focus": "x"})[1]

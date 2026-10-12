@@ -4,6 +4,27 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.39 (2026-10-12)
+
+The head coach's language review of 2026-10-11. No training rule and no number changed.
+
+- **`HC-SPORT` (validator 3.5):** a session of one sport that uses the other sport's words is
+  blocked until corrected. The cause was one glossary and one cue bank for both sports: a bike
+  session of 2026-10-14 said "zancada fluida".
+- **`config/language/es_mx.yaml` by sport** (`cycling`, `running`, `both`) for terms, cues and
+  failure sentences; the generated guide shows the sport of every line.
+- **Vocabulary:** *openers* stays in English (never "aperturas", "piernas abiertas"); *strides* and
+  *carbohidratos* always plural; *establecer* instead of "asentar"; *constante* by default
+  (*parejo* only for a run's pace); "esfuerzo en el que puedes hablar con frases completas"
+  instead of "ritmo conversable"; *repeticiones*; *carbohidratos durante la sesión*; in a bike
+  session *potencia* or *intensidad*, not "ritmo". `CHO` stays valid. A technical term with no
+  agreed translation stays in English.
+- **Percentages** in athlete text carry their reference ("60-68% del FTP"); a text line that
+  starts with "- " is flagged, because Intervals.icu reads it as a workout step.
+- **No vowel accents on upload:** `push_block` and `post_activity_comment` send á é í ó ú ü
+  without the accent (`shared.strip_accents`); ñ, ¿ and ¡ stay. The saved week is unchanged.
+- Prompt v7.39 (one paragraph and the list of `HC-` codes).
+
 ## v7.38 (2026-10-08)
 
 Session load (TSS) computed as Intervals.icu computes planned load, by target, and checked

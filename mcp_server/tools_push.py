@@ -274,6 +274,7 @@ def push_block(
     and lists any difference beyond the tolerance: tell the head coach."""
     ensure_import_paths()
     import validate_block as vb
+    import shared as _shared
 
     if not file_path:
         file_path = latest_block_path(athlete_id, athlete_name)
@@ -367,8 +368,10 @@ def push_block(
             "category": "WORKOUT",
             "type": activity_type,
             "type_inferred": inferred,
-            "name": header.get("Focus") or f"{author['name']} session",
-            "description": _description(header, code, language, include_notes),
+            # v7.35: no accents in anything the athlete's calendar receives.
+            "name": _shared.strip_accents(header.get("Focus") or f"{author['name']} session"),
+            "description": _shared.strip_accents(
+                _description(header, code, language, include_notes)),
             "external_id": external_id,
             "infame_load": infame_load,
             "load_method": load_method,

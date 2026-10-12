@@ -1,13 +1,20 @@
 # Language guide — Mexican Spanish (athlete-facing text)
 #
 # Source of truth for generated/Language_Guide_es-MX.md (a Project file the coach
-# reads) and for the validator's advisory CHK-LANG warnings. Edit THIS file, run
-# `python build_zone_tables.py build`, never the generated Markdown.
+# reads) and for the validator's CHK-LANG warnings and HC-SPORT blocks. Edit THIS
+# file, run `python build_zone_tables.py build`, never the generated Markdown.
 #
-# Vocabulary and phrases are the head coach's own (Sept 2026). Technical terms
-# that are universal in Spanish stay as they are: Tempo, strides, VO2max,
-# neuromuscular. Scope: [Focus], [Execution], [Nutrition] and the cue text in the
-# code block. Register: professional, direct, tú.
+# Vocabulary and phrases are the head coach's own (Sept-Oct 2026). Technical terms
+# that are universal stay in English: Tempo, strides, openers, sweet spot, sprints,
+# VO2max, FTP, neuromuscular. Any other technical term with no translation agreed
+# here also stays in English: translating it ourselves is how "openers" became
+# "aperturas". Scope: [Focus], [Why], [Execution], [Nutrition] and the cue text in
+# the code block. Register: professional, direct, tú.
+#
+# To improve the vocabulary later: add one `terms` line (what to write), and when a
+# wrong form keeps appearing one `banned` line (what to catch). Run the tests.
+#
+# `sport` on a line: cycling | running | both (default both).
 
 glossary:
   classes:            # physiological class -> the words used in [Focus] and [Execution]
@@ -21,19 +28,32 @@ glossary:
     anaerobic: anaeróbico
     neuromuscular: neuromuscular
   terms:
-    - {when: "endurance class on the sport's long day", write: "fondo aeróbico (never 'trote de fondo aeróbico': on a run it is simply 'fondo aeróbico')"}
-    - {when: "endurance class on any other run", write: "trote aeróbico"}
-    - {when: "endurance class on any other bike or mixed session", write: "resistencia aeróbica"}
-    - {when: "muscular endurance work (e.g. tempo on climbs)", write: "resistencia muscular"}
-    - {when: "strides", write: "strides (e.g. '6 strides de 20 s')"}
-    - {when: "harder minutes inside a session (touches)", write: "toques (e.g. 'Fondo aeróbico con toques de tempo', 'Tempo con arranques'); the session keeps its own class name"}
-    - {when: "short bursts on the bike", write: "arranques"}
-    - {when: "pick-ups on a run", write: "cambios de ritmo"}
-    - {when: "rolling aerobic / fartlek session", write: "fartlek, or 'terreno ondulado' when the terrain sets it"}
-    - {when: "technique drill session", write: "técnica de pedaleo / técnica de carrera (drills keep their own names: spin-ups, pierna aislada, skipping)"}
-    - {when: "stride form", write: "zancada fluida (never 'zancada suelta')"}
-    - {when: "minutes and seconds in [Focus], [Execution], [Nutrition]", write: "'10 min', '30 s' — never '10m' or '30s' (that is Intervals.icu syntax and reads as metres). Inside the code block the syntax stays '10m', '30s'"}
-    - {when: "author zone codes (Friel Zona 3, Daniels E, Koop ER...)", write: "never in athlete text: they go in the coach-only [Zone] field"}
+    - {sport: running, when: "endurance class on the sport's long day", write: "fondo aeróbico (never 'trote de fondo aeróbico': on a run it is simply 'fondo aeróbico')"}
+    - {sport: running, when: "endurance class on any other run", write: "trote aeróbico"}
+    - {sport: cycling, when: "endurance class on any bike or mixed session", write: "resistencia aeróbica (fondo aeróbico on the long day)"}
+    - {sport: both, when: "muscular endurance work (e.g. tempo on climbs)", write: "resistencia muscular"}
+    - {sport: both, when: "terms that stay in English", write: "Tempo, strides, openers, sweet spot, sprints, VO2max, FTP, neuromuscular. Any other technical term with no translation agreed in this guide also stays in English"}
+    - {sport: both, when: "strides", write: "always plural, never 'stride' ('6 strides de 20 s')"}
+    - {sport: both, when: "short efforts that wake the legs before a key session", write: "openers (never 'aperturas', never 'piernas abiertas')"}
+    - {sport: both, when: "harder minutes inside a session (touches)", write: "toques (e.g. 'Fondo aeróbico con toques de tempo', 'Tempo con arranques'); the session keeps its own class name"}
+    - {sport: cycling, when: "short bursts on the bike", write: "arranques"}
+    - {sport: running, when: "pick-ups on a run", write: "cambios de ritmo"}
+    - {sport: both, when: "rolling aerobic / fartlek session", write: "fartlek, or 'terreno ondulado' when the terrain sets it"}
+    - {sport: both, when: "technique drill session", write: "técnica de pedaleo / técnica de carrera (drills keep their own names: spin-ups, pierna aislada, skipping)"}
+    - {sport: running, when: "stride form", write: "zancada fluida (never 'zancada suelta')"}
+    - {sport: cycling, when: "pedalling form", write: "pedaleo fluido. 'Zancada', 'trote' and 'strides' are running words: never in a bike session"}
+    - {sport: running, when: "holding the effort", write: "ritmo ('sostener el ritmo'). Cycling words (pedaleo, rodillo, vatios) never appear in a run"}
+    - {sport: cycling, when: "holding the effort", write: "potencia when the step has a power target ('mantener la potencia'), intensidad when it is guided by RPE or heart rate ('mantener la intensidad'). Not 'ritmo'"}
+    - {sport: both, when: "a steady effort", write: "constante ('potencia constante', 'esfuerzo constante'). 'Parejo' only for the splits of a run ('paso parejo'), never the default"}
+    - {sport: both, when: "to set a pace or power from the start", write: "establecer (never 'asentar')"}
+    - {sport: both, when: "easy aerobic effort described by talking", write: "'esfuerzo en el que puedes hablar con frases completas' (never 'ritmo conversable' or 'conversacional')"}
+    - {sport: both, when: "carbohydrates", write: "always plural, 'carbohidratos' (never 'carbohidrato'). 'CHO' is a valid abbreviation ('6-7 g CHO/kg')"}
+    - {sport: both, when: "carbohydrates taken during the session", write: "'carbohidratos durante la sesión' (never 'fuel' or 'intra-entrenamiento')"}
+    - {sport: both, when: "repetitions of a set", write: "repeticiones (never 'repeats')"}
+    - {sport: both, when: "a percentage in [Focus], [Why], [Execution], [Nutrition]", write: "always with its reference: '60-68% del FTP', '95% del umbral', '85% de la FC máx'. A text line never starts with '- ' (Intervals.icu reads those lines as workout steps)"}
+    - {sport: both, when: "minutes and seconds in [Focus], [Execution], [Nutrition]", write: "'10 min', '30 s' — never '10m' or '30s' (that is Intervals.icu syntax and reads as metres). Inside the code block the syntax stays '10m', '30s'"}
+    - {sport: both, when: "accents", write: "write correct Spanish with accents. The upload removes the vowel accents (á é í ó ú ü) before the text reaches Intervals.icu; ñ, ¿ and ¡ stay as they are"}
+    - {sport: both, when: "author zone codes (Friel Zona 3, Daniels E, Koop ER...)", write: "never in athlete text: they go in the coach-only [Zone] field"}
 
 structure:
   focus: >-
@@ -49,65 +69,105 @@ structure:
     Three short sentences, at most 60 words, and do not re-list the structure:
     the athlete sees the steps below. (1) what the session trains, by class, in
     words; (2) how it should feel and be executed; (3) what to do if it is not
-    going as prescribed. Mention a number only when the athlete needs it to act.
+    going as prescribed. Mention a number only when the athlete needs it to act,
+    and give every percentage its reference.
   nutrition: >-
     Before / during / after, only what applies, each with a quantity or a time.
     When fuelling happens during the session, the timing also goes in the cue of
     that step.
 
-# The head coach's own phrases. Use them as the base; adapt to the step. A phrase
+# The head coach's own phrases, by sport. Use them as the base; adapt to the step.
+# `both` is for either sport; `cycling` and `running` only for that sport. A phrase
 # may repeat across sessions — consistent wording for the same kind of step is the
 # house style.
 cues:
   warmup:
-    - "Trote suave de calentamiento"
-    - "Trote de calentamiento"
-    - "Calentamiento progresivo"
-    - "Trote progresivo"
-    - "Pedaleo suave"
-    - "Pedaleo cómodo"
-    - "Pedaleo con cadencia cómoda autorregulada"
+    both:
+      - "Calentamiento progresivo"
+    cycling:
+      - "Pedaleo suave"
+      - "Pedaleo cómodo"
+      - "Pedaleo con cadencia cómoda"
+    running:
+      - "Trote suave de calentamiento"
+      - "Trote de calentamiento"
+      - "Trote progresivo"
   recovery:
-    - "Recupera"
-    - "Afloje"
-    - "Trote de recuperación"
-    - "Recupera en las bajadas o planos"
+    both:
+      - "Recupera"
+      - "Afloje"
+      - "Recupera en las bajadas o planos"
+    cycling:
+      - "Pedaleo suave"
+    running:
+      - "Trote de recuperación"
   hold_the_effort:
-    - "Ritmo constante"
-    - "Ritmo controlado"
-    - "Cadencia controlada"
-    - "Buena postura"
-    - "Manteniendo la forma"
-    - "Mantén la cadencia durante el intervalo"
-    - "Respeta la cadencia"
-    - "Respeta la intensidad"
-    - "Respeta el ritmo"
-    - "Mismo ritmo que el primer bloque"
-    - "Misma intensidad"
+    both:
+      - "Cadencia controlada"
+      - "Buena postura"
+      - "Manteniendo la forma"
+      - "Mantén la cadencia durante el intervalo"
+      - "Respeta la cadencia"
+      - "Respeta la intensidad"
+      - "Misma intensidad"
+    cycling:
+      - "Potencia constante"
+      - "Potencia controlada"
+      - "Respeta la potencia"
+      - "Misma potencia que el primer bloque"
+    running:
+      - "Ritmo constante"
+      - "Ritmo controlado"
+      - "Respeta el ritmo"
+      - "Mismo ritmo que el primer bloque"
   raise_or_lower:
-    - "Aumenta la intensidad"
-    - "Aumentando"
-    - "Sube la potencia sin exagerar"
-    - "Reduce la intensidad"
+    both:
+      - "Aumenta la intensidad"
+      - "Aumentando"
+      - "Reduce la intensidad"
+    cycling:
+      - "Sube la potencia sin exagerar"
   approximate:
-    - "Aproximadamente"
-    - "aprox."
+    both:
+      - "Aproximadamente"
+      - "aprox."
 
-# Failure-condition sentences ([Execution], part 3). {n} is an RPE from the code block.
+# Failure-condition sentences ([Execution], part 3), by sport. {n} is an RPE from the
+# code block. Pick the one that fits the session's structure: "primer bloque" only
+# when the session has blocks.
 fallbacks:
-  - "Si el esfuerzo pasa de RPE {n}, reduce la intensidad y conserva la duración."
-  - "Si no logras sostener el ritmo hasta el final del bloque, reduce la intensidad y termina la serie."
-  - "Si la frecuencia cardiaca se dispara pronto, recupera y retoma con menor intensidad."
-  - "Si las piernas se sienten pesadas desde el primer bloque, acorta la sesión y termina en resistencia aeróbica."
-  - "Si el último bloque exige más de lo indicado, mantén el mismo ritmo del primero o termínalo con menor intensidad."
+  both:
+    - "Si el esfuerzo pasa de RPE {n}, reduce la intensidad y conserva la duración."
+    - "Si la frecuencia cardiaca se dispara pronto, recupera y retoma con menor intensidad."
+    - "Si las piernas se sienten pesadas desde el primer bloque, acorta la sesión y termina en resistencia aeróbica."
+    - "Si las piernas se sienten pesadas desde el primer esfuerzo, acorta la sesión y termina en resistencia aeróbica."
+  cycling:
+    - "Si no logras mantener la potencia hasta el final del bloque, reduce la intensidad y termina la serie."
+    - "Si el último bloque exige más de lo indicado, mantén la misma potencia del primero o termínalo con menor intensidad."
+  running:
+    - "Si no logras sostener el ritmo hasta el final del bloque, reduce la intensidad y termina la serie."
+    - "Si el último bloque exige más de lo indicado, mantén el mismo ritmo del primero o termínalo con menor intensidad."
 
-# Patterns the validator warns about (never blocks). `where`: prose = [Focus],
-# [Execution], [Nutrition]; both = prose and cue text.
+# Words that belong to the OTHER sport. A session in the sport named here that uses
+# one of them is BLOCKED (HC-SPORT) until it is corrected. Only unambiguous words:
+# "carrera" (a race in cycling) and "paso" (a step) are not on the lists.
+sport_vocabulary:
+  cycling:
+    pattern: '(?i)\b(?:trot(?:e|es|ar|a|an|ando)|zancadas?|strides?|caminat(?:a|as)|corre|corres|correr|corriendo)\b'
+    fix: "Es vocabulario de carrera en una sesión de ciclismo. Usa pedaleo (pedaleo fluido, pedaleo suave) y potencia o intensidad; openers en lugar de strides."
+  running:
+    pattern: '(?i)\b(?:pedale(?:o|os|ar|a|an|ando)|pedalada|rodillo|vatios|watts|bicicleta|bici)\b'
+    fix: "Es vocabulario de ciclismo en una sesión de carrera. Usa trote, zancada, strides y ritmo."
+
+# Patterns the validator warns about (never blocks). `where`: prose = [Focus], [Why],
+# [Execution], [Nutrition]; both = prose and cue text. `sport` (optional) limits a
+# pattern to sessions of that sport.
 banned:
   - {pattern: 'se vuelve mayor', where: prose, fix: "Escribe 'si el esfuerzo pasa de RPE X' o 'si el esfuerzo sube'."}
   - {pattern: 'por encima de RPE', where: prose, fix: "Escribe 'si el esfuerzo pasa de RPE X'."}
   - {pattern: '(?i)\bvan \d', where: prose, fix: "Escribe 'Incluye 10 min de calentamiento' o 'Empieza con...'."}
   - {pattern: '(?i)\bpaso pareja\b', where: both, fix: "Concordancia: 'paso parejo'."}
+  - {pattern: '(?i)\b(?:potencia|ritmo|esfuerzo|intensidad)\s+parej[oa]\b', where: both, fix: "Escribe 'constante' ('potencia constante'). 'Parejo' solo para el paso de una carrera."}
   - {pattern: '(?i)zancada suelta', where: both, fix: "Escribe 'zancada fluida'."}
   - {pattern: '\b(Endurance|Threshold|Sub-threshold|Supra-threshold|Recovery|Anaerobic)\b', where: prose, fix: "En español: resistencia aeróbica (fondo aeróbico en día largo), umbral, sub-umbral, supra-umbral, recuperación, anaeróbico."}
   - {pattern: '(?i)trote de fondo aeróbico', where: both, fix: "Escribe 'fondo aeróbico' (día largo) o 'trote aeróbico' (día normal)."}
@@ -115,3 +175,13 @@ banned:
   - {pattern: '\b\d+x de \d', where: prose, fix: "Escribe '6 strides de 20 s' o '6 repeticiones de 20 s', no '6x de 20s'."}
   - {pattern: '\b(Friel|Daniels|Coggan|Carmichael|Palladino|Koop|Olbrich|Hansons?|Hudson|Rosario)\b', where: both, fix: "El atleta no usa los códigos de autor: van en el campo [Zone], solo para el coach."}
   - {pattern: '(?i)\brealiza tu\b|\bprocede a\b|\basegúrate de\b', where: prose, fix: "Frase calcada del inglés: usa el imperativo directo ('calienta', 'termina', 'bebe')."}
+  - {pattern: '(?i)\bapertura(?:s)?\b', where: both, fix: "Escribe 'openers', tal cual."}
+  - {pattern: '(?i)piernas abiertas|abre(?:r)? las piernas', where: both, fix: "Escribe 'activación de piernas' o 'openers'."}
+  - {pattern: '(?i)\b(?:asent(?:ar|ad[oa]s?)|asienta(?:n)?)\b', where: both, fix: "Escribe 'establecer'."}
+  - {pattern: '(?i)\bconversa(?:ble|cional)\b|conversaci[oó]n fluida', where: both, fix: "Escribe 'esfuerzo en el que puedes hablar con frases completas'."}
+  - {pattern: '(?i)\bstride\b', where: both, fix: "Escribe 'strides', siempre en plural."}
+  - {pattern: '(?i)\bcarbohidrato\b', where: both, fix: "Escribe 'carbohidratos', siempre en plural."}
+  - {pattern: '(?i)\brepeats?\b', where: both, fix: "Escribe 'repeticiones'."}
+  - {pattern: '(?i)\bfuel(?:l?ing)?\b|intra-?entrenamiento', where: both, fix: "Escribe 'carbohidratos durante la sesión'."}
+  - {pattern: '(?i)\britmo\b', where: both, sport: cycling, fix: "En ciclismo escribe 'potencia' (paso con meta de potencia) o 'intensidad' (paso por RPE o frecuencia cardiaca)."}
+  - {pattern: '\d+(?:\s?[-–]\s?\d+)?\s?%(?!\s*(?:del?\b|de la\b|FTP|LTHR|FC\b|umbral))', where: prose, fix: "Todo porcentaje lleva su referencia: '60-68% del FTP', '95% del umbral', '85% de la FC máx'."}

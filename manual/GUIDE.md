@@ -82,6 +82,8 @@ result goes at the **end** of `race_notes.md`.
 | "Couldn't load app settings" | the config was saved with a BOM: rewrite it with `[System.IO.File]::WriteAllText($p, $json, [Text.Encoding]::ASCII)` |
 | Errors about "remote-devices" | you are in Cowork/Code: use a plain Chat |
 | `Missing environment variable ICU_API_KEY` | step 1.2, or the `env` block in the Desktop config |
+| `HC-SPORT` on a week | the text has words of the other sport (a bike session with "zancada"): the coach rewrites it with the sport's own words and validates again |
+| A word or phrase you don't like in the athletes' text | send one line, "X → Y": it goes into `config/language/es_mx.yaml` with a test, in the next small version |
 | `Unknown athlete id` | check the id with the roster; nothing was written |
 | `HC-ATHLETE … no declared profile` for an athlete that existed | `config\athletes` lost its link to Drive. Rename the plain folder, then `cmd /c mklink /J athletes "<Drive>\infame-coach-sync\config-athletes"` inside `config`. Copy into Drive first anything the plain folder has that Drive lacks. Same for `data` and `out` |
 | `Unknown methodology 'X'` | the `[Methodology]` field is wrong: the coach corrects the week |

@@ -838,6 +838,26 @@ def test_tools_push():
         equal("tools_push: default call reports dry_run=True", r.get("dry_run"), True)
         check("tools_push: dry-run still constructs at least one event", r.get("count", 0) > 0)
 
+        # v7.35: no vowel accents reach Intervals.icu; ñ ¿ ¡ stay.
+        with open(good, encoding="utf-8") as f:
+            _txt = f.read()
+        _txt = re.sub(r"(?m)^\[Focus\]:.*$", "[Focus]: Resistencia aeróbica sin acentos ¿año?", _txt, count=1)
+        _txt = re.sub(r"(?m)^\[Execution\]:.*\n", "", _txt)
+        _txt = _txt.replace("[Focus]: Resistencia aeróbica sin acentos ¿año?",
+                            "[Focus]: Resistencia aeróbica sin acentos ¿año?\n"
+                            "[Execution]: Mantén la cadencia con pedaleo fluido y postura.", 1)
+        accented = os.path.join(tmp, "accents.md")
+        with open(accented, "w", encoding="utf-8") as f:
+            f.write(_txt)
+        ra = push_block(AID, file_path=accented)
+        _ev = (ra.get("events") or [{}])[0]
+        equal("tools_push: the workout name goes without vowel accents (ñ ¿ stay)",
+              _ev.get("name"), "Resistencia aerobica sin acentos ¿año?")
+        check("tools_push: the description carries no vowel accent",
+              _ev.get("description") and not re.search("[áéíóúüÁÉÍÓÚÜ]", _ev["description"]), _ev.get("description"))
+        check("tools_push: the description keeps the unaccented text it had",
+              "Manten la cadencia con pedaleo fluido" in (_ev.get("description") or ""), _ev.get("description"))
+
         # A double day: the same session written twice on one date. Before
         # the fix both got the same external_id and upsert=true kept only
         # the last one. The first keeps the original id (already-pushed

@@ -90,7 +90,9 @@ def post_activity_comment(
     dry run showing the activity it would land on; it posts only with dry_run=false
     AND confirm=true, after approval. Refused when the activity belongs to another
     athlete."""
-    body = str(text or "").strip()
+    ensure_import_paths()
+    import shared
+    body = shared.strip_accents(str(text or "").strip())   # v7.35: no accents reach Intervals.icu
     if not body:
         raise ToolError("The comment is empty — nothing to post.")
     if len(body) > MAX_COMMENT_CHARS:

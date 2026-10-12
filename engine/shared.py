@@ -13,6 +13,7 @@ them under their old local names, so nothing else changed.
   athlete_out_dir(...)  the athlete's folder under out/, found by id
   read_config(name)     one file of config/, parsed once (re-read if it changes)
   thresholds()          decision_thresholds.yaml with the derived class cutpoints
+  strip_accents(text)   the vowel accents removed (á é í ó ú ü); ñ ¿ ¡ stay (v7.35)
   EngineError           what the engine raises instead of ending the process
 """
 
@@ -25,6 +26,19 @@ from datetime import date, datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
+
+
+_ACCENTS = str.maketrans("áéíóúüÁÉÍÓÚÜ", "aeiouuAEIOUU")
+
+
+def strip_accents(text):
+    """Text for Intervals.icu: vowel accents and the diaeresis removed, because on
+    the athletes' devices and accounts set to English they show as strange
+    symbols (v7.35). The letter ñ and the marks ¿ and ¡ are left as they are.
+    Not unicodedata's NFD, which would also strip the ñ."""
+    if not isinstance(text, str):
+        return text
+    return unicodedata.normalize("NFC", text).translate(_ACCENTS)
 
 
 class EngineError(Exception):
