@@ -39,7 +39,8 @@ import os
 import re
 from datetime import date
 
-from .common import ROOT, ensure_import_paths, ledger_record, safe_out_dir, latest_block_path
+from .common import (ROOT, ensure_import_paths, ledger_record, safe_out_dir, latest_block_path,
+                     mark_cache_stale)
 from .guard import ToolError, guarded
 from .tools_validate import _run_validation
 
@@ -271,7 +272,9 @@ def push_block(
     same events. Race days are skipped; workouts already planned on those dates are
     not removed. include_notes=false sends only the steps. After a live send,
     `load_check` compares each session's load with the one Intervals.icu computed
-    and lists any difference beyond the tolerance: tell the head coach."""
+    and lists any difference beyond the tolerance: tell the head coach. A live send
+    marks the local data stale, so the next get_athlete_state re-reads the calendar,
+    and records each session's load in the ledger."""
     ensure_import_paths()
     import validate_block as vb
     import shared as _shared
@@ -425,9 +428,18 @@ def push_block(
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)
     resp.raise_for_status()
     load_check = _check_uploaded_loads(athlete_id, events, resp, fad)
+    # The load of what was uploaded lives here, so #SESSION never has to
+    # carry it (v7.42): a figure written by hand in Notes went stale on
+    # 2026-10-11 when the week was corrected and re-uploaded.
+    per_session = [(str(e.get("start_date_local") or "")[:10], e.get("infame_load")) for e in events]
+    known = [v for _d, v in per_session if isinstance(v, (int, float))]
     ledger_record(athlete_id, "block_uploaded", file=os.path.basename(str(file_path or "")) or None,
                   sessions=len(events), override_validation=bool(override_validation),
-                  dates=sorted({str(e.get("start_date_local") or "")[:10] for e in events}))
+                  dates=sorted({d for d, _v in per_session}),
+                  load_tss=round(sum(known)) if known else None,
+                  loads=[f"{d} {round(v) if isinstance(v, (int, float)) else '?'}"
+                         for d, v in sorted(per_session, key=lambda x: x[0])])
+    stale = mark_cache_stale(athlete_id)
     return {
         "ok": True,
         "dry_run": False,
@@ -435,4 +447,5 @@ def push_block(
         "status_code": resp.status_code,
         **payload,
         "load_check": load_check,
+        "cache_marked_stale": stale,
     }

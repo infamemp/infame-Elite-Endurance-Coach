@@ -598,6 +598,9 @@ def unit_tests():
         ("prompt: #SESSION Notes is not a log", "Not a log: never what was written, uploaded or done"),
     ]:
         check(name, needle in _pr, needle)
+    _vbsrc = open(os.path.join(ROOT, "verify", "validate_block.py"), encoding="utf-8").read()
+    check("validator: PASS says what it covers, not that the week is right (v7.42)",
+          "well-formed and uploadable" in _vbsrc and "Upload-safe" not in _vbsrc)
     # v7.30: one source for each rule — the prompt never restates what the engine owns
     check("prompt: no TSB bands of its own (the engine's Resolved state governs)",
           "TSB > 0" not in _pr and "−10 to 0" not in _pr and "`recovery_priority`" in _pr)

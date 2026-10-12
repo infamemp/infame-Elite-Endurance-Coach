@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.6 (v7.40 — CHK-RANGE: a single-value target is flagged; v7.39 — HC-SPORT)
+Version: 3.7 (v7.42 — PASS says what it covers; v7.40 — CHK-RANGE; v7.39 — HC-SPORT)
 """
 
 VERSION = "3.5"   # keep equal to the "Version:" line above
@@ -2223,7 +2223,10 @@ def main():
               f"Duration into {dur_written} header(s) in "
               f"{os.path.basename(args.file)}")
 
-    print("RESULT: PASS — verified against config. Upload-safe.")
+    # v7.42: PASS says what it covers. The old wording was read as "correct" on
+    # 2026-10-11 while sessions broke the head coach's criteria.
+    print("RESULT: PASS — well-formed and uploadable: format, targets, zones, RPE, load. "
+          "The head coach's criteria are not checked here: that is the coach's review.")
     record_validation(tee, args.file, "pass", list(race_sessions) + [args.athlete], len(sessions))
     sys.exit(0)
 

@@ -551,7 +551,10 @@ def test_tools_coach():
               remove_block(AID, from_date=date.today().isoformat()).get("ok"), False)
         remove_block(AID, dry_run=False, confirm=False)
         equal("remove: one open gate is not enough", fake.writes(), [])
+        _seed_athlete_data(fresh=True)
         r = remove_block(AID, dry_run=False, confirm=True)
+        check("remove: the local cache is marked stale so #STATE re-fetches (v7.42)",
+              r.get("cache_marked_stale") is True and not common.is_cache_fresh(AID))
         equal("remove: live call deletes exactly the two uploaded sessions, by id",
               [c[2]["json"] for c in fake.writes()], [[{"id": 1}, {"id": 2}]])
         equal("remove: the calendar is re-read and the delete verified",
@@ -948,6 +951,7 @@ def test_tools_push():
         original_get = requests.Session.get
         requests.Session.post = _fake_post
         requests.Session.get = _fake_get
+        _seed_athlete_data(fresh=True)
         try:
             with _placeholder_key():
                 r = push_block(AID, file_path=copy, dry_run=False, confirm=True)
@@ -957,6 +961,14 @@ def test_tools_push():
 
         equal("tools_push: both gates open actually sends (against the mock)",
               r.get("sent"), True)
+        from mcp_server import common as _cm
+        check("tools_push: the local cache is marked stale so #STATE re-reads the "
+              "calendar (v7.42)", r.get("cache_marked_stale") is True and not _cm.is_cache_fresh(AID))
+        import ledger as _lg
+        _up = [e for e in _lg.read(AID) if e.get("event") == "block_uploaded"]
+        check("ledger: an upload records its load, total and per session (v7.42)",
+              bool(_up) and isinstance(_up[-1].get("load_tss"), int)
+              and len(_up[-1].get("loads") or []) == r.get("count"), _up[-1:] if _up else None)
         lc = r.get("load_check") or {}
         equal("tools_push: no loads in the bulk response -> one read-back of the "
               "events (v7.38)", len(gets), 1)

@@ -105,6 +105,20 @@ def is_cache_fresh(aid: str, max_age_minutes: float | None = None) -> bool:
     return age <= minutes
 
 
+def mark_cache_stale(aid: str) -> bool:
+    """After a write to Intervals.icu (an upload, a removal, a threshold),
+    the cached athlete_data.json no longer matches the calendar: age it so
+    the next get_athlete_state re-fetches by itself instead of serving the
+    old copy for up to an hour. A stale copy read right after an upload made
+    a week look missing on 2026-10-11, and it was uploaded again (v7.42).
+    Returns whether there was a cache to mark."""
+    path = athlete_data_path(aid)
+    if not os.path.exists(path):
+        return False
+    os.utime(path, (0, 0))
+    return True
+
+
 def lookup_on_account(aid: str, fad) -> tuple[object, str]:
     """One network call: (real_aid, name) for `aid` from
     fad.list_athletes(). Raises ToolError if the account has no such

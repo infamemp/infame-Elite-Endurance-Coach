@@ -24,7 +24,7 @@ import os
 import re
 from datetime import date, datetime, timedelta
 
-from .common import DATA, ensure_import_paths, ledger_record
+from .common import DATA, ensure_import_paths, ledger_record, mark_cache_stale
 from .guard import ToolError, guarded
 
 MAX_COMMENT_CHARS = 2000
@@ -260,11 +260,7 @@ def update_threshold(
     # so the next get_athlete_state re-fetches by itself.
     ledger_record(athlete_id, "threshold_changed", sport_type=sport, field=field,
                   old=change["old_display"], new=change["new_display"], verified=confirmed)
-    invalidated = False
-    cache = os.path.join(DATA, str(athlete_id), "athlete_data.json")
-    if os.path.exists(cache):
-        os.utime(cache, (0, 0))
-        invalidated = True
+    invalidated = mark_cache_stale(athlete_id)
     return {"ok": True, "dry_run": False, "sent": True, "changed": confirmed,
             "status_code": resp.status_code, **change,
             "now_in_intervals": after, "now_in_intervals_display": human(after),
@@ -348,7 +344,9 @@ def remove_block(
     left = [e.get("id") for e in still if e.get("id") in {r["id"] for r in rows}]
     ledger_record(athlete_id, "sessions_removed", count=len(rows),
                   dates=sorted({r["date"] for r in rows}), verified=not left)
+    stale = mark_cache_stale(athlete_id)
     return {"ok": True, "dry_run": False, "sent": True, "status_code": resp.status_code,
             **summary, "still_on_calendar": left, "verified": not left,
+            "cache_marked_stale": stale,
             "note": None if not left else
             "Some sessions are still on the calendar after the delete — check Intervals.icu."}

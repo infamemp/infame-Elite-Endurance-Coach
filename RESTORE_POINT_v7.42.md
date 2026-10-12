@@ -1,9 +1,18 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.41
+# RESTORE POINT — Infame Elite Endurance Coach v7.42
 
 **Date frozen:** 2026-10-12
-**Previous:** v7.40 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.41 (head coach's criteria, corrections, what PASS means)
-**Tests:** `python tests/run_tests.py` → 904/904 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 199/199
+**Previous:** v7.41 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.41 (unchanged in v7.42)
+**Tests:** `python tests/run_tests.py` → 905/905 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 202/202
+
+## What changed in v7.42 — the cache follows the writes
+
+Code only. After a live upload, removal or threshold change, the local copy of the athlete's
+Intervals.icu data is marked stale, so the next `get_athlete_state` re-reads the calendar
+instead of serving an old copy for up to an hour (on 2026-10-11 that made a week look missing,
+and it was uploaded again). Each upload records its load in the ledger, total and per session.
+The validator's PASS now says what it covers: format, targets, zones, RPE and load — not the
+head coach's criteria. **Deploy:** restart Claude Desktop. The Project does not change.
 
 ## What changed in v7.41 — criteria, corrections and PASS
 

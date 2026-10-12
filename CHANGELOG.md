@@ -4,6 +4,20 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.42 (2026-10-12)
+
+Code only; the prompt stays v7.41.
+
+- **The cache follows the writes.** `push_block`, `remove_block` and `update_threshold` mark the
+  local Intervals.icu copy stale after a live change (`common.mark_cache_stale`), so the next
+  `get_athlete_state` re-reads the calendar. Cause: on 2026-10-11 a stale copy, read right after an
+  upload, made a week look missing, and it was uploaded again.
+- **The ledger records the load of each upload** (`load_tss` and `loads` per session), so
+  `#SESSION` never has to carry it.
+- **PASS says what it covers** (validator 3.7): "well-formed and uploadable: format, targets,
+  zones, RPE, load. The head coach's criteria are not checked here: that is the coach's review."
+- 1 new engine test, 3 new MCP tests.
+
 ## v7.41 (2026-10-12)
 
 Prompt only. Cause: on 2026-10-11 the coach shortened sessions below the durations the head
