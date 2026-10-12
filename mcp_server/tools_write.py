@@ -245,6 +245,88 @@ def save_block(athlete_id: str, text: str, athlete_name: str | None = None,
 
 
 # Maintainer notes (the docstring below is the description the model reads):
+# Replace sessions inside a saved week without rewriting the rest (v7.43).
+# Before this, any correction meant re-emitting the whole week: on
+# 2026-10-11 one week was rewritten and validated five times for fixes that
+# touched a few sessions each. Each card in `text` replaces the card of the
+# saved file with the same [Date] (and, on a day with more than one session,
+# the same [Discipline]); every other card is kept as saved, after the same
+# unambiguous format repairs the validator applies to any file. It never
+# adds or removes a session — a new or deleted day is a re-save of the week.
+@guarded
+def replace_session(athlete_id: str, text: str, file_path: str | None = None,
+                    athlete_name: str | None = None) -> dict:
+    """Correct one or more sessions of a saved week without rewriting the others.
+    `text` holds only the corrected session cards; each replaces the card with the
+    same [Date] (and [Discipline], on a day with two sessions) in the saved file
+    (the latest saved block when file_path is omitted). Every other session stays
+    as it was. Then validate_block on the returned path, and push_block if the week
+    is already on the calendar (it updates the same events)."""
+    from .common import ROOT, ensure_import_paths, latest_block_path
+
+    ensure_import_paths()
+    import validate_block as vb
+
+    body = (text or "").strip()
+    if not body:
+        raise ToolError("No session cards given. Nothing was changed.")
+    if not file_path:
+        file_path = latest_block_path(athlete_id, athlete_name)
+    elif not os.path.isabs(file_path):
+        file_path = os.path.join(ROOT, file_path)
+    if not os.path.exists(file_path):
+        raise ToolError(f"File not found: {file_path}. Nothing was changed.")
+
+    with open(file_path, encoding="utf-8") as f:
+        current, _ = vb.normalize_block(f.read())
+    new, _ = vb.normalize_block(body)
+
+    def cards(t):
+        """[(start, end, date, discipline)] for each card in t."""
+        starts = [m.start() for m in vb.HEADER_START_RE.finditer(t)]
+        out = []
+        for i, st in enumerate(starts):
+            end = starts[i + 1] if i + 1 < len(starts) else len(t)
+            header = vb.split_sessions(t[st:end])[0][0]
+            out.append((st, end, (header.get("Date") or "").strip(),
+                        (header.get("Discipline") or "").strip().lower()))
+        return out
+
+    old_cards, new_cards = cards(current), cards(new)
+    if not new_cards:
+        raise ToolError("No session card found in the text (each starts with '[Week] ... | [Date] ...'). "
+                        "Nothing was changed.")
+    plan = []
+    for st, end, d, disc in new_cards:
+        if not d:
+            raise ToolError("A corrected card has no [Date]. Nothing was changed.")
+        same_day = [c for c in old_cards if c[2] == d]
+        match = same_day if len(same_day) <= 1 else [c for c in same_day if c[3] == disc]
+        if len(match) != 1:
+            dates = ", ".join(sorted({c[2] for c in old_cards if c[2]}))
+            why = ("no session on that date" if not same_day else
+                   "more than one session that day and none, or several, with that [Discipline]")
+            raise ToolError(f"Cannot place the card for {d} ({disc or 'no discipline'}): {why}. "
+                            f"Dates in {os.path.basename(file_path)}: {dates}. To add or remove a "
+                            f"session, save the whole week again with save_block. Nothing was changed.")
+        if any(p[0] is match[0] for p in plan):
+            raise ToolError(f"Two corrected cards for the same session ({d}). Nothing was changed.")
+        plan.append((match[0], new[st:end].strip()))
+
+    out = current
+    for (st, end, d, _disc), card in sorted(plan, key=lambda p: p[0][0], reverse=True):
+        tail = "\n\n" if end < len(out) else "\n"
+        out = out[:st] + card + tail + out[end:]
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(out.rstrip() + "\n")
+    replaced = sorted(p[0][2] for p in plan)
+    ledger_record(athlete_id, "session_replaced", file=os.path.basename(file_path), dates=replaced)
+    return {"ok": True, "path": os.path.relpath(file_path, ROOT), "replaced": replaced,
+            "kept": len(old_cards) - len(plan),
+            "next": "validate_block on this path; push_block if the week is already on the calendar."}
+
+
+# Maintainer notes (the docstring below is the description the model reads):
 # Write the athlete's declared profile, config/athletes/<athlete_id>.yaml —
 # after an intake, or to change goals, equipment, limitations, methodology or
 # any other declared field. Same gate as an upload:

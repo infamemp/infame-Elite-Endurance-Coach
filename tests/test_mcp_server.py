@@ -1234,6 +1234,35 @@ def test_mcp_first_workflow():
     check("workflow: validate_block(athlete_id) validates the latest week without a path",
           rv.get("ok") is True and str(rv.get("file", "")).endswith("_bloque_w2.md"), rv)
 
+    # 2b — replace_session corrects one card and keeps the rest byte for byte (v7.43)
+    from mcp_server.tools_write import replace_session
+    _base = good_text.strip()
+    _week = "\n\n".join(_base.replace("24-08-2026", d) for d in ("24-08-2026", "25-08-2026", "26-08-2026"))
+    rw = save_block(AID, _week, athlete_name="Test Fixture", week=7)
+    _wpath = os.path.join(ROOT, rw["path"])
+    with open(_wpath, encoding="utf-8") as f:
+        _before = f.read()
+    _focus = [l for l in _base.splitlines() if l.startswith("[Focus]")][0]
+    _fixed = _base.replace("24-08-2026", "25-08-2026").replace(_focus, "[Focus]: Corrected session")
+    rr = replace_session(AID, _fixed, file_path=_wpath)
+    with open(_wpath, encoding="utf-8") as f:
+        _after = f.read()
+    _chunks = lambda t: [c for c in re.split(r"(?m)^(?=\[Week\])", t) if c.strip()]
+    check("replace_session: replaces the card of that date and keeps the other two",
+          rr.get("ok") and rr.get("replaced") == ["25-08-2026"] and rr.get("kept") == 2, rr)
+    check("replace_session: the corrected card is in the file",
+          "[Focus]: Corrected session" in _after and _after.count("[Week]") == 3)
+    check("replace_session: the other sessions are unchanged byte for byte",
+          [c.strip() for i, c in enumerate(_chunks(_after)) if i != 1]
+          == [c.strip() for i, c in enumerate(_chunks(_before)) if i != 1])
+    rbad = replace_session(AID, _base.replace("24-08-2026", "30-08-2026"), file_path=_wpath)
+    with open(_wpath, encoding="utf-8") as f:
+        _still = f.read()
+    check("replace_session: a date not in the week is refused and nothing changes",
+          rbad.get("ok") is False and _still == _after, rbad)
+    rv7 = validate_block(athlete_id=AID, file_path=_wpath)
+    check("replace_session: the corrected week still validates", rv7.get("ok") is True, rv7)
+
     # 3 — dates Intervals.icu accepts; race days not pushed
     equal("workflow: _iso_date converts DD-MM-YYYY", _iso_date("29-09-2026"), "2026-09-29")
     equal("workflow: _iso_date keeps YYYY-MM-DD", _iso_date("2026-09-29"), "2026-09-29")

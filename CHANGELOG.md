@@ -4,6 +4,18 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.43 (2026-10-12)
+
+- **`replace_session` (new tool):** corrects sessions of a saved week from only the corrected
+  cards; each replaces the card with the same `[Date]` (and `[Discipline]` on a double day), the
+  rest of the week stays as saved. It never adds or removes a session, and refuses a card it
+  cannot place without changing anything. Cause: on 2026-10-11 every correction re-emitted the
+  whole week — one week was rewritten and validated five times.
+- **Prompt v7.43:** *Correct only what changes* — a fix to some sessions emits only those cards
+  through `replace_session`; the whole week is re-emitted only when a session is added or
+  removed or most of it changes. The tools table lists the new tool.
+- 1 new engine test, 5 new MCP tests.
+
 ## v7.42 (2026-10-12)
 
 Code only; the prompt stays v7.41.

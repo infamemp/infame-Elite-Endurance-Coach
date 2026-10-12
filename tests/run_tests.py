@@ -596,6 +596,7 @@ def unit_tests():
          "10. **The head coach's criteria**"),
         ("prompt: PASS means well-formed, not right", "PASS means the week is well-formed and uploadable"),
         ("prompt: #SESSION Notes is not a log", "Not a log: never what was written, uploaded or done"),
+        ("prompt: a correction saves only the corrected cards (v7.43)", "**Correct only what changes.**"),
     ]:
         check(name, needle in _pr, needle)
     _vbsrc = open(os.path.join(ROOT, "verify", "validate_block.py"), encoding="utf-8").read()

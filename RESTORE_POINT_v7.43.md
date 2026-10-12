@@ -1,9 +1,16 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.42
+# RESTORE POINT — Infame Elite Endurance Coach v7.43
 
 **Date frozen:** 2026-10-12
-**Previous:** v7.41 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.41 (unchanged in v7.42)
-**Tests:** `python tests/run_tests.py` → 905/905 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 202/202
+**Previous:** v7.42 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.43 (correct only what changes)
+**Tests:** `python tests/run_tests.py` → 906/906 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 207/207
+
+## What changed in v7.43 — correct only what changes
+
+New tool `replace_session`: a correction saves only the corrected session cards, and the rest
+of the week stays as saved. The prompt now says to correct this way and to re-emit a whole
+week only when a session is added or removed or most of it changes. **Deploy:** (1) restart
+Claude Desktop; (2) paste the new prompt in the Claude Project and open a new chat.
 
 ## What changed in v7.42 — the cache follows the writes
 
