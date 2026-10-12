@@ -1,9 +1,20 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.40
+# RESTORE POINT — Infame Elite Endurance Coach v7.41
 
 **Date frozen:** 2026-10-12
-**Previous:** v7.39 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.40 (one rule added: intensity targets are ranges)
-**Tests:** `python tests/run_tests.py` → 892/892 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 199/199
+**Previous:** v7.40 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.41 (head coach's criteria, corrections, what PASS means)
+**Tests:** `python tests/run_tests.py` → 904/904 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 199/199
+
+## What changed in v7.41 — criteria, corrections and PASS
+
+Prompt only; no code, config or number changed. The head coach's criteria weigh the same
+wherever they are written (profile notes are "context" only for the weekly pattern); changing
+something agreed — a shorter session, another day — is proposed in the design table, never
+applied silently; a session grows with purposeful work, never a longer warm-up; a miss against
+something agreed is fixed and shown, never asked about (*Correcting is not deciding*); the
+pre-emission check reviews the head coach's criteria before `save_block`; PASS means
+well-formed and uploadable, not right; `#SESSION` Notes is not a log. **Deploy:** paste the
+new prompt in the Claude Project and open a new chat.
 
 ## What changed in v7.40 — targets are ranges
 

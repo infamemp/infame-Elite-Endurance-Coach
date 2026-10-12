@@ -580,6 +580,22 @@ def unit_tests():
         ("prompt: provisional thresholds keep Endurance in the lower half", "lower half of that zone"),
         ("prompt: at most one threshold test per week", "Schedule at most one test per week"),
         ("prompt: profile notes never override the saved weekly pattern", "they never override a pattern saved in `#SESSION`"),
+        # v7.41: the head coach's criteria, corrections and what PASS means
+        ("prompt: profile notes are context only for the weekly pattern",
+         "This concerns only which day holds which discipline"),
+        ("prompt: criteria weigh the same wherever they are written",
+         "It has the same weight wherever it is written"),
+        ("prompt: changing what was agreed is proposed, never applied silently",
+         "is proposed in the design table with its reason, never applied silently"),
+        ("prompt: a session grows with purposeful work, not a longer warm-up",
+         "never by stretching the warm-up or the cool-down"),
+        ("prompt: a correction is made, not asked about", "**Correcting is not deciding.**"),
+        ("prompt: STOP AND WAIT is for decisions, not for corrections",
+         "a STOP AND WAIT is for decisions, never for fixing"),
+        ("prompt: the pre-emission check includes the head coach's criteria",
+         "10. **The head coach's criteria**"),
+        ("prompt: PASS means well-formed, not right", "PASS means the week is well-formed and uploadable"),
+        ("prompt: #SESSION Notes is not a log", "Not a log: never what was written, uploaded or done"),
     ]:
         check(name, needle in _pr, needle)
     # v7.30: one source for each rule — the prompt never restates what the engine owns

@@ -4,6 +4,32 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.41 (2026-10-12)
+
+Prompt only. Cause: on 2026-10-11 the coach shortened sessions below the durations the head
+coach had agreed, padded warm-ups to fix it, asked permission to correct its own mistakes and
+read the validator's PASS as "correct". The rules it broke were already in the prompt; three
+passages pushed the other way.
+
+- **Criteria weigh the same wherever they are written** (conversation, `#SESSION` Notes,
+  profile notes). *Availability* had called profile notes "context"; that now applies only to
+  the weekly pattern.
+- **Changing what was agreed is proposed, not applied:** a shorter session, another day or
+  less of a discipline goes in the design table with its reason. A reason to reduce load
+  changes what is inside the session before the duration agreed. A session that must grow
+  grows with purposeful work, never with a longer warm-up or cool-down.
+- **Correcting is not deciding** (replaces "A correction is checked before it is announced"):
+  a miss against something agreed is fixed and shown, never asked about; the fix is checked
+  against all the head coach's criteria; a corrected week already on the calendar comes with
+  its validation and push dry run in one response. STOP AND WAIT is for decisions.
+- **Pre-emission check item 10:** the head coach's criteria, reviewed before `save_block`.
+  **PASS** is stated as "well-formed and uploadable", not "right".
+- **`#SESSION` Notes is not a log:** no record of what was written or uploaded, no figures
+  that go stale; rewritten whole each time.
+- Duplications trimmed (Spanish-text paragraph now points to the guide, Carmichael's figures
+  to his file, two engine-contract rows) so the prompt stays about the same length.
+- 9 new prompt tests.
+
 ## v7.40 (2026-10-12)
 
 - Session intensity targets are ranges (`low-high%`), never a single value. Prompt rule added;
