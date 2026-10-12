@@ -1,9 +1,16 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.39
+# RESTORE POINT — Infame Elite Endurance Coach v7.40
 
 **Date frozen:** 2026-10-12
-**Previous:** v7.38 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.39 (the Spanish-text paragraph and the list of `HC-` codes changed)
+**Previous:** v7.39 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.40 (one rule added: intensity targets are ranges)
 **Tests:** `python tests/run_tests.py` → 892/892 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 199/199
+
+## What changed in v7.40 — targets are ranges
+
+Session intensity targets are written as a range (`low-high%`), never a single value. The
+prompt now says it (before, ranges appeared only as examples) and the validator warns
+`CHK-RANGE` on a single-value step (advisory, never blocks). **Deploy:** paste the new
+prompt in the Claude Project and open a new chat.
 
 ## What changed in v7.39 — the head coach's language review
 

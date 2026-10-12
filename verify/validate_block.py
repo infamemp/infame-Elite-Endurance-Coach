@@ -39,7 +39,7 @@ Options:
 
 Exit code: 0 = upload-safe · 1 = hard-constraint violation.
 
-Version: 3.5 (v7.39 — HC-SPORT: a session never carries the other sport's words)
+Version: 3.6 (v7.40 — CHK-RANGE: a single-value target is flagged; v7.39 — HC-SPORT)
 """
 
 VERSION = "3.5"   # keep equal to the "Version:" line above
@@ -1056,6 +1056,13 @@ def check_constraints(steps, code, author, th, discipline, profile=None):
         if floor is not None and lo < floor:
             errors.append(("HC-FLOOR", s["line"],
                            f"{lo:g}% is below the {metric} prescription floor of {floor}%"))
+
+        # A target is written as a range (v7.40). A single value is advisory
+        # only: the coach decides, the validator never blocks it.
+        if lo == hi and not s["ramp"]:
+            warns.append(("CHK-RANGE", s["line"],
+                          f"Single target {lo:g}% — write intensity targets as a "
+                          f"range (low-high%)"))
 
         # Special output rule: the native metric must not be emitted
         if sor and metric == sor.get("native_metric"):

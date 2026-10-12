@@ -4,6 +4,12 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.40 (2026-10-12)
+
+- Session intensity targets are ranges (`low-high%`), never a single value. Prompt rule added;
+  the validator warns `CHK-RANGE` on a single-value step (advisory, never blocks). Cause: the
+  prompt showed ranges only as examples, so a chat could drop to `50%` unnoticed.
+
 ## v7.39 (2026-10-12)
 
 The head coach's language review of 2026-10-11. No training rule and no number changed.

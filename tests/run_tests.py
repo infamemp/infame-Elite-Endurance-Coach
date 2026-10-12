@@ -225,6 +225,14 @@ def unit_tests():
           not hc_codes('- 10m ramp 50-70% 90rpm [RPE 2-3] "a"\n- 20m 88-92% [RPE 4] "b"',
                        "coggan", "trainer"))
 
+    # Targets are ranges (v7.40): a single value only warns
+    check("range: a single-value target warns CHK-RANGE",
+          "CHK-RANGE" in all_codes("- 20m 75% [RPE 2]", "coggan", "road_bike"))
+    check("range: a single-value target never blocks",
+          "CHK-RANGE" not in hc_codes("- 20m 75% [RPE 2]", "coggan", "road_bike"))
+    check("range: a range does not warn",
+          "CHK-RANGE" not in all_codes("- 20m 75-80% [RPE 2]", "coggan", "road_bike"))
+
     # Any methodology, any metric of its sport
     check("metrics: running power with a pace-only methodology is accepted",
           not hc_codes("- 20m 75-80% [RPE 2]", "daniels", "treadmill"))
