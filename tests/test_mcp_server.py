@@ -841,6 +841,44 @@ def test_tools_push():
         equal("tools_push: default call reports dry_run=True", r.get("dry_run"), True)
         check("tools_push: dry-run still constructs at least one event", r.get("count", 0) > 0)
 
+        # v7.44: an indoor session (trainer, treadmill, any alias of them) goes
+        # up as plain Ride / Run with indoor=true, never VirtualRide / VirtualRun
+        # (those make Intervals.icu apply the outdoor FTP).
+        with open(good, encoding="utf-8") as f:
+            _good_txt = f.read()
+        _tm_src = os.path.join(ROOT, "tests", "blocks", "treadmill_steps.md")
+        with open(_tm_src, encoding="utf-8") as f:
+            _tm_txt = f.read().replace("[Athlete ID]: TESTRAMP", f"[Athlete ID]: {AID}")
+
+        def _first_event(text, name):
+            fp = os.path.join(tmp, name)
+            with open(fp, "w", encoding="utf-8") as f:
+                f.write(text)
+            return (push_block(AID, file_path=fp).get("events") or [{}])[0]
+
+        _ev_tr = _first_event(_good_txt, "indoor_trainer.md")
+        equal("tools_push: trainer goes up as Ride, not VirtualRide", _ev_tr.get("type"), "Ride")
+        equal("tools_push: trainer goes up with the indoor box checked", _ev_tr.get("indoor"), True)
+        _ev_rod = _first_event(_good_txt.replace("[Discipline]: trainer", "[Discipline]: rodillo"),
+                               "indoor_rodillo.md")
+        check("tools_push: the alias 'rodillo' is indoor Ride too",
+              _ev_rod.get("type") == "Ride" and _ev_rod.get("indoor") is True, _ev_rod)
+        _ev_road = _first_event(_good_txt.replace("[Discipline]: trainer", "[Discipline]: road_bike"),
+                                "outdoor_road.md")
+        check("tools_push: an outdoor ride is Ride with indoor=false",
+              _ev_road.get("type") == "Ride" and _ev_road.get("indoor") is False, _ev_road)
+        _ev_tm = _first_event(_tm_txt, "indoor_treadmill.md")
+        equal("tools_push: treadmill goes up as Run, not VirtualRun", _ev_tm.get("type"), "Run")
+        equal("tools_push: treadmill goes up with the indoor box checked", _ev_tm.get("indoor"), True)
+        _ev_cam = _first_event(_tm_txt.replace("[Discipline]: treadmill", "[Discipline]: caminadora"),
+                               "indoor_caminadora.md")
+        check("tools_push: the alias 'caminadora' is indoor Run too",
+              _ev_cam.get("type") == "Run" and _ev_cam.get("indoor") is True, _ev_cam)
+        _ev_rr = _first_event(_tm_txt.replace("[Discipline]: treadmill", "[Discipline]: road_run"),
+                              "outdoor_run.md")
+        check("tools_push: an outdoor run is Run with indoor=false",
+              _ev_rr.get("type") == "Run" and _ev_rr.get("indoor") is False, _ev_rr)
+
         # v7.35: no vowel accents reach Intervals.icu; ñ ¿ ¡ stay.
         with open(good, encoding="utf-8") as f:
             _txt = f.read()
@@ -944,7 +982,8 @@ def test_tools_push():
             gets.append({"url": url, "params": params})
             sent = calls[-1]["json"] if calls else []
             return _FakeGetResponse([
-                {"external_id": e["external_id"], "icu_training_load": 0}
+                {"external_id": e["external_id"], "icu_training_load": 0,
+                 "indoor": e.get("indoor")}
                 for e in sent])
 
         original_post = requests.Session.post
@@ -970,8 +1009,12 @@ def test_tools_push():
               bool(_up) and isinstance(_up[-1].get("load_tss"), int)
               and len(_up[-1].get("loads") or []) == r.get("count"), _up[-1:] if _up else None)
         lc = r.get("load_check") or {}
-        equal("tools_push: no loads in the bulk response -> one read-back of the "
-              "events (v7.38)", len(gets), 1)
+        equal("tools_push: nothing useful in the bulk response -> one read-back for the "
+              "loads (v7.38) and one for the indoor box (v7.44)", len(gets), 2)
+        ic = r.get("indoor_check") or {}
+        check("tools_push: the live send confirms the indoor box was kept",
+              ic.get("checked", 0) >= 1 and ic.get("confirmed") == ic["checked"]
+              and not ic.get("not_confirmed"), ic)
         check("tools_push: the read-back asks for the uploaded dates",
               gets and gets[0]["url"].endswith(f"/athlete/{AID}/events")
               and set(gets[0]["params"]) == {"oldest", "newest"})
@@ -985,6 +1028,8 @@ def test_tools_push():
               calls and calls[0]["url"] == f"{fad.BASE_URL}/athlete/{AID}/events/bulk")
         check("tools_push: upsert=true was passed",
               calls and calls[0]["params"] == {"upsert": "true"})
+        check("tools_push: the indoor flag travels in the wire payload",
+              calls and all("indoor" in e for e in calls[0]["json"]))
         check("tools_push: internal 'type_inferred' annotation is stripped "
               "from the actual wire payload",
               calls and all("type_inferred" not in e for e in calls[0]["json"]))

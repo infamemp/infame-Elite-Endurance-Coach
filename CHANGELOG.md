@@ -4,6 +4,23 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.44 (2026-10-13)
+
+- **Indoor sessions upload as Ride / Run with the indoor box checked.** Trainer and treadmill
+  sessions used to go up as `VirtualRide` / `VirtualRun`, and Intervals.icu then applied the
+  outdoor FTP (a 50-70% step of a 200 W / 175 W indoor athlete came out 100-140 W instead of
+  87-122 W, about 14% too high in zones and load). Now `push_block` sends plain `Ride` / `Run`
+  with `"indoor": true`; outdoor sessions send `"indoor": false`, so a corrected re-push also
+  fixes events uploaded the old way. Rule for every indoor discipline, present or future.
+- **Single source:** `config/decision_thresholds.yaml` marks the indoor disciplines
+  (`disciplines.canonical.<name>.indoor: true`: trainer, treadmill). Informal names resolve
+  through the validator's aliases, so `rodillo` and `caminadora` are indoor too (before, an alias
+  fell to a generic type).
+- **Verified after every upload:** `push_block` reads back the events and reports in
+  `indoor_check` any event whose indoor box Intervals.icu did not keep (also written to the
+  ledger as `upload_indoor_mismatch`).
+- Tests: 217/217 (server), 906/906 (engine).
+
 ## v7.43 (2026-10-12)
 
 - **`replace_session` (new tool):** corrects sessions of a saved week from only the corrected

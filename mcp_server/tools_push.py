@@ -54,14 +54,19 @@ from .tools_validate import _run_validation
 # the ambiguity that bug was about doesn't even reach this table — it's
 # resolved before the CLI ever calls into this file. Kept anyway as an
 # explicit, auditable mapping rather than a guess made once and forgotten.
+# Indoor rule (Oct 2026): an indoor session is NEVER uploaded as VirtualRide /
+# VirtualRun, because Intervals.icu then applies the outdoor FTP. It goes up as
+# Ride / Run with the indoor box checked (`indoor: true` in the payload), which
+# makes Intervals.icu use the Indoor FTP. Which disciplines are indoor is read
+# from config/decision_thresholds.yaml (`disciplines.canonical.<name>.indoor`).
 _DISCIPLINE_TO_TYPE = {
     ("cycling", "road_bike"): "Ride",
     ("cycling", "mtb"): "MountainBikeRide",
     ("cycling", "gravel"): "GravelRide",
-    ("cycling", "trainer"): "VirtualRide",
+    ("cycling", "trainer"): "Ride",         # indoor: sent with indoor=true
     ("running", "road_run"): "Run",
     ("running", "trail_run"): "TrailRun",
-    ("running", "treadmill"): "VirtualRun",
+    ("running", "treadmill"): "Run",        # indoor: sent with indoor=true
     # No confirming fixture either way for track_run, same honest gap the
     # original restore point flagged for "track" generally — mapped to the
     # plain sport type as the least-wrong default, not verified evidence.
@@ -144,16 +149,31 @@ def _description(header: dict, code: str, language: str, include_notes: bool) ->
     return ("\n".join(lines) + "\n\n" + steps) if lines else steps
 
 
-def _activity_type(sport: str, discipline: str) -> tuple[str, bool]:
-    """(type, is_inferred). is_inferred marks the one mapping above that
-    isn't backed by a confirming fixture, so a dry-run payload can say so
-    plainly instead of presenting every entry with equal confidence."""
-    key = (sport, str(discipline or "").lower())
+def _activity_type(sport: str, discipline: str, th: dict | None = None) -> tuple[str, bool, bool]:
+    """(type, is_inferred, indoor). is_inferred marks a mapping that isn't
+    backed by a confirming fixture, so a dry-run payload can say so plainly.
+    The discipline is resolved through the same aliases the validator uses
+    ('rodillo' -> trainer, 'caminadora' -> treadmill), so an informal name
+    still gets the right type AND the indoor box. `indoor` comes from the
+    discipline's `indoor` flag in config/decision_thresholds.yaml."""
+    raw = str(discipline or "").strip().lower()
+    canonical = raw
+    flags: dict = {}
+    if th:
+        try:
+            import validate_block as vb
+            name, _alias, err = vb.resolve_discipline(raw, sport, th)
+            if name and not err:
+                canonical = name
+            flags = (((th.get("disciplines") or {}).get("canonical") or {}).get(canonical)) or {}
+        except Exception:  # noqa: BLE001 — fall back to the raw name
+            flags = {}
+    indoor = bool(flags.get("indoor"))
+    key = (sport, canonical)
     if key in _DISCIPLINE_TO_TYPE:
-        return _DISCIPLINE_TO_TYPE[key], key == ("running", "track_run")
+        return _DISCIPLINE_TO_TYPE[key], key == ("running", "track_run"), indoor
     fallback = "Ride" if sport == "cycling" else "Run"
-    return fallback, True
-
+    return fallback, True, indoor
 
 
 # Fields that annotate an event for the head coach and are never sent.
@@ -226,6 +246,57 @@ def _check_uploaded_loads(athlete_id: str, events: list, resp, fad) -> dict:
                       sessions=[{k: m[k] for k in ("date", "infame_load",
                                                    "intervals_load", "method")}
                                 for m in result["mismatches"]])
+    return result
+
+
+def _check_uploaded_indoor(athlete_id: str, events: list, resp, fad) -> dict:
+    """After a live send, confirm Intervals.icu kept the `indoor` box of each
+    event as sent (v7.44). Without it Intervals.icu applies the outdoor FTP to
+    an indoor session. The bulk response is read first; when it does not carry
+    the field, the events of those dates are read back once. Reports only —
+    never undoes the upload — and never raises: a check that cannot run says
+    why. Events that did not keep the box are listed and written to the ledger."""
+    result = {"checked": 0, "confirmed": 0, "not_confirmed": [], "not_available": []}
+    try:
+        want = {e["external_id"]: bool(e.get("indoor")) for e in events}
+        got: dict = {}
+        try:
+            body = resp.json()
+        except Exception:  # noqa: BLE001 — no JSON body
+            body = None
+        for e in body if isinstance(body, list) else []:
+            if isinstance(e, dict) and e.get("external_id") in want and "indoor" in e:
+                got[e["external_id"]] = bool(e.get("indoor"))
+        missing = [x for x in want if x not in got]
+        if missing:
+            dates = sorted(e["start_date_local"][:10] for e in events
+                           if e["external_id"] in missing)
+            url = f"{fad.BASE_URL}/athlete/{athlete_id}/events"
+            back = fad.SESSION.get(url, params={"oldest": dates[0], "newest": dates[-1]},
+                                   timeout=45)
+            back.raise_for_status()
+            for e in back.json() or []:
+                if isinstance(e, dict) and e.get("external_id") in missing:
+                    got[e["external_id"]] = bool(e.get("indoor"))
+        for e in events:
+            sent, kept = want[e["external_id"]], got.get(e["external_id"])
+            if kept is None:
+                result["not_available"].append(e["external_id"])
+                continue
+            result["checked"] += 1
+            if kept == sent:
+                result["confirmed"] += 1
+            else:
+                result["not_confirmed"].append({
+                    "date": e["start_date_local"][:10], "name": e.get("name"),
+                    "external_id": e["external_id"], "sent_indoor": sent,
+                    "intervals_indoor": kept, "type": e.get("type")})
+    except Exception as exc:  # noqa: BLE001 — the upload already happened
+        result["error"] = f"indoor check could not run: {exc}"
+    if result["not_confirmed"]:
+        ledger_record(athlete_id, "upload_indoor_mismatch",
+                      sessions=[{k: m[k] for k in ("date", "sent_indoor", "intervals_indoor")}
+                                for m in result["not_confirmed"]])
     return result
 
 
@@ -348,7 +419,7 @@ def push_block(
         except Exception as exc:  # noqa: BLE001 — EngineError: unknown methodology
             skipped.append({"reason": f"unknown methodology: {exc}", "header": header})
             continue
-        activity_type, inferred = _activity_type(author.get("sport"), discipline)
+        activity_type, inferred, indoor = _activity_type(author.get("sport"), discipline, th)
         # One external_id per SESSION, not per date: a double day (AM run +
         # PM bike, or a strength session) used to get the same id twice, and
         # upsert=true silently kept only the last one. The first session of
@@ -370,6 +441,9 @@ def push_block(
             "start_date_local": f"{iso}T00:00:00",
             "category": "WORKOUT",
             "type": activity_type,
+            # Always sent, true or false, so a corrected re-push also fixes an
+            # event that was uploaded the other way (v7.44).
+            "indoor": indoor,
             "type_inferred": inferred,
             # v7.35: no accents in anything the athlete's calendar receives.
             "name": _shared.strip_accents(header.get("Focus") or f"{author['name']} session"),
@@ -428,6 +502,7 @@ def push_block(
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)
     resp.raise_for_status()
     load_check = _check_uploaded_loads(athlete_id, events, resp, fad)
+    indoor_check = _check_uploaded_indoor(athlete_id, events, resp, fad)
     # The load of what was uploaded lives here, so #SESSION never has to
     # carry it (v7.42): a figure written by hand in Notes went stale on
     # 2026-10-11 when the week was corrected and re-uploaded.
@@ -447,5 +522,6 @@ def push_block(
         "status_code": resp.status_code,
         **payload,
         "load_check": load_check,
+        "indoor_check": indoor_check,
         "cache_marked_stale": stale,
     }

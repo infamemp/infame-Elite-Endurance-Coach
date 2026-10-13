@@ -93,15 +93,21 @@ prescription_floors:
 # `sport` must match the sport of the session's methodology (config/authors):
 # a running methodology on a cycling discipline is a hard error.
 
+# `indoor: true` marks a discipline ridden or run indoors. Whatever the
+# discipline, an indoor session is uploaded to Intervals.icu as plain
+# Ride / Run with the indoor box checked, NEVER as VirtualRide / VirtualRun:
+# only that way does Intervals.icu apply the athlete's Indoor FTP (and the
+# indoor zones) instead of the outdoor FTP. Any new indoor discipline must
+# carry `indoor: true` here.
 disciplines:
   canonical:
     road_bike: {sport: cycling}
     mtb:       {sport: cycling}
     gravel:    {sport: cycling}
-    trainer:   {sport: cycling}    # indoor, smart trainer
+    trainer:   {sport: cycling, indoor: true}    # indoor, smart trainer
     road_run:  {sport: running}
     trail_run: {sport: running}
-    treadmill: {sport: running}    # indoor
+    treadmill: {sport: running, indoor: true}    # indoor
     track_run: {sport: running}
 
   # Older or informal names still accepted in session headers, so blocks written
