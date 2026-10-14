@@ -4,6 +4,14 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.45 (2026-10-14)
+
+- **Google Drive sync error on `athlete_data.json` fixed.** v7.42 marked the local cache stale by
+  dating the file at the epoch (1970-01-01 UTC, still 1969 in Mexico's time zone), and Google
+  Drive for desktop refuses to upload a file with that date. `mark_cache_stale` now dates it just
+  past the cache window, which is just as stale for the cache and a valid date for Drive. The
+  file already marked is repaired by the next `get_athlete_state` fetch. 1 new MCP test.
+
 ## v7.44 (2026-10-13)
 
 - **Indoor sessions upload as Ride / Run with the indoor box checked.** Trainer and treadmill

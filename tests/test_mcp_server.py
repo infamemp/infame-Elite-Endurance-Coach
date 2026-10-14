@@ -555,6 +555,9 @@ def test_tools_coach():
         r = remove_block(AID, dry_run=False, confirm=True)
         check("remove: the local cache is marked stale so #STATE re-fetches (v7.42)",
               r.get("cache_marked_stale") is True and not common.is_cache_fresh(AID))
+        from datetime import datetime as _dt
+        check("remove: the stale mark keeps a real date — Google Drive refuses 1970 (v7.45)",
+              _dt.fromtimestamp(os.path.getmtime(common.athlete_data_path(AID))).year >= 2020)
         equal("remove: live call deletes exactly the two uploaded sessions, by id",
               [c[2]["json"] for c in fake.writes()], [[{"id": 1}, {"id": 2}]])
         equal("remove: the calendar is re-read and the delete verified",

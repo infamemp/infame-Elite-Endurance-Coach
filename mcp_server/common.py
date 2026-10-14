@@ -111,11 +111,17 @@ def mark_cache_stale(aid: str) -> bool:
     the next get_athlete_state re-fetches by itself instead of serving the
     old copy for up to an hour. A stale copy read right after an upload made
     a week look missing on 2026-10-11, and it was uploaded again (v7.42).
-    Returns whether there was a cache to mark."""
+    Returns whether there was a cache to mark.
+
+    The file is dated just past the cache window, never at the epoch:
+    Google Drive for desktop refuses to upload a file dated 1970 (before
+    1970 in the local time zone west of UTC), and data/ lives in Drive
+    (v7.45)."""
     path = athlete_data_path(aid)
     if not os.path.exists(path):
         return False
-    os.utime(path, (0, 0))
+    old = datetime.now(timezone.utc).timestamp() - (_load_state_cache_minutes() + 60) * 60
+    os.utime(path, (old, old))
     return True
 
 
