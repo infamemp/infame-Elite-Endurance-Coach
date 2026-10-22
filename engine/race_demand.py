@@ -22,11 +22,11 @@ Version: 1.0 (v7.21)
 
 from datetime import date, datetime, timedelta
 
-A_PRIORITIES = ("A+", "A", "A-")
 NUMERIC_FIELDS = ("day", "distance_km", "climb_m", "expected_hours")
 
 
 from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
+from shared import is_a_level  # noqa: E402 — one A-level rule (v7.48)
 
 def _num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
@@ -43,7 +43,7 @@ def next_demand_goal(goals, today=None):
         d = _as_date(g.get("date"))
         if d is None or d < today:
             continue
-        is_a = str(g.get("priority") or "").upper() in A_PRIORITIES
+        is_a = is_a_level(g.get("priority"))
         found.append((0 if is_a else 1, d, g))
     if not found:
         return None, None

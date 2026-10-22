@@ -4,6 +4,33 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.48 (2026-10-22)
+
+Cleanup: every key in `config/decision_thresholds.yaml` is now read by code, so changing a
+value there always changes what the system does. Nothing the system does changed.
+
+- **Removed sections no code read**, whose rules live in the prompt: `class_resolution`
+  (its precedence is the comment above it), `metric_defaults` (it contradicted the prompt,
+  which takes the default metric from each zone table's `Default Metric`),
+  `discouraged_metrics`, `no_metric_available` and `state_block` (Metric Map steps 4 and 6,
+  and the 7-day rule; its `rebuild_command` no longer existed).
+- **Unread keys inside live sections** became comments next to the real settings:
+  `ramps.forbidden_disciplines` (the complement of `allowed_disciplines`) and
+  `no_magnitude_limit`; four `tss_rules` that only described what the code does; the
+  descriptive `taper` keys (`optimal_duration_days` duplicated `a_race_taper_days`);
+  `state_resolution.operational_states`.
+- **Removed dead analysis**: `longitudinal.pace_anchors_secs`, `anchor_tolerance_pct` and
+  `recent_peak_threshold` with the unused `_pace_by_duration()`, and the 190-line
+  `running_ftp_protocol` (no code read it; the 3 + 12 minute CP test it described is
+  already in the running anchor protocols that reach `#STATE`, and in Palladino's KB).
+- **One A-level rule.** `A+`, `A`, `A-` was written by hand in three modules (state, core
+  sessions, race demand) while the config map that defines it was unread. Now
+  `shared.is_a_level()` reads `race_priorities.intervals_icu`.
+- The file's header no longer claims a schema file that does not exist;
+  `config/tss_classes.yaml` marks its two reference-only sections.
+- Tests check behaviour instead of the removed keys, and guard against their return.
+  Tests: 946/946 (engine), 228/228 (server).
+
 ## v7.47 (2026-10-22)
 
 - **The architecture of a session is the one the coach declared.** Reading the shape back

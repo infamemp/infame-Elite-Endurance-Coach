@@ -158,9 +158,8 @@ def unit_tests():
     # ── Ramp rules ────────────────────────────────────────────────
     r = th["ramps"]
     check("ramps: trainer allowed", "trainer" in r["allowed_disciplines"])
-    check("ramps: road bike forbidden", "road_bike" in r["forbidden_disciplines"])
-    check("ramps: road run forbidden", "road_run" in r["forbidden_disciplines"])
-    check("ramps: trail run forbidden", "trail_run" in r["forbidden_disciplines"])
+    for _no_ramp in ("road_bike", "road_run", "trail_run", "treadmill"):
+        check(f"ramps: {_no_ramp} is not allowed a ramp", _no_ramp not in r["allowed_disciplines"])
 
     # ── Discipline vocabulary ─────────────────────────────────────
     # One canonical name per discipline; old names still resolve, "road"
@@ -170,9 +169,8 @@ def unit_tests():
     for disc in ("road_bike", "mtb", "gravel", "trainer",
                  "road_run", "trail_run", "treadmill", "track_run"):
         check(f"disciplines: {disc} is canonical", disc in canon)
-    for listed in (r["allowed_disciplines"] + r["forbidden_disciplines"]
-                   + list(r.get("override_eligible") or {})
-                   + list(th["metric_defaults"])):
+    for listed in (r["allowed_disciplines"]
+                   + list(r.get("override_eligible") or {})):
         check(f"disciplines: '{listed}' in config uses the canonical vocabulary",
               listed in canon)
     equal("disciplines: 'road' + cycling -> road_bike",
@@ -330,10 +328,9 @@ def unit_tests():
         equal("hardening: a '(partial)' TSS re-validates without divergence",
               again.returncode, 0)
     check("ramps: only the trainer can follow a continuous ramp",
-          r["allowed_disciplines"] == ["trainer"]
-          and "treadmill" in r["forbidden_disciplines"])
+          r["allowed_disciplines"] == ["trainer"])
     check("ramps: no magnitude cap is imposed",
-          "no_magnitude_limit" in r,
+          not any(k for k in r if "max" in k or "limit" in k or "cap" in k),
           "a cap would prohibit a progressive ramp test")
 
     # ── Anchored authors are converted before matching ────────────
@@ -1397,22 +1394,34 @@ def unit_tests():
           not any(x in prot[k].lower()
                   for k in prot for x in (" 150m ", " 400m ", " 1200m ", " 2400m "))
           , "protocols must be duration-based")
-    cp = th["longitudinal"]["testing"]["running_ftp_protocol"]
-    equal("cp test: short leg is 3 minutes", cp["components"]["short_minutes"], 3)
-    equal("cp test: long leg is 12 minutes", cp["components"]["long_minutes"], 12)
-    equal("cp test: short runs before long", cp["order"], "short_before_long")
-    equal("cp test: 30 minutes between components",
-          cp["components"]["recovery_between_minutes"], 30)
+    check("cp test: the 3-minute short leg runs before the long leg",
+          "3-minute" in prot["1000"] and "before the long leg" in prot["1000"])
+    check("cp test: the 12-minute long leg, 30 minutes after the short one",
+          "12-minute" in prot["3000"] and "30 minutes" in prot["3000"])
 
 
     # ── Taper is evidence-based ───────────────────────────────────
     tp = th["taper"]
-    equal("taper: 2 weeks per Bosquet 2007", tp["optimal_duration_days"], 14)
+    equal("taper: 2 weeks per Bosquet 2007", tp["a_race_taper_days"], 14)
     equal("taper: volume cut 21-60% (cycling/running, Bosquet Table 2)",
           (tp["volume_reduction_pct"]["min"], tp["volume_reduction_pct"]["max"]), (21, 60))
-    equal("taper: intensity is maintained", tp["maintain_intensity"], True)
-    equal("taper: TSB targets are labelled as heuristic, not evidence",
-          tp["target_tsb_source"], "coach_heuristic")
+    _tp_txt = open(os.path.join(ROOT, "config", "decision_thresholds.yaml"), encoding="utf-8").read()
+    check("taper: intensity is maintained (Bosquet)", "Intensity is maintained" in _tp_txt)
+    check("taper: TSB targets are labelled as heuristic, not evidence",
+          "HEURISTIC, not from Bosquet" in _tp_txt)
+
+    # v7.48: every key in decision_thresholds.yaml is read by code. The ones
+    # that only described a rule were removed; they must not come back.
+    for _gone in ("class_resolution", "metric_defaults", "discouraged_metrics",
+                  "no_metric_available", "state_block"):
+        check(f"config v7.48: no unread section '{_gone}'", _gone not in th)
+    for _sec, _gone in (("ramps", "forbidden_disciplines"), ("tss_rules", "straddling_range_rule"),
+                        ("taper", "optimal_duration_days"), ("longitudinal", "pace_anchors_secs")):
+        check(f"config v7.48: no unread key {_sec}.{_gone}", _gone not in th[_sec])
+    import shared as _sh
+    for _p, _want in (("A+", True), ("A", True), ("a-", True), ("B", False), ("C", False),
+                      ("D", False), (None, False)):
+        equal(f"is_a_level v7.48: {_p!r}", _sh.is_a_level(_p), _want)
 
     # ── Declared profile reaches profile.md ───────────────────────
     # config/athletes/<id>.yaml must be embedded in profile.md, because

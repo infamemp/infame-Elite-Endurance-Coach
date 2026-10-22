@@ -48,7 +48,7 @@ import load_metrics  # noqa: E402
 import durability_watts  # noqa: E402
 import pd_diagnosis  # noqa: E402
 import shared as _shared  # noqa: E402 — config, errors (v7.33)
-from shared import EngineError  # noqa: E402
+from shared import EngineError, is_a_level  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "config")
@@ -575,7 +575,7 @@ def taper_check(projection, goals, thresholds, pmc=None):
 
     a_goals = []
     for g in goals or []:
-        if str(g.get("priority") or "").upper() not in ("A+", "A", "A-"):
+        if not is_a_level(g.get("priority")):
             continue
         raw_date = g.get("date")
         if not raw_date:

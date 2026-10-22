@@ -1,9 +1,9 @@
-# Decision Thresholds — Infame Elite Endurance Coach v6
-# Conforms to config/schema/thresholds.schema.json
+# Decision Thresholds — Infame Elite Endurance Coach v7
 #
 # Cross-cutting rules that are NOT properties of any single author.
-# Nothing here may be duplicated in the prompt, the engine, or the validator —
-# all three read from this file. Zero magic numbers outside config/.
+# Every key here is read by code: change it here and the engine, the validator
+# and the server follow. Rules that need judgement live in the prompt, not here
+# (v7.48: keys no code read were removed or turned into comments).
 #
 # SECTION INDEX (v7.33) — search for the name followed by a colon.
 #   Writing a workout
@@ -13,19 +13,14 @@
 #     ramps                  where a ramp target is allowed ...... validator
 #     metric_equipment       metric needs which device ........... validator
 #     tss_rules              TSS per session and per class ....... validator
-#     class_resolution       zone first, cutpoints second ........ rule as written (no code reads it)
-#     metric_defaults        default metric per discipline ....... rule as written (tests check the names)
-#     discouraged_metrics    pace on trail ....................... rule as written
-#     no_metric_available    fall back to RPE .................... rule as written
 #   Athlete state (#STATE)
 #     state_resolution       TSB bands, HRV, ACWR ................ build_state
-#     state_block            how old a #STATE may be ............. rule as written
 #     longitudinal           curves, durability, repeatability ... build_state, longitudinal
 #     heads_up               alerts and adherence ................ build_state, execution, roster
 #     load_monotony          Foster monotony and strain .......... load_metrics, validator
 #     neuromuscular_density  days with work above FTP ............ build_state, load_metrics
 #   Races and the week as a whole
-#     race_priorities        A+ … D and their Intervals.icu map .. profile
+#     race_priorities        A+ … D and their Intervals.icu map .. profile, state, core sessions, race demand
 #     taper                  taper length and target TSB ......... build_state, plan checks, roster, validator
 #     plan_checks            spacing, ramp, recovery, easy share . plan checks, validator
 #   Server
@@ -149,11 +144,9 @@ race_priorities:
 ramps:
   allowed_disciplines: [trainer]
   required_metrics: [power]
-  forbidden_disciplines: [road_bike, mtb, gravel, road_run, trail_run, treadmill, track_run]
-  no_magnitude_limit: >
-    No cap is placed on ramp duration or delta. A progressive ramp test is a
-    legitimate protocol, and any numeric ceiling would prohibit it. Magnitude is
-    the coach's judgement.
+  # Every other discipline is forbidden. No cap is placed on ramp duration or
+  # delta: a progressive ramp test is a legitimate protocol, and any numeric
+  # ceiling would prohibit it. Magnitude is the coach's judgement.
 
 # ══════════════════════════════════════════════════════════════════
 # METRIC EQUIPMENT — which device a metric depends on
@@ -209,16 +202,13 @@ tss_rules:
   upload_check_tolerance_tss: 2     # push_block: report a session whose load
                                     # Intervals.icu computed differs by more
   range_cost_point: midpoint        # midpoint | low | high — how a target range is costed
-  ramp_cost_point: midpoint         # if_squared: a ramp is costed at its midpoint; np_30s and hrss follow it second by second
   repeats_multiply: true            # a repeat block multiplies its steps by the count
-  count_recovery_intervals: true    # recovery steps inside repeats are costed, not skipped
-  straddling_range_rule: midpoint_class
-  # When a range spans two physiological classes, the class containing the
-  # midpoint governs the whole step. No blending.
-  distance_steps: unverifiable
-  # Distance-based steps (2km, 500mtr) have no duration until the athlete's pace
-  # is known. They are excluded from the computed total and reported explicitly.
   rounding: nearest_integer
+  # Fixed in code, not settings: a ramp is costed at its midpoint under
+  # if_squared (np_30s and hrss follow it second by second); recovery steps
+  # inside repeats are costed; a range spanning two classes takes the class of
+  # its midpoint; distance steps (2km, 500mtr) have no duration until the pace
+  # is known, so they are left out of the total and reported (CHK-TSS-PARTIAL).
   divergence_tolerance_pct: 10
   # Maximum permitted gap between a declared and a recomputed session TSS.
   duration_divergence_tolerance_minutes: 2
@@ -243,12 +233,6 @@ tss_rules:
 #      crosswalk-estimated columns).
 #   2. The derived cutpoints apply only when no zone contains the target.
 
-class_resolution:
-  order: [author_zone, cutpoints]
-  note: >
-    Resolve an intensity target against the active methodology's zones first.
-    Fall back to classification_cutpoints only when no declared zone contains it.
-
 # ══════════════════════════════════════════════════════════════════
 # ATHLETE STATE RESOLUTION
 # ══════════════════════════════════════════════════════════════════
@@ -272,7 +256,8 @@ state_resolution:
     normal: {min: 0.90, max: 1.10}
     elevated: {min: 1.10}
 
-  operational_states: [recovery_priority, load_accepting]
+  # The two operational states build_state resolves from these bands:
+  # recovery_priority and load_accepting.
 
 # ══════════════════════════════════════════════════════════════════
 # TAPER GOVERNANCE
@@ -284,9 +269,7 @@ taper:
   #   Performance: A Meta-Analysis. Med Sci Sports Exerc. 2007;39(8):1358-1365.
   #   27 studies of competitive athletes.
 
-  optimal_duration_days: 14
-  duration_range_days: {min: 8, max: 14}
-  # 8-14 d carries the largest effect (0.59). Shorter and longer tapers still
+  # Duration: 8-14 d carries the largest effect (0.59). Shorter and longer tapers still
   # improve performance but with wider confidence intervals — individual
   # variation in optimal duration is well documented.
 
@@ -308,16 +291,13 @@ taper:
   # Overall, step taper's point estimate is higher (0.42) but not significant
   # (N = 98); in cycling the authors call step vs progressive unresolved.
 
-  maintain_intensity: true
-  # Training load must NOT be reduced at the expense of intensity. Intensity
+  # Intensity is maintained: training load must NOT be reduced at the expense of intensity. Intensity
   # maintains the adaptations the taper is meant to express; studies that cut it
   # showed no benefit.
 
   min_frequency_pct_of_pretaper: 80
   # Reducing session frequency produced no significant improvement. Cut volume
   # through session duration, not by removing sessions.
-
-  reduce_volume_via: session_duration
 
   # ── Scheduling ────────────────────────────────────────────────
   a_race_taper_days: 14
@@ -335,56 +315,6 @@ taper:
     stage_race: {min: 5, max: 15}   # taper targets stage 1 only; later stages are
                                     # about durability and glycogen management
     default: {min: 5, max: 15}
-  target_tsb_source: coach_heuristic
-
-# ══════════════════════════════════════════════════════════════════
-# METRIC RESOLUTION
-# ══════════════════════════════════════════════════════════════════
-# Defaults per discipline. An athlete-level override in
-# config/athletes/<id>.yaml under metric_overrides always wins.
-
-metric_defaults:
-  road_bike: power             # falls back to lthr when no power meter
-  mtb: power
-  gravel: power
-  trainer: power
-  road_run: pace
-  trail_run: lthr
-  treadmill: pace
-  track_run: pace
-  # Trail defaults to LTHR, or run power when available. Pace is DISCOURAGED,
-  # not prohibited: on variable gradient and surface, pace stops representing
-  # effort — the same effort yields paces minutes per km apart.
-
-discouraged_metrics:
-  trail_run:
-    metric: pace
-    reason: >
-      Gradient and surface variability break the relationship between pace and
-      effort on trail terrain.
-    permitted_when: explicitly_chosen
-    requires: >
-      Warn the athlete why it is problematic, confirm the choice is deliberate,
-      and record it in metric_overrides.trail_run in the athlete profile so it is not
-      re-litigated each block.
-
-no_metric_available:
-  fallback: rpe
-  note: >
-    A trail athlete with neither a power meter nor a heart rate monitor has no
-    preferable metric. Prescribe by RPE with descriptive cue text, and tell the
-    athlete what a heart rate monitor would add. Never silently default to pace.
-
-# ══════════════════════════════════════════════════════════════════
-# STATE FRESHNESS
-# ══════════════════════════════════════════════════════════════════
-
-state_block:
-  max_age_days: 7
-  # Beyond this, the #STATE block is stale: flag it and ask for a rebuild.
-  # A stale state presented as current is more damaging than no state at all.
-  absent_behavior: stop_and_wait
-  rebuild_command: python engine/build_state.py --athlete <id>
 
 # ══════════════════════════════════════════════════════════════════
 # LONGITUDINAL ANALYSIS
@@ -403,18 +333,6 @@ longitudinal:
 
   # Anchor distances, in metres, for the running pace curve.
   pace_anchors_metres: [400, 1000, 3000, 5000, 10000, 21097]
-
-  # Duration anchors for running, in seconds. The pace curve is indexed by
-  # distance, so these are read by inverting it: find the distance whose
-  # elapsed time is closest to the anchor. Answers "how far in 60 minutes".
-  pace_anchors_secs: [3600, 5400, 7200]
-
-  # Tolerance for matching an anchor to the nearest available curve point.
-  anchor_tolerance_pct: 5
-
-  # A recent window value within this fraction of the long-window value means
-  # the athlete's best effort at that duration is current, not historical.
-  recent_peak_threshold: 0.98
 
   # Change bands for window-over-window comparison, in percent.
   # Running is stricter than cycling: running power and pace vary less between
@@ -535,198 +453,6 @@ longitudinal:
         input — the modified Riegel model works best in this duration range.
       "21097": >
         A maximal effort of 80-100 minutes, or a half marathon race.
-
-    # ── Running CP / FTP testing ─────────────────────────────────
-    # Steve Palladino, "Protocol for CP Testing" (2020). This supersedes the
-    # 3+9 pairing in his earlier primer: the long leg must be at least 10
-    # minutes to control overestimation, and 12 is the recommended minimum.
-    running_ftp_protocol:
-      preferred: two_parameter_critical_power
-
-      components:
-        short_minutes: 3
-        long_minutes: 12
-        long_options_minutes: [12, 15, 20]
-        long_minimum_minutes: 10
-        recovery_between_minutes: 30
-      order: short_before_long
-      order_rationale: >
-        A long-before-short protocol impairs the short component, and the model
-        then OVERESTIMATES CP. A slightly underestimated CP is far preferable to
-        an overestimated one, so the short leg always runs first.
-      long_leg_note: >
-        12 minutes is the recommended minimum. Stronger, more experienced runners
-        with good fatigue resistance can use 15 or 20 minutes. A long leg under
-        10 minutes raises the risk of overestimation.
-
-      execution:
-        - Warm up 15 minutes easy with 4 x ~50m accelerations
-        - Stop and let breathing recover fully
-        - 3 minutes at maximal effort, paced as evenly as possible
-        - Stop and let breathing recover fully
-        - Easy running 5-10 minutes
-        - Recover fully — at least 30 minutes between the two test segments
-        - 12 minutes at maximal effort, paced as evenly as possible
-        - Stop and let breathing recover fully
-        - Easy cool down for the balance of the planned session
-      execution_notes: >
-        Turn auto-lap OFF and press the manual lap button at the start and end of
-        each test component. Track, path or road are all acceptable as long as the
-        effort is uninterrupted. Perfectly even pacing is not essential — a
-        maximal effort is.
-
-      pacing_method: >
-        Start each component at the modelled power for that duration, or at the
-        average power from the previous test. Hold it for the first two thirds to
-        three quarters, then ramp to maximum over the final quarter to third.
-        Empty the tank by the end of each component.
-
-      venue:
-        prefer: loop_or_track
-        avoid: >
-          Routes where one test meets a headwind and the other a tailwind — the
-          air-power mismatch can underestimate RWC and overestimate CP. Avoid
-          solving it with 180-degree turns, which lower total air power. A
-          sheltered straight-line route run in the same direction for both
-          components also works.
-        consistency: >
-          Use the same protocol, venue, surface, footwear and conditions each
-          time. A CP from sea level is not valid at altitude, and one from 18C is
-          not valid at 27C, without conversion.
-
-      taper: >
-        A CP test needs some taper — not a full one, but it must not be dropped
-        into a hard or long training week. Keep the lead-in similar each time.
-
-      validity_weeks: 6
-      validity_range_weeks: [4, 8]
-
-      retest_triggers:
-        - 10-21 days before an A race, to confirm CP for race power planning
-        - Training conditions changed for more than a week or two — heat, humidity, altitude
-        - No sufficiently maximal efforts across a range of durations to support a modelled estimate
-        - No recent racing to feed or validate the model
-        - Training targets routinely feel too easy, or are being exceeded
-        - After injury, illness, or a long lay-off
-        - After a significant change to the power meter weight setting
-        - After changing run power hardware
-        - When training both outdoors and on a treadmill
-        - When individualising high-intensity interval targets from CP and RWC
-
-      overestimation_causes:
-        - Long component shorter than 10 minutes
-        - Underperforming the short component relative to the long one
-        - Running the long component before the short one
-
-      rwc_sanity_check: >
-        Check the RWC (W') estimate alongside CP. A very low RWC suggests CP is
-        overestimated; a very high RWC suggests it is underestimated. Treat it as
-        a prompt to look closer, not as proof of error.
-
-      weight_change_note: >
-        A CP in raw watts is specific to the weight setting on the pod at test
-        time. Compare W/kg across test dates, or keep the weight setting fixed.
-
-      race_planning_tte_minutes: 50
-      race_planning_note: >
-        When applying CP to race target power via the Riegel formula, use 50
-        minutes as time to exhaustion at CP. Few non-elite runners hold CP for
-        anywhere near 60 minutes.
-
-      # ── Model selection ──────────────────────────────────────
-      # The number of data points decides which model is valid.
-      model_selection:
-        two_points: >
-          Linear model — the SuperPower Calculator or the Final Surge CP
-          calculator. Correct and sufficient for a 3+12 test.
-        more_than_two_points: >
-          Do NOT use the two-point linear model. Use a linear 1/time model or a
-          multi-parameter power-duration model (WKO, TrainingPeaks, Stryd,
-          GoldenCheetah). With more than two points these produce a more valid
-          estimate.
-        note: >
-          The model searches for leverage points in the data. If the inputs are
-          not maximal efforts, the CP and RWC estimates are wrong — no model
-          repairs a submaximal input.
-
-      # ── Same-day testing ─────────────────────────────────────
-      same_day_preferred: true
-      same_day_rationale: >
-        Running both components on the same day — or within a couple of days —
-        fixes the environmental conditions for the estimate. A multi-parameter
-        model draws on any effort from the last 90 days, so its inputs carry
-        unknown and mixed temperature and humidity. A same-day 3+12 gives CP,
-        RWC and a known baseline condition together.
-
-      # ── What the test yields beyond CP ───────────────────────
-      derived_outputs:
-        - name: Reserve Work Capacity (RWC / W')
-          use: >
-            Comes out of the same model as CP. Feed CP and RWC together into an
-            individualised interval power target calculator to get power ranges
-            per interval type, rather than generic percentages.
-        - name: Power at VO2max
-          use: >
-            The 5-minute power estimated from CP and RWC is a surrogate for power
-            at VO2max, typically within 2% of a graded exercise test. It sets the
-            ceiling of the maximal aerobic power zone.
-          caveat: >
-            A lab graded test on a treadmill carries no air-power component, so
-            its value is not directly comparable to outdoor power without
-            conversion.
-        - name: VO2max estimate
-          use: >
-            Enter the distance covered in the 12-minute component into a Cooper
-            test calculator for an approximate VO2max.
-        - name: Running Effectiveness sample
-          use: >
-            When the 12-minute component is run on a track or flat surface, it
-            provides a useful RE sample for that intensity — applicable to 5k
-            pacing, where RE will be close to the same value.
-
-      # ── Quality control on the estimate ──────────────────────
-      quality_control:
-        cross_check: >
-          Run the 12-minute component alone through a single-effort calculator
-          for efforts under 50 minutes. It returns a CP range. If the 3+12
-          estimate falls dramatically outside that range, treat the test as
-          suspect. Athletes with high RWC tend toward the upper end of the range,
-          low RWC toward the lower end.
-        air_power_check: >
-          Compare air power between components. The 3-minute test runs faster, so
-          its air power should be equal to or about 1% HIGHER than the 12-minute
-          test. It should NEVER be lower. Lower air power on the short component
-          means a wind or direction problem, and it can underestimate RWC while
-          overestimating CP.
-        environmental_baseline: >
-          Record temperature and humidity for both components. Heat and humidity
-          affect longer durations far more than short ones — an 80F 400m is
-          barely touched while an 80F 10k is heavily affected. When the two
-          components differ, use the 12-minute component's conditions as the
-          baseline for the estimate.
-
-      record_each_test:
-        - Date, location and route
-        - Average power and duration for each component
-        - CP and RWC estimates
-        - Power meter weight setting and pod type
-        - Temperature, humidity, altitude
-        - TSB or RSB at the time of the test
-        - Shoes used and pod placement
-
-      single_parameter_fallback:
-        model: modified_riegel
-        formula: estimated_FTP = known_power * (predicted_duration / known_duration) ^ exponent
-        predicted_duration_minutes: 50
-        bracket_with_minutes: 45
-        exponent_default: -0.06
-        exponent_range: [-0.08, -0.05]
-        exponent_note: >
-          -0.07 for most runners, -0.06 for those with very good fatigue
-          resistance, -0.05 for higher-calibre runners, up to -0.08 for lower
-          aerobic fitness with high anaerobic capacity. The correct exponent is
-          individual and shifts across a training cycle.
-        requires: A maximal effort, ideally a race between 5k and half marathon.
 
   # W' balance depletion above 100% is not physically possible. When it appears,
   # the athlete's configured W' is too low and every anaerobic reading derived

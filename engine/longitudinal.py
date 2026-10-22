@@ -62,37 +62,6 @@ def _pace_points(curves, window):
     return (pts or None), entry.get("window")
 
 
-def _pace_by_duration(curves, window, anchors_secs, tolerance_pct):
-    """Invert the pace curve: for each duration anchor, find how far the athlete
-    covered in about that time. The curve is indexed by distance and returns
-    elapsed seconds, so this answers 'how far in 60 minutes'."""
-    entry = (curves.get("pace") or {}).get(window)
-    if not entry:
-        return None
-    points = entry.get("points") or {}
-    out = {}
-    for want in anchors_secs:
-        best_key, best_gap = None, None
-        for k, v in points.items():
-            secs = v.get("seconds")
-            if not secs:
-                continue
-            gap = abs(secs - want)
-            if best_gap is None or gap < best_gap:
-                best_key, best_gap = k, gap
-        if best_key is None:
-            continue
-        got = points[best_key]
-        if best_gap > want * (tolerance_pct / 100.0):
-            continue
-        out[str(want)] = {
-            "metres": got.get("metres"),
-            "seconds": got.get("seconds"),
-            "speed_ms": got.get("speed_ms"),
-        }
-    return out or None
-
-
 def curve_progression(curves, sport, cfg):
     """Curve movement across rolling windows.
 

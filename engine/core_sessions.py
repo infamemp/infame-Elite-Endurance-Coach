@@ -34,7 +34,6 @@ except ImportError:  # pragma: no cover — every entry point already requires i
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(ROOT, "config", "core_sessions.yaml")
-A_PRIORITIES = ("A+", "A", "A-")
 
 
 def load_config(path=CONFIG_PATH):
@@ -49,6 +48,7 @@ def load_config(path=CONFIG_PATH):
 
 
 from shared import as_date as _as_date  # noqa: E402 — shared parser (v7.33)
+from shared import is_a_level  # noqa: E402 — one A-level rule (v7.48)
 
 def goal_discipline(goal):
     """The goal's discipline: `discipline`, else the first race day's."""
@@ -68,7 +68,7 @@ def next_a_goal(goals, today=None):
     for g in goals or []:
         if not isinstance(g, dict):
             continue
-        if str(g.get("priority") or "").upper() not in A_PRIORITIES:
+        if not is_a_level(g.get("priority")):
             continue
         d = _as_date(g.get("date"))
         if d and d >= today:

@@ -13,6 +13,7 @@ them under their old local names, so nothing else changed.
   athlete_out_dir(...)  the athlete's folder under out/, found by id
   read_config(name)     one file of config/, parsed once (re-read if it changes)
   thresholds()          decision_thresholds.yaml with the derived class cutpoints
+  is_a_level(priority)  True for a goal priority Intervals.icu stores as A (A+, A, A-)
   strip_accents(text)   the vowel accents removed (á é í ó ú ü); ñ ¿ ¡ stay (v7.39)
   EngineError           what the engine raises instead of ending the process
 """
@@ -81,6 +82,16 @@ def read_config(name, required=True):
             hit = (stamp, yaml.safe_load(f) or {})
         _CONFIG_CACHE[path] = hit
     return copy.deepcopy(hit[1])
+
+
+def is_a_level(priority):
+    """True when a goal's priority is an A-level event: one that
+    race_priorities.intervals_icu maps to Intervals.icu's A (A+, A and A-).
+    One rule for the state, the core sessions and the race demand (v7.48;
+    before, each carried its own copy of the list)."""
+    mapping = (read_config("decision_thresholds.yaml").get("race_priorities") or {}) \
+        .get("intervals_icu") or {}
+    return mapping.get(str(priority or "").strip().upper()) == "A"
 
 
 def thresholds():

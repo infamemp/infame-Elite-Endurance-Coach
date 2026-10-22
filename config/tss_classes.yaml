@@ -21,6 +21,9 @@
 # the standard CR-10 reference used when an author publishes none, and to flag
 # an author whose own RPE disagrees strongly with the class.
 
+# Reference definitions of the four domains, for people reading this file:
+# no code reads this section (a class's domain is the `domain` of its entry
+# under `classes`).
 domains:
   moderate:
     label: Moderate
@@ -212,7 +215,8 @@ bands:
     anaerobic:       {min: 115,  max: 150}
     neuromuscular:   {min: 150,  max: null}
 
-# Universal anchor tying the metrics together at threshold.
+# Universal anchor tying the metrics together at threshold. Reference for
+# people reading this file; the conversion itself is config/crosswalk.yaml.
 universal_anchor:
   statement: >
     100% FTP (power) = 100% LTHR (heart rate) = 100% threshold pace
