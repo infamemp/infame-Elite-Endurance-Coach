@@ -520,6 +520,11 @@ def fetch_recent_sessions(aid, days=RECENT_SESSIONS_DAYS):
             "category": e.get("category"),
             "type": e.get("type"),
             "description": e.get("description") or "",
+            # v7.47: the architecture and class declared on the card travel
+            # as tags (arch:, class:, method:); indoor tells the trainer from
+            # an outdoor ride for the cross-week monotony check.
+            "tags": [t for t in (e.get("tags") or []) if isinstance(t, str)],
+            "indoor": bool(e.get("indoor")),
             "planned_load": e.get("icu_training_load") or e.get("training_load"),
             "planned_time": e.get("moving_time"),
         })

@@ -837,7 +837,14 @@ def test_tools_push():
     good = os.path.join(ROOT, "tests", "blocks", "good_trainer_coggan.md")
     with tempfile.TemporaryDirectory() as tmp:
         copy = os.path.join(tmp, "block.md")
-        shutil.copy2(good, copy)
+        # v7.47: the tags carry what the card declares in [Zone] and
+        # [Architecture], so the copy declares both.
+        with open(good, encoding="utf-8") as f:
+            _declared = f.read().replace(
+                "[Focus]: VO2 Max\n",
+                "[Focus]: VO2 Max\n[Zone]: VO2max · Coggan L5\n[Architecture]: classic_intervals\n", 1)
+        with open(copy, "w", encoding="utf-8") as f:
+            f.write(_declared)
 
         r = push_block(AID, file_path=copy)
         equal("tools_push: default call (no args) never sends", r.get("sent"), False)
@@ -1002,6 +1009,16 @@ def test_tools_push():
         check("tags: method, class, architecture and week are tagged (v7.46)",
               {"method:coggan", "class:vo2max", "arch:classic_intervals", "week:03"} <= set(_tags),
               _tags)
+        # v7.47: a value the card does not declare is never guessed into a tag.
+        _bare = (push_block(AID, file_path=good).get("events") or [{}])[0].get("tags") or []
+        check("tags: no [Zone] and no [Architecture] -> no class: and no arch: tag (v7.47)",
+              not any(t.startswith(("class:", "arch:")) for t in _bare), _bare)
+        with open(os.path.join(tmp, "custom.md"), "w", encoding="utf-8") as f:
+            f.write(_declared.replace("[Architecture]: classic_intervals",
+                                      "[Architecture]: custom: 4 x 3 min con salida explosiva", 1))
+        _cus = (push_block(AID, file_path=os.path.join(tmp, "custom.md")).get("events")
+                or [{}])[0].get("tags") or []
+        check("tags: a custom: shape is tagged arch:custom (v7.47)", "arch:custom" in _cus, _cus)
 
         original_post = requests.Session.post
         original_get = requests.Session.get

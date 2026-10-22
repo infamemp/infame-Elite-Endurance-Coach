@@ -260,6 +260,7 @@ HEADER_LABEL_TRANSLATIONS = {
     "porque": "Why",
     "fuente": "Source",
     "fuentes": "Source",
+    "arquitectura": "Architecture",
 }
 HEADER_LABEL_RE = re.compile(r"\[([^\[\]\n]+)\]")
 
@@ -767,6 +768,64 @@ def session_monotony_profile(steps, author, th, declared=None):
             "load_class": purpose["class"],
             "touches": touches_above(purpose["secs"], session_class),
             "fingerprint": tuple(fingerprint), "dose": dose}
+
+
+# Intervals.icu event type -> the discipline the exemption rule needs. Indoor
+# rides and runs are the trainer and the treadmill (push_block uploads them
+# as Ride / Run with the indoor box checked, v7.44).
+_EVENT_DISCIPLINE = {"Ride": "road_bike", "MountainBikeRide": "mtb", "GravelRide": "gravel",
+                     "VirtualRide": "trainer", "Run": "road_run", "TrailRun": "trail_run",
+                     "VirtualRun": "treadmill"}
+
+
+def mono_history(athlete_id, before, th):
+    """CHK-MONO reference points from the sessions already uploaded (v7.47):
+    {(sport, class): {fingerprint, dose, label}} for the latest session of each
+    class dated before `before`, read from data/<id>/athlete_data.json. Only
+    sessions this system uploaded count, since their tags name the methodology
+    (method:) and the declared class (class:) the profile needs. {} when
+    nothing is fetched. Since v7.0 a file is one week, so without this the
+    check never saw the week before."""
+    if not athlete_id or not before:
+        return {}
+    path = os.path.join(ROOT, "data", str(athlete_id), "athlete_data.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            recent = json.load(f).get("recent_sessions") or []
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for ev in sorted(recent, key=lambda e: e.get("date") or ""):
+        try:
+            when = date.fromisoformat(str(ev.get("date") or "")[:10])
+        except ValueError:
+            continue
+        if when >= before or ev.get("category") != "WORKOUT":
+            continue
+        tags = [str(t).lower() for t in ev.get("tags") or []]
+        method = next((t[7:] for t in tags if t.startswith("method:")), None)
+        declared = next((t[6:] for t in tags if t.startswith("class:")), None)
+        if not method:
+            continue
+        try:
+            author, _th, _tssc = load_config(method)
+        except Exception:  # noqa: BLE001 — an unknown methodology is skipped
+            continue
+        steps, _ = parse_block(ev.get("description") or "")
+        prof = session_monotony_profile(steps, author, th, declared)
+        if not prof or CLASS_RANK[prof["class"]] < CLASS_RANK["tempo"]:
+            continue
+        disc = _EVENT_DISCIPLINE.get(ev.get("type") or "")
+        if ev.get("indoor") and disc == "road_bike":
+            disc = "trainer"
+        elif ev.get("indoor") and disc == "road_run":
+            disc = "treadmill"
+        if outdoor_bike_mtb_exempt(disc, prof["class"]):
+            continue
+        out[(author["sport"], prof["class"])] = {
+            "fingerprint": prof["fingerprint"], "dose": prof["dose"],
+            "label": f"{when.strftime('%d-%m-%Y')} · {ev.get('name') or 'uploaded session'}"}
+    return out
 
 
 def resolve_discipline(raw, sport, th):
@@ -1497,18 +1556,55 @@ def _architecture_module():
     return architecture
 
 
-def classify_for_core(code, sport, th):
-    """{architecture, class, sequence, touches} of one session, or None."""
+def classify_for_core(code, sport, th, header=None):
+    """{architecture, class, sequence, touches} of one session, or None.
+
+    The architecture declared in the card's [Architecture] and the class in
+    [Zone] win over the reading of the steps (v7.47), exactly as they do for
+    the sessions already uploaded (architecture.summarize_recent)."""
+    arch_mod = _architecture_module()
     try:
-        r = _architecture_module().classify_session(
+        r = arch_mod.classify_session(
             code, event_type={"cycling": "Ride", "running": "Run"}.get(sport), thresholds=th)
     except Exception:
+        r = None
+    declared = arch_mod.parse_declared((header or {}).get("Architecture"))
+    if declared == arch_mod.CUSTOM:
+        declared = None  # a custom shape matches no library architecture
+    row = arch_mod.with_declared(r, declared, declared_class(header) if header else None)
+    if not row:
         return None
-    if not r.get("ok"):
-        return None
-    return {"architecture": r["architecture"], "class": r["class"],
-            "sequence": r["sequence"],
-            "touches": [c for c, _s in r.get("touches") or []]}
+    return {"architecture": row["architecture"], "class": row["class"],
+            "sequence": row["sequence"], "touches": row["touches"]}
+
+
+def check_architecture(header, discipline, session_class):
+    """CHK-ARCH advisories (never block) for [Architecture] on a Training day:
+    missing, not a library slug, or a library slug whose own classes or
+    disciplines leave out this session's (the prompt's selection rule). A
+    `custom:` shape is the coach's own and is not checked further."""
+    if header.get("Category", "Training") != "Training":
+        return []
+    arch_mod = _architecture_module()
+    raw = str(header.get("Architecture", "")).strip()
+    if not raw:
+        return [("CHK-ARCH", "-", "Header field [Architecture] missing — the slug from the "
+                                  "design table, or custom: plus the shape")]
+    slug = arch_mod.parse_declared(raw)
+    if slug is None:
+        return [("CHK-ARCH", "-", f"[Architecture] '{raw}' is not a library slug — use one of "
+                                  f"config/architectures/, or custom: plus the shape")]
+    if slug == arch_mod.CUSTOM:
+        return []
+    spec = arch_mod.library().get(slug) or {}
+    out = []
+    if discipline and spec.get("disciplines") and discipline not in spec["disciplines"]:
+        out.append(("CHK-ARCH", "-", f"[Architecture] {slug} is not listed for {discipline} "
+                                     f"(its disciplines: {', '.join(spec['disciplines'])})"))
+    if session_class and spec.get("classes") and session_class not in spec["classes"]:
+        out.append(("CHK-ARCH", "-", f"[Architecture] {slug} is not listed for the class "
+                                     f"{session_class} (its classes: {', '.join(spec['classes'])})"))
+    return out
 
 
 def load_recent_classified(athlete_id, th):
@@ -1764,6 +1860,7 @@ def main():
     # Tempo-and-above, where repetition without progression is objectively
     # checkable, is verified here.
     mono_last = {}
+    mono_seeded = set()  # athletes whose upload history already seeded mono_last
     # Foster monotony & strain on the PLANNED WEEK (CHK-LOAD-MONOTONY, see
     # below) -- distinct from CHK-MONO's architecture-repeat check above.
     # week_days: {(athlete_id, iso_year, iso_week): {date: load}}, filled in
@@ -1885,7 +1982,7 @@ def main():
                                         author, th)
                 if st_cls:
                     lim_classes.append((st["line"], st_cls))
-            lim_row = classify_for_core(code, author.get("sport"), th) or {}
+            lim_row = classify_for_core(code, author.get("sport"), th, header) or {}
             e, w = restrictions.check_session(
                 lim_list, lim_date, author.get("sport"), discipline, lim_secs, lim_undet,
                 lim_classes, lim_row.get("sequence") or [], CLASS_ORDER)
@@ -1911,7 +2008,8 @@ def main():
             week_days.setdefault(mono_gkey, {})[mono_dt] = mono_load
 
         # CHK-MONO — never blocks. Compared against the last non-exempt
-        # session of the same class seen so far in this file; exempt
+        # session of the same class seen so far in this file, or before it
+        # among the sessions already uploaded (mono_history, v7.47); exempt
         # sessions (outdoor road/mtb, Recovery-Endurance-Tempo) are neither
         # flagged nor kept as a reference point for what follows. Only
         # Tempo-and-above is checked: whether a flat Recovery/Endurance
@@ -1932,9 +2030,19 @@ def main():
                               f"[Zone] declares {mprof['class']}, but most of the Main Set's "
                               f"load sits in {mprof['load_class']} — check the label or "
                               f"the session"))
+            warns += check_architecture(header, discipline, (mprof or {}).get("class")
+                                        or declared_class(header))
             if (mprof and CLASS_RANK[mprof["class"]] >= CLASS_RANK["tempo"]
                     and not outdoor_bike_mtb_exempt(discipline, mprof["class"])):
-                key = (author["sport"], mprof["class"])
+                mono_aid = header.get("Athlete ID") or args.athlete
+                if mono_aid not in mono_seeded:
+                    # The first session of this athlete in the file: the weeks
+                    # before it come from what was already uploaded (v7.47).
+                    mono_seeded.add(mono_aid)
+                    for (h_sport, h_cls), h_prof in mono_history(
+                            mono_aid, parse_header_date(header.get("Date")), th).items():
+                        mono_last.setdefault((mono_aid, h_sport, h_cls), h_prof)
+                key = (mono_aid, author["sport"], mprof["class"])
                 prev = mono_last.get(key)
                 if (prev and prev["fingerprint"] == mprof["fingerprint"]
                         and mprof["dose"] <= prev["dose"]):
@@ -2054,7 +2162,7 @@ def main():
                                  ("Training", "Race") else [], author, th, tssc, header,
                                  discipline, race_aid))
             if header.get("Category", "Training") in ("Training", "Race") and steps:
-                core_row = classify_for_core(code, author.get("sport"), th)
+                core_row = classify_for_core(code, author.get("sport"), th, header)
                 if core_row:
                     core_row["date"] = parse_header_date(header.get("Date", ""))
                     # The declared purpose wins over the history reading here,

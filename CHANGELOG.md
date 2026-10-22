@@ -4,6 +4,36 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.47 (2026-10-22)
+
+- **The architecture of a session is the one the coach declared.** Reading the shape back
+  from the steps (`engine/architecture.py`) misnamed 7 of 19 textbook sessions, one per
+  library shape: stepped_build, hard_start_fading, climb_simulation, cadence_contrast,
+  progression_run, rolling_aerobic and technique_drills. RECENT ARCHITECTURES drives
+  variety ("start from the unused ones"), so a misread shape stayed "unused" and was
+  offered again; the core-session check could report uphill work as missing when it was
+  prescribed.
+- **New card field `[Architecture]`** (prompt v7.47): the slug approved in the design
+  table, or `custom: ...`. Coach-only, never shown to the athlete. `CHK-ARCH` warns
+  (never blocks) when it is missing, not in the library, or not listed for the session's
+  discipline or class.
+- **Tags carry what was declared.** `push_block` tags `arch:` from `[Architecture]` and
+  `class:` from `[Zone]`, and leaves a tag out when the card declares nothing (v7.46
+  wrote the reading of the steps). `fetch_recent_sessions` now keeps each event's tags
+  and indoor box.
+- **One rule everywhere:** RECENT ARCHITECTURES, the core-session check (block and
+  history) and the injury shape limits use the declared architecture and class first and
+  the reading only for sessions that declare none.
+- **`CHK-MONO` across weeks.** Since v7.0 a file is one week, so the repeat check only saw
+  sessions of the same week. It now also compares against the sessions this system
+  uploaded in the last 8 weeks (their tags name the methodology and class).
+- **One record instead of two.** The hand-written `Recent Architectures` field left
+  `#SESSION` (it duplicated the computed record, went stale between saves and
+  contradicted "Notes is not a log"). RECENT ARCHITECTURES in `#STATE` is shorter and
+  shows the source of each row.
+- New restore point `RESTORE_POINT_v7.47.md` (replaces v7.43; also fixes its stated prompt
+  version). Tests: 946/946 (engine), 228/228 (server).
+
 ## v7.46 (2026-10-22)
 
 - **Uploaded sessions carry tags.** `push_block` now tags every session it sends to

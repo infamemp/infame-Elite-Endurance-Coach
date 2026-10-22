@@ -181,20 +181,16 @@ _LOCAL_ONLY = {"type_inferred", "infame_load", "load_method"}
 
 
 # ══════════════════════════════════════════════════════════════════
-# TAGS (v7.46)
-# Every uploaded session carries tags, so the head coach can find and group
-# the sessions in Intervals.icu (by class, architecture, methodology or week).
+# TAGS (v7.46, declared values since v7.47)
+# Every uploaded session carries tags: infame, method:<author>,
+# class:<class>, arch:<architecture>, week:<NN>. The class is the purpose
+# declared in [Zone] and the architecture the one declared in [Architecture]:
+# what the coach decided, never a reading of the steps. They are read back by
+# engine/architecture.py, so RECENT ARCHITECTURES, the core-session check and
+# the cross-week monotony check work from what was decided. A value the card
+# does not declare is left out, never guessed; tagging never stops an upload.
 # Idea taken from Montis.icu (v5.4.121, Oct 2026: template tags on workouts).
-# The tags describe what was written; nothing in this system reads them back
-# to decide anything: RECENT ARCHITECTURES keeps classifying each session from
-# its own text, which stays correct even after a hand edit in Intervals.icu.
 # ══════════════════════════════════════════════════════════════════
-
-# The prefixes this system owns. A tag with one of them is rewritten on every
-# push; any other tag on the event (one the head coach added by hand in
-# Intervals.icu) is kept.
-_OWN_TAG = "infame"
-_OWN_PREFIXES = ("method:", "class:", "arch:", "week:")
 
 
 def _tag_value(text) -> str:
@@ -204,32 +200,21 @@ def _tag_value(text) -> str:
     return re.sub(r"\s+", "_", t)
 
 
-def _session_tags(header: dict, code: str, author: dict, th: dict, activity_type: str) -> list:
-    """The tags of one session: infame, method:<author>, class:<class>,
-    arch:<architecture>, week:<NN>. The class is the session's purpose: the
-    one declared in [Zone], or else where most of its load sits under the
-    author's own zones (the same reading the validator uses). The architecture
-    comes from engine/architecture.py. A part that cannot be read is left out,
-    never guessed; tagging never stops an upload."""
-    tags = [_OWN_TAG]
+def _session_tags(header: dict) -> list:
+    """The tags of one session, from its card: infame, method:, class: (from
+    [Zone]), arch: (from [Architecture]), week:."""
+    import architecture
+    import validate_block as vb
+    tags = [architecture.OWN_TAG]
     method = _tag_value(header.get("Methodology"))
     if method:
         tags.append(f"method:{method}")
-    try:
-        import validate_block as vb
-        steps, _ = vb.parse_block(code)
-        prof = vb.session_monotony_profile(steps, author, th, vb.declared_class(header))
-        if prof and prof.get("class"):
-            tags.append(f"class:{prof['class']}")
-    except Exception:  # noqa: BLE001 — no class tag rather than no upload
-        pass
-    try:
-        import architecture
-        arch = architecture.classify_session(code, event_type=activity_type, thresholds=th)
-        if arch.get("ok") and arch.get("architecture"):
-            tags.append(f"arch:{arch['architecture']}")
-    except Exception:  # noqa: BLE001 — no architecture tag rather than no upload
-        pass
+    cls = vb.declared_class(header)
+    if cls:
+        tags.append(f"class:{cls}")
+    arch = architecture.parse_declared(header.get("Architecture"))
+    if arch:
+        tags.append(f"arch:{arch}")
     week = _week_tag(header.get("Week"))
     if week:
         tags.append(f"week:{_tag_value(week)}")
@@ -237,8 +222,9 @@ def _session_tags(header: dict, code: str, author: dict, th: dict, activity_type
 
 
 def _is_own_tag(tag) -> bool:
+    import architecture
     t = str(tag or "").strip().lower()
-    return t == _OWN_TAG or t.startswith(_OWN_PREFIXES)
+    return t == architecture.OWN_TAG or t.startswith(architecture.OWN_TAG_PREFIXES)
 
 
 def _keep_coach_tags(athlete_id: str, events: list, fad) -> dict:
@@ -541,7 +527,7 @@ def push_block(
             "description": _shared.strip_accents(
                 _description(header, code, language, include_notes)),
             "external_id": external_id,
-            "tags": _session_tags(header, code, author, th, activity_type),
+            "tags": _session_tags(header),
             "infame_load": infame_load,
             "load_method": load_method,
         })

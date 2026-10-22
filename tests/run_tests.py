@@ -2477,6 +2477,126 @@ def planned_load_tests():
 # GOLDEN TESTS — full state engine per fixture
 # ══════════════════════════════════════════════════════════════════
 
+# The 19 textbook sessions of the v7.47 probe: one per library shape, written
+# the way a coach writes it. The text reading misnamed 7 of them; with the
+# shape declared, every one is recorded as designed.
+_TEXTBOOK_SHAPES = {
+    "classic_intervals": "5x\n- 4m 108-112%\n- 4m 55%",
+    "sustained_effort": "- 20m 95-100%",
+    "steady_aerobic": "- 60m 65-72%",
+    "single_ramp": "- 12m ramp 80-110%",
+    "surges_on_base": "3x\n- 2m 85%\n- 15s 150%\n- 2m 85%\n- 15s 150%",
+    "sprints": "6x\n- 15s 200%\n- 4m 50%",
+    "stepped_build": "2x\n- 4m 85%\n- 4m 92%\n- 4m 100%\n- 4m 106%\n- 6m 55%",
+    "hard_start_fading": "- 2m 115%\n- 3m 105%\n- 4m 95%\n- 6m 55%",
+    "over_unders": "3x\n- 2m 105%\n- 2m 92%\n- 2m 105%\n- 2m 92%\n- 5m 55%",
+    "descending_ramp": "- 10m ramp 110-85%",
+    "progressive_intervals": "- 5m 95%\n- 4m 55%\n- 5m 100%\n- 4m 55%\n- 5m 105%\n- 4m 55%\n- 5m 110%",
+    "cadence_contrast": "4x\n- 4m 75% 60rpm\n- 4m 75% 100rpm",
+    "climb_simulation": "4x\n- 4m ramp 85-100%\n- 30s 130%\n- 4m 55%",
+    "pyramid": "- 2m 110%\n- 2m 55%\n- 4m 110%\n- 4m 55%\n- 6m 110%\n- 6m 55%\n- 4m 110%\n- 4m 55%\n- 2m 110%",
+    "duration_ladder": "- 3m 108%\n- 3m 55%\n- 5m 108%\n- 4m 55%\n- 7m 108%\n- 5m 55%",
+    "progression_run": "- 30m 70%\n- 15m 82%\n- 10m 92%",
+    "aerobic_touches": "- 15m 68%\n- 1m 105%\n- 15m 68%\n- 1m 105%\n- 15m 68%",
+    "rolling_aerobic": "- 10m 65%\n- 5m 78%\n- 10m 65%\n- 5m 80%\n- 10m 65%\n- 5m 78%\n- 10m 65%",
+    "technique_drills": "4x\n- 1m 60% 110rpm\n- 2m 60% 90rpm\n- 30s 60% 120rpm\n- 3m 60%",
+}
+
+
+def declared_architecture_tests():
+    """v7.47: the architecture declared on the card ([Architecture], uploaded
+    as the arch: and class: tags) is the session's architecture everywhere --
+    RECENT ARCHITECTURES, the core sessions, the injury shapes, CHK-MONO --
+    and the text reading only fills in for sessions that declare nothing."""
+    import glob
+    import architecture as A
+    import validate_block as vb
+    th = vb.load_thresholds_only()
+
+    lib_files = sorted(os.path.splitext(os.path.basename(p))[0] for p in
+                       glob.glob(os.path.join(ROOT, "config", "architectures", "[a-z]*.yaml")))
+    equal("declared v7.47: ALL_ARCHITECTURES matches config/architectures/",
+          sorted(A.ALL_ARCHITECTURES), lib_files)
+    equal("declared v7.47: library() reads every architecture file",
+          sorted(A.library()), lib_files)
+
+    for raw, want in [("over_unders", "over_unders"), ("Over-Unders (3 sets)", "over_unders"),
+                      ("`pyramid`", "pyramid"), ("custom: 5x1 min con salida", "custom"),
+                      ("CUSTOM", "custom"), ("piramide", None), ("", None), (None, None)]:
+        equal(f"parse_declared v7.47: {raw!r}", A.parse_declared(raw), want)
+    equal("declared_from_tags v7.47: arch and class",
+          A.declared_from_tags(["infame", "method:coggan", "class:tempo", "arch:pyramid"]),
+          ("pyramid", "tempo"))
+    equal("declared_from_tags v7.47: nothing declared", A.declared_from_tags(["race"]), (None, None))
+
+    W, C = "Warmup\n\n- 10m ramp 50-70%\n\nMain Set\n\n", "\n\nCooldown\n\n- 5m 50%\n"
+    misread = [k for k, v in _TEXTBOOK_SHAPES.items()
+               if A.classify_session(W + v + C, "Ride", th)["architecture"] != k]
+    check("declared v7.47: the text reading still misnames some textbook shapes "
+          "(why the declaration wins)", len(misread) >= 1, misread)
+    sessions = [{"date": f"2026-09-{i + 1:02d}", "type": "Ride", "description": W + v + C,
+                 "tags": ["infame", "method:coggan", f"arch:{k}"]}
+                for i, (k, v) in enumerate(_TEXTBOOK_SHAPES.items())]
+    rows = A.summarize_recent(sessions, th)["rows"]
+    equal("declared v7.47: every declared session is recorded as designed (19/19)",
+          [r["architecture"] for r in rows], list(_TEXTBOOK_SHAPES))
+    _counts, unused = A.frequency(rows)
+    equal("declared v7.47: with every shape declared once, none is listed unused", unused, [])
+    check("declared v7.47: a misread declared session keeps the reading as read_as",
+          all((r["read_as"] is not None) == (r["architecture"] in misread) for r in rows),
+          [(r["architecture"], r["read_as"]) for r in rows])
+    check("declared v7.47: declared rows say so", all(r["source"] == "declared" for r in rows))
+
+    old = A.summarize_recent([{"date": "2026-09-01", "type": "Ride",
+                               "description": W + _TEXTBOOK_SHAPES["classic_intervals"] + C}], th)["rows"]
+    check("declared v7.47: a session with no tags is still read from its text",
+          old and old[0]["architecture"] == "classic_intervals" and old[0]["source"] == "read", old)
+    cls_only = A.summarize_recent([{"date": "2026-09-01", "type": "Ride", "tags": ["class:threshold"],
+                                    "description": W + _TEXTBOOK_SHAPES["classic_intervals"] + C}], th)["rows"]
+    equal("declared v7.47: a declared class wins over the generic reading",
+          cls_only[0]["class"], "threshold")
+    md = A.render({"rows": rows[:2]})
+    check("declared v7.47: #STATE shows the source of each row",
+          "| Source |" in md and "declared" in md, md[:400])
+    check("declared v7.47: #STATE no longer points to continuity.md",
+          "continuity.md" not in A.render({"rows": rows[:1]}))
+
+    hdr = {"Category": "Training", "Zone": "Threshold · Coggan L4",
+           "Architecture": "climb_simulation"}
+    row = vb.classify_for_core(W + _TEXTBOOK_SHAPES["climb_simulation"] + C, "cycling", th, hdr)
+    check("declared v7.47: the core-session check sees the declared climb_simulation",
+          row and row["architecture"] == "climb_simulation" and row["class"] == "threshold", row)
+    row = vb.classify_for_core(W + _TEXTBOOK_SHAPES["classic_intervals"] + C, "cycling", th,
+                               {"Architecture": "custom: hill sprints"})
+    equal("declared v7.47: a custom shape falls back to the reading for core and limits",
+          (row or {}).get("architecture"), "classic_intervals")
+
+    def arch(value, disc="trainer", cls="threshold", cat="Training"):
+        h = {"Category": cat}
+        if value is not None:
+            h["Architecture"] = value
+        return [w[0] for w in vb.check_architecture(h, disc, cls)], vb.check_architecture(h, disc, cls)
+    codes, _w = arch(None)
+    equal("CHK-ARCH v7.47: missing on a Training day warns", codes, ["CHK-ARCH"])
+    equal("CHK-ARCH v7.47: a Rest day needs none", arch(None, cat="Rest")[0], [])
+    equal("CHK-ARCH v7.47: a library slug that fits is clean", arch("over_unders")[0], [])
+    equal("CHK-ARCH v7.47: custom: is the coach's own shape", arch("custom: mixed set")[0], [])
+    _c, _w = arch("piramide")
+    check("CHK-ARCH v7.47: an unknown slug warns", _c == ["CHK-ARCH"] and "library slug" in _w[0][2], _w)
+    _c, _w = arch("descending_ramp", disc="road_bike")
+    check("CHK-ARCH v7.47: a slug not listed for the discipline warns",
+          _c == ["CHK-ARCH"] and "road_bike" in _w[0][2], _w)
+    _c, _w = arch("sprints", cls="vo2max")
+    check("CHK-ARCH v7.47: a slug not listed for the class warns",
+          _c == ["CHK-ARCH"] and "vo2max" in _w[0][2], _w)
+
+    prompt = open(os.path.join(ROOT, "Prompt", "infame_elite_endurance_coach.md"), encoding="utf-8").read()
+    check("prompt v7.47: the card carries [Architecture]",
+          "[Architecture]: <" in prompt and "`[Architecture]`" in prompt)
+    check("prompt v7.47: #SESSION no longer keeps a hand-written Recent Architectures log",
+          "Recent Architectures:" not in prompt)
+
+
 def build_for_fixture(name):
     """Run the real state engine over one fixture and return its state.json."""
     import build_state
@@ -2964,6 +3084,16 @@ BLOCK_CASES = [
     ("purpose_mismatch.md", 0, ["CHK-PURPOSE"]),
     # ...while a real tempo session repeated with no progression still is.
     ("tempo_repeat.md", 0, ["CHK-MONO"]),
+    # v7.47: one tempo session in this week's file, the same one already
+    # uploaded the week before (data/_test_monohist/, written by block_tests).
+    # Before v7.47 CHK-MONO only looked inside the file, so it never fired.
+    ("mono_cross_week.md", 0, ["CHK-MONO", "05-10-2026 · Tempo uploaded"]),
+    # ...and with more dose than last week's it is a progression, not a repeat.
+    ("mono_cross_week_progressed.md", 0, [], ["CHK-MONO"]),
+    # v7.47: [Architecture] is checked against the library (warns, never blocks):
+    # a slug not listed for the discipline, and a Training card without one.
+    ("arch_checks.md", 0, ["descending_ramp is not listed for road_bike",
+                           "Header field [Architecture] missing"]),
 ]
 
 
@@ -2987,6 +3117,21 @@ def block_tests():
                 {"date": "2026-08-25", "training_load": 55},
             ],
         }, f)
+
+    # v7.47: a tempo session uploaded by this system the week before
+    # mono_cross_week.md, as fetch_recent_sessions() stores it -- the
+    # description carries the notes push_block adds above the steps.
+    hist_dir = os.path.join(ROOT, "data", "_test_monohist")
+    os.makedirs(hist_dir, exist_ok=True)
+    with open(os.path.join(hist_dir, "athlete_data.json"), "w", encoding="utf-8") as f:
+        json.dump({"fetched_at": "2026-10-10", "recent_sessions": [{
+            "id": 1, "date": "2026-10-05", "name": "Tempo uploaded", "category": "WORKOUT",
+            "type": "Ride", "indoor": True,
+            "tags": ["infame", "method:coggan", "class:tempo", "arch:classic_intervals", "week:05"],
+            "description": ("Por que: Para sostener mas potencia en tempo.\n\n"
+                            "Warmup\n\n- 8m ramp 45-70% [RPE 1-3]\n\nMain Set\n\n3x\n"
+                            "- 12m 80-85% [RPE 4-5]\n- 4m 50-55% [RPE 1-2]\n\n"
+                            "Cooldown\n\n- 3m ramp 60-45% [RPE 1-2]")}]}, f)
 
     try:
         for case in BLOCK_CASES:
@@ -3024,6 +3169,7 @@ def block_tests():
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
         shutil.rmtree(blend_dir, ignore_errors=True)
+        shutil.rmtree(hist_dir, ignore_errors=True)
 
 
 def week_target_tests():
@@ -3153,6 +3299,10 @@ def _run_sections(args, run_all):
             planned_load_tests()
         except Exception as e:
             FAILED.append(("planned load tests", f"raised {type(e).__name__}: {e}"))
+        try:
+            declared_architecture_tests()
+        except Exception as e:
+            FAILED.append(("declared architecture tests", f"raised {type(e).__name__}: {e}"))
 
     if run_all or args.blocks:
         print("Block validation...")

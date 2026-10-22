@@ -1,64 +1,32 @@
 """
 engine/architecture.py — Infame Elite Endurance Coach v7
 =========================================================
-Classifies one session's Main Set into an architecture family, from the
-session's own written text alone -- no header, no author, no methodology
-needed. Built for one purpose: answer "what did I already prescribe this
-athlete recently, and in what shape" from the record Intervals.icu already
-keeps (each event's own `description` field), so nothing has to be pasted
-into continuity.md by hand to be checked.
+Names the architecture family of each session, for RECENT ARCHITECTURES in
+#STATE, the core-session check and the shape restrictions of an injury.
 
-The 14 families this file recognizes are the ones in
-config/architectures/*.yaml, derived from a structural analysis of ~1,700
-real MyWhoosh / Whatsonzwift workouts (see that folder's _SCHEMA.md). This
-module does not read those YAML files -- it only needs to produce the same
-`name` slugs, so the two stay in vocabulary lock-step by convention, not by
-a runtime dependency.
-
-Deliberately reuses `parse_block()` and `SUFFIX_TO_METRIC` from
-verify/validate_block.py rather than writing a second parser for the same
-syntax -- that parser is already the one thing in this repo tested against
-193 real cases of exactly this text. This file adds only what that parser
-does not do: turning its flat, mult-tagged step list into repeat units,
-naming the shape those units form, and giving the shape an approximate
-physiological class.
-
-That class is deliberately approximate. A past session's `description` has
-no [Methodology] header, so the author-specific zone table that would
-normally classify it is unknown here -- only the generic cutpoints in
-decision_thresholds.yaml are used. This is correct for grouping recent
-architectures by rough class ("another VO2max session this week") but must
-never be read as a number to prescribe from; #STATE and the active
-author's zones remain the only authority for that, per <engine_contract>.
+Two sources, in this order (v7.47):
+  1. What the coach declared. Every card carries [Architecture] (a slug of
+     config/architectures/*.yaml, or `custom: ...`), uploaded as the tags
+     `arch:<slug>` and `class:<class>`. That is the session's architecture.
+  2. A reading of the session's own text, for sessions that declare nothing
+     (uploaded before v7.47, or written by hand in Intervals.icu). It reuses
+     `parse_block()` from verify/validate_block.py, so there is one parser for
+     the syntax. It is approximate: in a test of one textbook session per
+     library shape (v7.47) it misnamed 7 of 19 -- stepped_build,
+     hard_start_fading, climb_simulation, cadence_contrast, progression_run,
+     rolling_aerobic and technique_drills -- which is why a declaration always
+     wins over it. Its class comes from the generic cutpoints in
+     decision_thresholds.yaml, not the athlete's author: for grouping only,
+     never a number to prescribe from.
 
 The class is the one that carries most of the session's load, not its
 hardest step (v7.35): an aerobic ride or run with a few minutes of tempo,
 sweet spot, VO2max or strides stays aerobic, and those minutes are listed as
-its `touches`. Before v7.35 the hardest unit named the class, so any touch
-turned an aerobic session into a "tempo" or "VO2max" one in the record.
+its `touches`.
 
-Known, accepted gaps in this first version (rare in the 14-family corpus,
-each under 30 of ~1,700 real workouts -- revisit only if real use shows
-they matter):
-  - Cadence is not read from the step line, so `cadence_contrast` is never
-    produced.
-  - A ladder, pyramid, or progressive/regressive set written as separate
-    single-effort lines (rather than wrapped in one `Nx` repeat) is read as
-    several `sustained_effort` units in sequence, not as one of those three
-    shapes. A true `Nx` repeat is unaffected -- this only misses a ladder
-    written step-by-step outside any repeat.
-  - `climb_simulation`, `progressive_intervals`, `pyramid` are consequently
-    not produced by this version.
-  - A "criss-cross" pattern (alternating high/low, both sides sub-threshold)
-    has no architecture file of its own in config/architectures/ -- it is
-    folded into `over_unders`, the nearest shape, rather than invented as an
-    unreviewed 15th family.
-  - A strictly monotonic multi-step rep (each step harder or easier than
-    the last, no repetition) can match either `surges_on_base` or
-    `hard_start_fading`'s detection; the surge check runs first and wins
-    the tie. Both are rare in the corpus (128 and 19 of ~1,700), so this is
-    left as a disclosed tie-break rather than a disambiguation worth the
-    extra rule.
+The slugs live in ALL_ARCHITECTURES below and in config/architectures/;
+library() reads each file's classes and disciplines for the validator's
+CHK-ARCH.
 """
 
 import os
@@ -646,9 +614,7 @@ def _rolling(leaves, event_type, thresholds):
 
 # The 19 architecture slugs in config/architectures/*.yaml, kept here as
 # plain data so the frequency tally below can report a zero count for one
-# that never appeared -- this module does not read those YAML files (see
-# module docstring), so this list is kept in sync by convention, the same
-# way _DIRECT_FAMILY's slugs already are.
+# that never appeared. A test checks this list against the folder.
 ALL_ARCHITECTURES = [
     "classic_intervals", "sustained_effort", "steady_aerobic", "single_ramp",
     "surges_on_base", "sprints", "stepped_build", "hard_start_fading",
@@ -678,26 +644,132 @@ def frequency(rows):
     return counts, unused
 
 
+# ══════════════════════════════════════════════════════════════════
+# DECLARED ARCHITECTURE (v7.47)
+# The coach picks each session's architecture in the design table and writes
+# it on the card as [Architecture]; push_block uploads it as the tags
+# `arch:<slug>` and `class:<class>`. That declaration is what the session IS:
+# reading a shape back from the steps misnamed 7 of the 19 library shapes in a
+# test of textbook sessions (v7.47), so the text reading is used only for
+# sessions that declare nothing (uploaded before v7.47, or written by hand).
+# When both exist and differ, the reading is kept in the row as `read_as`
+# (state.json only): the reading misnames too many shapes to be shown in
+# #STATE as a doubt about the card.
+# ══════════════════════════════════════════════════════════════════
+
+CUSTOM = "custom"
+
+# Tags this system writes on every uploaded session (tools_push). Any other
+# tag on an Intervals.icu event belongs to the head coach.
+OWN_TAG = "infame"
+OWN_TAG_PREFIXES = ("method:", "class:", "arch:", "week:")
+
+
+def parse_declared(value):
+    """The architecture slug named by an [Architecture] value, CUSTOM for a
+    `custom: ...` shape, or None when it names nothing known.
+
+    Only the first word counts, so "over_unders (3 sets)" is over_unders;
+    hyphens and spaces are read as underscores ("over-unders")."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return None
+    first = re.split(r"[\s(:,;·+]", text, maxsplit=1)[0].replace("-", "_").strip("`*_ ")
+    if first == CUSTOM:
+        return CUSTOM
+    return first if first in ALL_ARCHITECTURES else None
+
+
+def declared_from_tags(tags):
+    """(architecture, class) declared by this system's tags on an event, each
+    None when absent."""
+    arch = cls = None
+    for t in tags or []:
+        t = str(t).strip().lower()
+        if t.startswith("arch:"):
+            arch = parse_declared(t[5:])
+        elif t.startswith("class:"):
+            cls = t[6:] or None
+    return arch, cls
+
+
+def with_declared(read, architecture=None, cls=None):
+    """One session's row, from the text reading (`read`: classify_session's
+    result, or None) and what the coach declared. The declaration wins for the
+    architecture and the class; touches and any inner shapes come from the
+    reading, the inner shapes only when the reading agrees on the primary
+    shape (otherwise they belong to a misreading). `source` says which one
+    named the shape."""
+    read = read if (read and read.get("ok")) else None
+    touches = [c for c, _s in (read or {}).get("touches") or []] if read else []
+    if not architecture:
+        if not read:
+            return None
+        return {"architecture": read["architecture"], "class": cls or read["class"],
+                "combo": read["combo"], "sequence": read["sequence"],
+                "touches": touches, "source": "read", "read_as": None}
+    sequence = [architecture]
+    read_as = None
+    if read:
+        if read["architecture"] == architecture:
+            sequence += [s for s in read["sequence"][1:] if s != architecture]
+        elif read["architecture"]:
+            read_as = read["architecture"]
+    return {"architecture": architecture, "class": cls or (read or {}).get("class"),
+            "combo": len(sequence) > 1, "sequence": sequence, "touches": touches,
+            "source": "declared", "read_as": read_as}
+
+
+_LIBRARY = None
+
+
+def library():
+    """{slug: {"classes": [...], "disciplines": [...]}} from
+    config/architectures/*.yaml, read once. {} when the folder cannot be read."""
+    global _LIBRARY
+    if _LIBRARY is None:
+        import glob
+        try:
+            import yaml
+        except ImportError:  # pragma: no cover
+            return {}
+        out = {}
+        root = os.path.join(os.path.dirname(_VERIFY), "config", "architectures")
+        for path in sorted(glob.glob(os.path.join(root, "[a-z]*.yaml"))):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    d = yaml.safe_load(f) or {}
+            except Exception:  # noqa: BLE001 — one unreadable file is skipped
+                continue
+            if d.get("name"):
+                out[d["name"]] = {"classes": list(d.get("applicable_classes") or []),
+                                  "disciplines": list(d.get("disciplines") or [])}
+        _LIBRARY = out
+    return _LIBRARY
+
+
 def summarize_recent(recent_sessions, thresholds):
     """Classify every one of the last ~8 weeks' events (fetch_athlete_data.
-    fetch_recent_sessions()) into an architecture family. Never raises on a
-    single bad session -- one unparseable entry is skipped, not fatal to the
-    whole state build, exactly like every other signal in this module."""
+    fetch_recent_sessions()) into an architecture family: the one its tags
+    declare when it has them (v7.47), else the one read from its text. Never
+    raises on a single bad session -- one unparseable entry is skipped, not
+    fatal to the whole state build, exactly like every other signal in this
+    module."""
     rows = []
     for s in recent_sessions or []:
         desc = (s.get("description") or "").strip()
-        if not desc:
+        arch, cls = declared_from_tags(s.get("tags"))
+        if not desc and not arch:
             continue  # rest day, or an event with nothing written on it
         try:
-            r = classify_session(desc, event_type=s.get("type"), thresholds=thresholds)
+            r = classify_session(desc, event_type=s.get("type"), thresholds=thresholds) \
+                if desc else None
         except Exception:
+            r = None
+        row = with_declared(r, arch, cls)
+        if not row:
             continue
-        if not r["ok"]:
-            continue
-        rows.append({"date": s.get("date"), "type": s.get("type"),
-                     "architecture": r["architecture"], "class": r["class"],
-                     "combo": r["combo"], "sequence": r["sequence"],
-                     "touches": [c for c, _s in r.get("touches") or []]})
+        rows.append({"date": s.get("date"), "type": s.get("type"), **row})
     rows.sort(key=lambda x: x["date"] or "")
     return {"rows": rows}
 
@@ -709,27 +781,23 @@ def render(summary):
         lines.append("No classifiable session found in the last 8 weeks.")
         return "\n".join(lines)
     lines += [
-        "Read automatically from each session's own text already saved on "
-        "Intervals.icu -- not a substitute for `Recent Architectures` in "
-        "`continuity.md` when that is present and current; a backstop for "
-        "when it is not, and a cross-check either way. Class is "
-        "approximate (generic cutpoints, not the athlete's active author) "
-        "-- for grouping only, never a number to prescribe from. The class "
-        "is where most of the session's load sits; harder minutes inside it "
-        "are listed as touches (an aerobic ride with a few tempo minutes is "
-        "`endurance + tempo`, not a tempo session). A blank "
-        "row is a session whose text did not parse into a named shape or "
-        "had nothing to classify (a rest day, a bare imported ride).",
+        "Each session uploaded by this system carries the architecture and "
+        "class declared on its card (`declared`). Older or hand-written "
+        "sessions are read from their own text (`read`): that reading is "
+        "approximate, for grouping only. Harder minutes inside a session are "
+        "its touches (`endurance + tempo` is an aerobic session, not a tempo "
+        "one).",
         "",
-        "| Date | Type | Architecture | Approx. class |",
-        "|:---|:---|:---|:---|",
+        "| Date | Type | Architecture | Class | Source |",
+        "|:---|:---|:---|:---|:---|",
     ]
     for r in rows:
         arch = " + ".join(r["sequence"]) if r["combo"] else (r["architecture"] or "_complex/free-form_")
         cls = r["class"] or "-"
         if r["class"] and r.get("touches"):
             cls += " + " + ", ".join(r["touches"])
-        lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {cls} |")
+        src = r.get("source") or "read"
+        lines.append(f"| {r['date']} | {r['type'] or '-'} | {arch} | {cls} | {src} |")
 
     counts, unused = frequency(rows)
     lines += [

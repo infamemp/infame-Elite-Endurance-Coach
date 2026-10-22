@@ -1,9 +1,27 @@
-# RESTORE POINT — Infame Elite Endurance Coach v7.43
+# RESTORE POINT — Infame Elite Endurance Coach v7.47
 
-**Date frozen:** 2026-10-12
-**Previous:** v7.42 — every version is in `CHANGELOG.md`; older restore points are in the git history
-**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.43 (correct only what changes)
-**Tests:** `python tests/run_tests.py` → 906/906 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 207/207
+**Date frozen:** 2026-10-22
+**Previous:** v7.43 — every version is in `CHANGELOG.md`; older restore points are in the git history
+**Prompt:** `Prompt/infame_elite_endurance_coach.md` v7.47 (declared architecture)
+**Tests:** `python tests/run_tests.py` → 946/946 · `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` → 228/228
+
+## What changed in v7.47 — the architecture is what the coach declared
+
+The session card carries `[Architecture]` (the slug approved in the design table, or
+`custom: ...`). `push_block` uploads it as the tag `arch:<slug>`, with `class:<class>` from
+`[Zone]`, and RECENT ARCHITECTURES, the core-session check, the injury shape limits and
+`CHK-MONO` read those tags first. Reading the shape back from the steps misnamed 7 of the
+19 library shapes; it now only fills in for sessions that declare nothing. `CHK-MONO`
+also compares against the sessions already uploaded (before, only inside the one-week
+file), and the hand-written `Recent Architectures` field left `#SESSION`. **Deploy:**
+(1) restart Claude Desktop; (2) paste the new prompt in the Claude Project and open a new
+chat.
+
+## What changed in v7.44–v7.46
+
+Indoor sessions upload as Ride / Run with the indoor box (v7.44); the stale-cache mark
+keeps a date Google Drive accepts (v7.45); uploads carry tags (v7.46). Details in
+`CHANGELOG.md`.
 
 ## What changed in v7.43 — correct only what changes
 
@@ -145,7 +163,7 @@ number changed — the golden outputs are identical.
 
 ## What the Project must contain
 
-- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.37).
+- **Instructions:** the full text of `Prompt/infame_elite_endurance_coach.md` (v7.47).
 - **Knowledge files (flat, no folders):** `generated/Cycling_Doctrine.md`,
   `generated/Running_Doctrine.md`, `generated/Language_Guide_es-MX.md`,
   `Syntax/Intervals Workout Builder Syntax.md`.
