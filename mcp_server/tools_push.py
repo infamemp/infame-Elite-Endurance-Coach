@@ -180,6 +180,95 @@ def _activity_type(sport: str, discipline: str, th: dict | None = None) -> tuple
 _LOCAL_ONLY = {"type_inferred", "infame_load", "load_method"}
 
 
+# ══════════════════════════════════════════════════════════════════
+# TAGS (v7.46)
+# Every uploaded session carries tags, so the head coach can find and group
+# the sessions in Intervals.icu (by class, architecture, methodology or week).
+# Idea taken from Montis.icu (v5.4.121, Oct 2026: template tags on workouts).
+# The tags describe what was written; nothing in this system reads them back
+# to decide anything: RECENT ARCHITECTURES keeps classifying each session from
+# its own text, which stays correct even after a hand edit in Intervals.icu.
+# ══════════════════════════════════════════════════════════════════
+
+# The prefixes this system owns. A tag with one of them is rewritten on every
+# push; any other tag on the event (one the head coach added by hand in
+# Intervals.icu) is kept.
+_OWN_TAG = "infame"
+_OWN_PREFIXES = ("method:", "class:", "arch:", "week:")
+
+
+def _tag_value(text) -> str:
+    """One tag value: lowercase, no accents, no spaces."""
+    import shared as _shared
+    t = _shared.strip_accents(str(text or "").strip().lower())
+    return re.sub(r"\s+", "_", t)
+
+
+def _session_tags(header: dict, code: str, author: dict, th: dict, activity_type: str) -> list:
+    """The tags of one session: infame, method:<author>, class:<class>,
+    arch:<architecture>, week:<NN>. The class is the session's purpose: the
+    one declared in [Zone], or else where most of its load sits under the
+    author's own zones (the same reading the validator uses). The architecture
+    comes from engine/architecture.py. A part that cannot be read is left out,
+    never guessed; tagging never stops an upload."""
+    tags = [_OWN_TAG]
+    method = _tag_value(header.get("Methodology"))
+    if method:
+        tags.append(f"method:{method}")
+    try:
+        import validate_block as vb
+        steps, _ = vb.parse_block(code)
+        prof = vb.session_monotony_profile(steps, author, th, vb.declared_class(header))
+        if prof and prof.get("class"):
+            tags.append(f"class:{prof['class']}")
+    except Exception:  # noqa: BLE001 — no class tag rather than no upload
+        pass
+    try:
+        import architecture
+        arch = architecture.classify_session(code, event_type=activity_type, thresholds=th)
+        if arch.get("ok") and arch.get("architecture"):
+            tags.append(f"arch:{arch['architecture']}")
+    except Exception:  # noqa: BLE001 — no architecture tag rather than no upload
+        pass
+    week = _week_tag(header.get("Week"))
+    if week:
+        tags.append(f"week:{_tag_value(week)}")
+    return tags
+
+
+def _is_own_tag(tag) -> bool:
+    t = str(tag or "").strip().lower()
+    return t == _OWN_TAG or t.startswith(_OWN_PREFIXES)
+
+
+def _keep_coach_tags(athlete_id: str, events: list, fad) -> dict:
+    """Before a live send, read the events already on the calendar for those
+    dates and keep, on each event being re-pushed, the tags the head coach
+    added by hand. This system's own tags are replaced (a corrected session
+    may have changed class or architecture). Never raises: if the calendar
+    cannot be read, the events go up with this system's tags only, and the
+    result says so."""
+    result = {"events_with_kept_tags": 0}
+    try:
+        dates = sorted(e["start_date_local"][:10] for e in events)
+        url = f"{fad.BASE_URL}/athlete/{athlete_id}/events"
+        got = fad.SESSION.get(url, params={"oldest": dates[0], "newest": dates[-1]},
+                              timeout=45)
+        got.raise_for_status()
+        existing = {e.get("external_id"): e.get("tags") or []
+                    for e in got.json() or []
+                    if isinstance(e, dict) and e.get("external_id")}
+        for e in events:
+            kept = [t for t in existing.get(e["external_id"], [])
+                    if isinstance(t, str) and t.strip() and not _is_own_tag(t)]
+            if kept:
+                e["tags"] = e.get("tags", []) + [t for t in kept if t not in e.get("tags", [])]
+                result["events_with_kept_tags"] += 1
+    except Exception as exc:  # noqa: BLE001 — upload with our tags only
+        result["error"] = f"existing tags could not be read; sent this system's tags only: {exc}"
+    return result
+
+
 def _intervals_load(event: dict):
     """The planned load Intervals.icu computed for an event, or None."""
     for key in ("icu_training_load", "training_load"):
@@ -341,7 +430,9 @@ def push_block(
     (override_validation=true only when the head coach explicitly asks). It refuses
     a file with cards for another athlete. Re-pushing a corrected week updates the
     same events. Race days are skipped; workouts already planned on those dates are
-    not removed. include_notes=false sends only the steps. After a live send,
+    not removed. include_notes=false sends only the steps. Each session carries tags
+    (infame, method:, class:, arch:, week:) so it can be grouped in Intervals.icu;
+    tags the head coach added there by hand are kept. After a live send,
     `load_check` compares each session's load with the one Intervals.icu computed
     and lists any difference beyond the tolerance: tell the head coach. A live send
     marks the local data stale, so the next get_athlete_state re-reads the calendar,
@@ -450,6 +541,7 @@ def push_block(
             "description": _shared.strip_accents(
                 _description(header, code, language, include_notes)),
             "external_id": external_id,
+            "tags": _session_tags(header, code, author, th, activity_type),
             "infame_load": infame_load,
             "load_method": load_method,
         })
@@ -495,9 +587,10 @@ def push_block(
     # for unrecognized fields is unverified (this path itself is
     # unexercised, per this module's own docstring), so it's stripped
     # rather than trusted to be ignored.
-    wire_events = [{k: v for k, v in e.items() if k not in _LOCAL_ONLY} for e in events]
 
     fad.SESSION = fad.make_session()
+    tag_merge = _keep_coach_tags(athlete_id, events, fad)
+    wire_events = [{k: v for k, v in e.items() if k not in _LOCAL_ONLY} for e in events]
     url = f"{fad.BASE_URL}/athlete/{athlete_id}/events/bulk"
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)
     resp.raise_for_status()
@@ -523,5 +616,6 @@ def push_block(
         **payload,
         "load_check": load_check,
         "indoor_check": indoor_check,
+        "tag_merge": tag_merge,
         "cache_marked_stale": stale,
     }

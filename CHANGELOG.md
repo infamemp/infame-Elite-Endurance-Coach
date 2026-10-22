@@ -4,6 +4,25 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.46 (2026-10-22)
+
+- **Uploaded sessions carry tags.** `push_block` now tags every session it sends to
+  Intervals.icu: `infame`, `method:<author>`, `class:<class>`, `arch:<architecture>` and
+  `week:<NN>` (e.g. `infame, method:coggan, class:vo2max, arch:classic_intervals, week:03`), so
+  sessions can be found and grouped in Intervals.icu. The class is the session's purpose (the
+  one declared in [Zone], or else where most of its load sits under the author's zones, the same
+  reading the validator uses); the architecture comes from `engine/architecture.py`. A part that
+  cannot be read is left out, never guessed, and tagging never stops an upload. The dry run
+  shows the tags.
+- **Hand-added tags survive a re-push.** Before a live send, the events already on those dates
+  are read once; on a re-pushed event, any tag the head coach added in Intervals.icu is kept and
+  only this system's own tags are rewritten. If the calendar cannot be read, the events go up
+  with this system's tags and `tag_merge` says why.
+- Nothing reads the tags back: RECENT ARCHITECTURES still classifies each session from its own
+  text, which stays right after a hand edit in Intervals.icu. Idea taken from Montis.icu
+  (v5.4.121, workout tags).
+- Tests: 226/226 (server), 906/906 (engine).
+
 ## v7.45 (2026-10-14)
 
 - **Google Drive sync error on `athlete_data.json` fixed.** v7.42 marked the local cache stale by

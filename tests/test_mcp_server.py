@@ -983,11 +983,25 @@ def test_tools_push():
             # The load check reads the events back when the bulk response
             # carries no loads. Intervals.icu's load for each = ours + 1.
             gets.append({"url": url, "params": params})
+            if not calls:
+                # v7.46: the read before the POST, for tags already on the
+                # calendar. One hand-added tag and one stale tag of ours.
+                return _FakeGetResponse([
+                    {"external_id": _first_id, "tags": ["carrera_local", "class:old"]}])
             sent = calls[-1]["json"] if calls else []
             return _FakeGetResponse([
                 {"external_id": e["external_id"], "icu_training_load": 0,
                  "indoor": e.get("indoor")}
                 for e in sent])
+
+        _dry = push_block(AID, file_path=copy)
+        _first_id = _dry["events"][0]["external_id"]
+        _tags = _dry["events"][0].get("tags") or []
+        equal("tags: the first tag marks the session as this system's (v7.46)",
+              _tags[:1], ["infame"])
+        check("tags: method, class, architecture and week are tagged (v7.46)",
+              {"method:coggan", "class:vo2max", "arch:classic_intervals", "week:03"} <= set(_tags),
+              _tags)
 
         original_post = requests.Session.post
         original_get = requests.Session.get
@@ -1013,14 +1027,25 @@ def test_tools_push():
               and len(_up[-1].get("loads") or []) == r.get("count"), _up[-1:] if _up else None)
         lc = r.get("load_check") or {}
         equal("tools_push: nothing useful in the bulk response -> one read-back for the "
-              "loads (v7.38) and one for the indoor box (v7.44)", len(gets), 2)
+              "loads (v7.38), one for the indoor box (v7.44) and one for the tags "
+              "already on the calendar (v7.46)", len(gets), 3)
         ic = r.get("indoor_check") or {}
         check("tools_push: the live send confirms the indoor box was kept",
               ic.get("checked", 0) >= 1 and ic.get("confirmed") == ic["checked"]
               and not ic.get("not_confirmed"), ic)
         check("tools_push: the read-back asks for the uploaded dates",
-              gets and gets[0]["url"].endswith(f"/athlete/{AID}/events")
-              and set(gets[0]["params"]) == {"oldest", "newest"})
+              gets and all(g["url"].endswith(f"/athlete/{AID}/events")
+                           and set(g["params"]) == {"oldest", "newest"} for g in gets))
+        _wire0 = next((e for e in calls[0]["json"] if e["external_id"] == _first_id), {}) if calls else {}
+        check("tags: the tags travel in the wire payload (v7.46)",
+              calls and all(e.get("tags") and e["tags"][0] == "infame" for e in calls[0]["json"]))
+        check("tags: a tag the head coach added in Intervals.icu is kept on re-push (v7.46)",
+              "carrera_local" in (_wire0.get("tags") or []), _wire0.get("tags"))
+        check("tags: this system's old tag is replaced, not kept (v7.46)",
+              "class:old" not in (_wire0.get("tags") or [])
+              and "class:vo2max" in (_wire0.get("tags") or []), _wire0.get("tags"))
+        equal("tags: the result reports the kept hand-added tags (v7.46)",
+              (r.get("tag_merge") or {}).get("events_with_kept_tags"), 1)
         check("tools_push: a load far from ours is reported as a mismatch",
               lc.get("checked", 0) >= 1 and len(lc.get("mismatches") or []) == lc["checked"])
         check("tools_push: our load and method never travel in the payload",
@@ -1036,6 +1061,30 @@ def test_tools_push():
         check("tools_push: internal 'type_inferred' annotation is stripped "
               "from the actual wire payload",
               calls and all("type_inferred" not in e for e in calls[0]["json"]))
+
+
+def test_tools_push_tags():
+    """v7.46: when the calendar cannot be read before a live send, the events
+    still go up with this system's own tags, and the reason is reported."""
+    from mcp_server import tools_push as tp
+
+    events = [{"start_date_local": "2026-10-12T00:00:00", "external_id": "infame-X-2026-10-12-w01",
+               "tags": ["infame", "class:endurance"]}]
+
+    class _Fad:
+        BASE_URL = "https://intervals.icu/api/v1"
+
+        class SESSION:
+            @staticmethod
+            def get(*a, **k):
+                raise RuntimeError("network down")
+
+    res = tp._keep_coach_tags("X", events, _Fad)
+    check("tags: an unreadable calendar never stops the upload (v7.46)",
+          "error" in res and events[0]["tags"] == ["infame", "class:endurance"], res)
+    check("tags: own prefixes are recognised, hand-added tags are not (v7.46)",
+          tp._is_own_tag("arch:pyramid") and tp._is_own_tag("INFAME")
+          and not tp._is_own_tag("carrera_local"))
 
 
 def test_tools_push_load_check():
@@ -1573,7 +1622,7 @@ def main():
         for fn in (test_cancel_patch, test_guard, test_common, test_tools_read, test_tools_roster_and_execution, test_tools_coach, test_services, test_fetch_robustness, test_fatigue_curves_fetch, test_load_targets_tool, test_what_if_tool,
                    test_tools_write, test_tools_validate,
                    test_relative_file_path_resolves_against_root, test_tools_push,
-                   test_tools_push_load_check, test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
+                   test_tools_push_tags, test_tools_push_load_check, test_tools_push_refuses_blocked_block, test_mcp_first_workflow):
             fn()
     finally:
         _cleanup()
