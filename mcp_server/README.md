@@ -1,10 +1,9 @@
 # mcp_server — a local MCP server for Claude Desktop
 
 Rebuild of `mcp_server/server.py`, removed in September 2026 after
-production instability (`archive/RESTORE_POINT_v6.5.md`, `IMPROVEMENT_BACKLOG.md`
-§5). Read both before changing anything here — they hold the incident
-history and the architectural boundaries this rebuild is not allowed to
-cross.
+production instability (`archive/RESTORE_POINT_v6.5.md`). Read it before
+changing anything here — it holds the incident history; the boundaries this
+server must not cross are in `ROADMAP.md` ("Lines not to cross").
 
 Every tool calls the exact same engine functions `coach.py` does.
 `#STATE`, `profile.md`, and block validation are computed identically
@@ -14,25 +13,32 @@ that makes it safe to exist.
 
 ## What's here
 
+21 tools, registered in `server.py`. The prompt's `<tools>` table says when the
+coach uses each one.
+
 | Tool | Reads/writes | What it does |
 |:---|:---|:---|
-| `get_athlete_state` | reads, fetches | Fetch (if stale) + resolve + return `#STATE` |
+| `get_athlete_state` | reads, fetches | Fetch (if stale) + resolve + return `#STATE`, with continuity, race notes, availability, `review_due` and the last 30 days of the ledger |
 | `get_athlete_profile` | reads, fetches | Same pattern, for `profile.md` |
+| `get_reference` | reads | A methodology's zone table, the architecture library (filtered by class and discipline), the intake script, the profile template |
+| `get_knowledge` | reads | The book knowledge bases: principles by entry ID, section or query; the author's catalog with `catalog=true` |
 | `list_roster` | reads | `out/roster.md`, no network call |
 | `roster_overview` | reads | All athletes in one table from each `state.json` (+ `out/roster.md` for never-prepared ones); no network call |
+| `get_execution` | reads, fetches | Planned vs done via Intervals.icu's `paired_event_id`; refreshes once if the cache predates pairing |
 | `load_targets` | computes | Weekly TSS and hours targets from the coach's own cycle (e.g. 3:1), start TSS, growth and recovery; pure arithmetic, no athlete data, no network |
 | `what_if_targets` | reads | CTL and TSB on race morning with vs without the weekly TSS targets, using the state's own projection; uses the cached data, refetches only when stale |
-| `get_execution` | reads, fetches | Planned vs done via Intervals.icu's `paired_event_id`; refreshes once if the cache predates pairing |
+| `save_block` | writes | `out/<athlete>/blocks/<today>_bloque_w<N>.md` (one file per week) |
+| `replace_session` | writes | The corrected cards inside a saved week file; the other sessions stay as saved |
+| `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess; with `fill_tss` writes Duration and TSS into the headers |
+| `push_block` | writes (gated) | Uploads a validated week as Intervals.icu events (indoor box, tags from the card, notes). **Never sends unless both `dry_run=False` and `confirm=True` are passed in the same call, and refuses a BLOCKED week unless `override_validation=True`.** After a live send it compares each session's load with Intervals.icu's (`load_check`) and confirms the indoor box (`indoor_check`) |
+| `remove_block` | writes (gated) | Deletes only `infame-<athlete>-…` WORKOUT events from tomorrow on; everything else is left alone and counted |
 | `post_activity_comment` | writes (gated) | Comment on an athlete's activity; refuses an activity that is not theirs. Dry run by default |
 | `update_threshold` | writes (gated) | Sets ftp / lthr / max_hr / threshold_pace in Intervals.icu, shows old → new, re-reads to verify, marks the local cache stale |
-| `remove_block` | writes (gated) | Deletes only `infame-<athlete>-…` WORKOUT events from tomorrow on; everything else is left alone and counted |
+| `save_declared_profile` | writes (gated) | `config/athletes/<id>.yaml` after an intake or an approved change; dry run shows the diff, the previous version is kept in `data/<id>/profile_history/` |
+| `save_training_age` | writes | Years of consistent endurance training as the head coach stated it (0 for a beginner); sets the CTL ramp band in `#STATE`. A value in the declared profile wins |
 | `save_continuity` | writes | `out/<athlete>/continuity.md` — requires a `#SESSION ... #END` envelope |
 | `save_race_result` | writes | Appends a `#RACE_RESULT` block to `race_notes.md`, never overwrites |
 | `save_availability` | writes | `out/<athlete>/availability.md` — the head coach's stated daily maximums, returned by `get_athlete_state` |
-| `save_block` | writes | `out/<athlete>/blocks/<today>_bloque.md` |
-| `replace_session` | writes | the corrected cards inside a saved week file; the other sessions stay as saved |
-| `validate_block` | reads, may write | Runs `verify/validate_block.py` as a subprocess |
-| `push_block` | writes (gated) | Builds the Intervals.icu bulk-events payload. **Never sends anything unless both `dry_run=False` and `confirm=True` are passed explicitly in the same call — and even then, refuses to send a block `validate_block` would report BLOCKED, unless `override_validation=True` is also passed explicitly.** After a live send it compares each session's load with the load Intervals.icu computed (`load_check`, v7.38) and lists any difference beyond `tss_rules.upload_check_tolerance_tss`. |
 
 Since prompt v7.3 (2026-09-26) the coach calls every tool itself,
 `push_block` included — but only through the prompt's upload gate: a
@@ -40,12 +46,9 @@ dry-run first, then an explicit approval from the head coach, then the
 live call with `dry_run=False, confirm=True`. Nothing in this repository
 calls it automatically, and its default mode does not touch the network
 at all. That is deliberate and
-non-negotiable — see `IMPROVEMENT_BACKLOG.md` §6 ("do not let the engine
-start giving advice... an engine that prescribes rather than reports would
-undo the architecture") and this task's own scope limits. The Claude
-Project prompt, its Knowledge base, and the phase workflow's STOP-AND-WAIT
-gates are untouched by this rebuild — the coach still proposes, the human
-still approves every phase before advancing, exactly as before.
+non-negotiable — see `ROADMAP.md`, "Lines not to cross" ("the engine
+reports; the coach decides"). The coach still proposes and the head coach
+still approves every phase before advancing.
 
 **Validating and uploading are no longer independent, on purpose.** The
 original two-command CLI workflow could describe them as fully separate
@@ -61,7 +64,7 @@ the same check internally before its live send and refuses to send a
 BLOCKED block unless `override_validation=True` is passed explicitly — a
 deterministic-fact check, the same category as `validate_block`'s own
 HC-METRIC-style rules, not the engine giving advice, so it does not cross
-the §6 boundary above.
+that line.
 
 ## Why it broke last time, and what's different now
 
@@ -129,40 +132,16 @@ is resolved from the methodology's own `sport:` field
 
 ## Setup
 
-The `mcp` SDK is **not** part of `requirements.txt`'s core install — it's
-only needed to run this server, not for `coach.py`/`engine/`/`verify/`/the
-main test suite. Install it separately, in a virtualenv:
+Step by step, for Windows and the Claude Desktop config (including the
+`PYTHONPATH` the PC needs): `manual/GUIDE.md` §1. Two points that matter here:
 
-```
-python -m venv .venv-mcp
-.venv-mcp/bin/pip install "mcp==1.30.0" pyyaml requests
-```
-
-Pinned, not `>=`: see the comment in the root `requirements.txt` for why.
-`cancel_patch.py` will tell you (in the server's log, at startup) whether
-its workaround was actually needed for whatever version ends up installed.
-
-Point Claude Desktop's `claude_desktop_config.json` (outside this repo,
-per machine, never synced by git — same as last time) at the **wrapper**,
-not `server.py` directly:
-
-```json
-{
-  "mcpServers": {
-    "infame-coach": {
-      "command": "/absolute/path/to/.venv-mcp/bin/python",
-      "args": ["-m", "mcp_server.run_server"],
-      "cwd": "/absolute/path/to/infame-Elite-Endurance-Coach",
-      "env": { "ICU_API_KEY": "your_key_here" }
-    }
-  }
-}
-```
-
-`env.ICU_API_KEY` is required here even if it's already set with `setx` on
-this machine — Desktop does not reliably inherit environment variables for
-the process it launches (the same finding `archive/RESTORE_POINT_v6.5.md`
-§4 recorded).
+- `mcp` is pinned (`mcp==1.30.0`), not `>=`: see the comment in the root
+  `requirements.txt`. `cancel_patch.py` says in the server's log at startup
+  whether its workaround was needed for the installed version.
+- Point Desktop at the **wrapper** (`-m mcp_server.run_server`), not
+  `server.py`, and put `ICU_API_KEY` in the config's `env` even if it is set
+  with `setx`: Desktop does not reliably inherit environment variables
+  (`archive/RESTORE_POINT_v6.5.md` §4).
 
 `run_server.py` is a thin wrapper around `server.py`, not a process
 supervisor that restarts a crashed server transparently — that isn't
@@ -209,20 +188,16 @@ account or network access is needed):
   open, and proceeding (still against the mock only) once
   `override_validation=True` is passed explicitly.
 
-Before running any of this against real athlete data: it was designed and
-tested exclusively against `TESTRAMP` first, as this task required, and
-only after `tests/run_tests.py`'s full 193-test suite was confirmed
-unaffected.
+- `[Architecture]` and `[Zone]` reaching the upload as tags, and tags the
+  head coach added in Intervals.icu surviving a re-push.
 
 ## Known limitations, stated rather than hidden
 
-- **The live `push_block` send path is unexercised against a real
-  Intervals.icu account** — same as the original tool
-  (`archive/RESTORE_POINT_v6.5.md` §5). Verified only against a mocked
-  `requests.Session.post`. The payload shape matches
-  `IMPROVEMENT_BACKLOG.md` §5's description of the endpoint as closely as
-  this repository's own documentation allows; there was no way to confirm
-  it against Intervals.icu's actual API response in this environment.
+- **The test suite never touches the network.** The live `push_block` path is
+  tested against a mocked `requests.Session`; it has run against the real
+  Intervals.icu account since 21 September 2026 (the first real push found
+  the DD-MM-YYYY date bug fixed in `_iso_date`), and every live send reads the
+  events back to check load and the indoor box.
 - **`[Discipline]: track_run`'s activity-type mapping is inference, not a
   confirmed fixture** — same honest gap the original restore point flagged
   for `track` generally. Marked as such in `push_block`'s own output

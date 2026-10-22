@@ -11,12 +11,9 @@ so it gets more resistance than every other tool here, not less:
 - `dry_run=True` is the default AND the only mode this function will ever
   run in unless the caller passes BOTH `dry_run=False` AND `confirm=True`
   explicitly, in the same call. One flag flipped by accident is not enough.
-- Nothing in this repository calls this function automatically. It is not
-  wired into `mcp_server/server.py`'s tool descriptions in any way that
-  encourages an LLM to reach for it unprompted, and — per this task's own
-  scope — the Claude Project prompt is untouched, so nothing there can
-  invoke it either. It exists to be called deliberately, by a human, the
-  same as every other manual step it could someday replace.
+- Nothing in this repository calls this function automatically. The coach
+  calls it only through the prompt's upload gate: a dry run, the head
+  coach's explicit approval, then the live call with both flags.
 - Before actually sending (both gates open), this function runs the exact
   same check `validate_block` runs and refuses to send a block that check
   reports as BLOCKED. This was NOT true of the original two-command CLI
@@ -387,11 +384,9 @@ def _check_uploaded_indoor(athlete_id: str, events: list, resp, fad) -> dict:
 #
 # Every call not opening both gates returns the constructed payload and
 # `sent: False` without making any network request at all — this is the
-# default, and it is exercised by every automated test in this package;
-# the live-send path is exercised only by a mocked `requests.Session.post`,
-# the same way the original tool's live path was verified (and, per
-# archive/RESTORE_POINT_v6.5.md §5, never actually exercised against a
-# real account even once).
+# default. The test suite exercises the live-send path only against a
+# mocked `requests.Session`; it has run against the real Intervals.icu
+# account since 21 September 2026.
 #
 # Before that live send, this tool runs the same check `validate_block`
 # runs against `file_path` and raises `ToolError` — sending nothing — if
@@ -568,14 +563,10 @@ def push_block(
 
     import fetch_athlete_data as fad
 
-    # `type_inferred` is annotation for a human reading the dry-run payload
-    # — never part of the actual wire request. Intervals.icu's tolerance
-    # for unrecognized fields is unverified (this path itself is
-    # unexercised, per this module's own docstring), so it's stripped
-    # rather than trusted to be ignored.
-
     fad.SESSION = fad.make_session()
     tag_merge = _keep_coach_tags(athlete_id, events, fad)
+    # Annotations for the head coach (_LOCAL_ONLY: type_inferred, our load and
+    # its method) never travel in the request.
     wire_events = [{k: v for k, v in e.items() if k not in _LOCAL_ONLY} for e in events]
     url = f"{fad.BASE_URL}/athlete/{athlete_id}/events/bulk"
     resp = fad.SESSION.post(url, params={"upsert": "true"}, json=wire_events, timeout=45)

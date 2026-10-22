@@ -14,7 +14,10 @@ both are in the git history).
    .venv-mcp\Scripts\pip.exe install -r requirements.txt "mcp==1.30.0"
    ```
 4. Claude Desktop → Settings → Developer → Edit config. Merge in (don't replace
-   the file; never save it with `Set-Content -Encoding UTF8`, the BOM breaks it):
+   the file; never save it with `Set-Content -Encoding UTF8`, the BOM breaks it).
+   The example is the laptop; on the PC every path is
+   `E:\\Dev\\github\\infame_elite_endurance_coach`. `PYTHONPATH` is required:
+   without it the server fails with `No module named 'mcp_server'`.
    ```json
    {"mcpServers": {"infame-coach": {
      "command": "C:\\Dev\\Github\\infame_elite_endurance_coach\\.venv-mcp\\Scripts\\python.exe",
@@ -65,11 +68,17 @@ result goes at the **end** of `race_notes.md`.
 
 ## 4. Updating the code
 
-1. Get the new files into `C:\Dev\Github\infame_elite_endurance_coach`.
-2. `python tests/run_tests.py` and `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py`
-   — both must pass.
-3. Commit and push in GitHub Desktop (GitHub runs both suites again).
-4. Restart Claude Desktop. If the prompt changed, paste it into the Project.
+Changes arrive already tested and pushed to `main` (GitHub runs both suites
+again on every push; a red cross next to a commit means a test failed).
+
+1. In GitHub Desktop: **Fetch origin**, then **Pull origin**, on the machine you
+   are working on.
+2. Quit Claude Desktop from the system tray and reopen it.
+3. If the prompt changed (the newest `RESTORE_POINT_v*.md` says so under
+   **Deploy**), paste the whole of `Prompt/infame_elite_endurance_coach.md`
+   into the Project's instructions and open a new chat.
+4. To run the tests yourself: `python tests/run_tests.py` and
+   `.venv-mcp\Scripts\python.exe tests/test_mcp_server.py` — both must pass.
 5. Check the three Drive links (they hold your athletes; git must never replace them):
    `dir config | findstr athletes`, and the same for `data` and `out` in the repo
    folder. Each line must start with `d----l`. A `d-----` means a plain folder.

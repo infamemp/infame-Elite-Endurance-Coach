@@ -29,6 +29,11 @@ opening Claude for the mechanical part.
   this system did not upload; the coach names them and the head coach removes
   them.
 - `coach.py review` has no tool yet.
+- Palladino, the spine of running, is the one book KB in the old numbered
+  format (`§N`) with no catalog: `get_knowledge(catalog=true)` has no worked
+  sessions for it. Re-extract it with the book pipeline like the others.
+- Sessions uploaded before v7.47 carry no tags: RECENT ARCHITECTURES reads
+  them from their text (approximate) until they leave the 8-week window.
 - `data/<id>/history/` has no retention limit.
 - Target TSB ranges by event type are the coach's judgement, not a source:
   revisit them with real taper outcomes.

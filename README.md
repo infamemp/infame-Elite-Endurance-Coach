@@ -12,7 +12,7 @@ in `CHANGELOG.md`; what comes next is in `ROADMAP.md`.
 
 | Layer | Where | Job |
 |:---|:---|:---|
-| Configuration | `config/` | All coaching knowledge as data: 13 methodologies, classes, thresholds |
+| Configuration | `config/` | All coaching knowledge as data: 12 methodologies (plus Friel's running zones, reference only), classes, thresholds, the architecture library |
 | Engine | `engine/` | Fetch from Intervals.icu, resolve `#STATE`, project the PMC, check plans |
 | Reasoning | Claude Project (`Prompt/`) | Methodology, session design, conversation |
 | Verification | `verify/` | The gate: a week that fails is not uploaded |
@@ -21,7 +21,7 @@ in `CHANGELOG.md`; what comes next is in `ROADMAP.md`.
 plans on top of it and never recalculates it.
 
 Every client reaches the engine the same way: Claude through the MCP server
-(`mcp_server/`, 20 tools), scripts and the coming web interface through
+(`mcp_server/`, 21 tools), scripts and the coming web interface through
 `services/`. A rule fixed once is fixed for all of them.
 
 ## Daily use
@@ -42,7 +42,7 @@ verify/          validate_block.py, the hard-constraint gate
 services/        the engine as plain functions for scripts and the interface
 mcp_server/      the local MCP server Claude Desktop uses
 generated/       zone tables, architectures, doctrines — built from config/, never edited
-Prompt/          the coach's system prompt, with the two previous versions
+Prompt/          the coach's system prompt (earlier versions: git history, CHANGELOG.md)
 Knowledge/       book knowledge bases (Principles/ read by get_knowledge; Catalogs/)
 Syntax/          Intervals.icu workout builder reference
 tests/           fixtures, golden baselines, both test suites

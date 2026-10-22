@@ -1,13 +1,12 @@
 """
-fetch_athlete_data.py — Infame Elite Endurance Coach v6, Stage 3
-=================================================================
-Fetches the athlete data the deterministic engine needs and that the Excel
-report does not carry: daily wellness (HRV, resting HR, sleep), the PMC time
-series (CTL/ATL per day), and power/pace curves across rolling windows.
-
-This script does NOT replace intervals_export.py. That script still produces
-the human-readable Excel report and is untouched. This one writes structured
-JSON for the engine to consume in Stage 4.
+fetch_athlete_data.py — Infame Elite Endurance Coach v7
+=======================================================
+Fetches everything the engine reads from Intervals.icu: the profile and sport
+settings, daily wellness (HRV, resting HR, sleep), the PMC time series
+(CTL/ATL per day), activities, planned events (with their tags since v7.47)
+and power/pace curves across rolling windows. It is the only source of data
+since the Excel pipeline (intervals_export.py, convert.py) was retired in
+v6.3; build_state.py and build_profile.py read what it writes.
 
 Output: data/<athlete_id>/athlete_data.json  (one file per athlete)
 
@@ -547,8 +546,7 @@ def calc_age(dob_str):
 
 def eftp_by_category(summary_row):
     """eFTP per sport category (Ride/Run/Swim) from athlete-summary.json's
-    byCategory block. Same source and shape intervals_export.py already
-    reads — kept identical so the two scripts never disagree."""
+    byCategory block."""
     out = {}
     for bc in (summary_row or {}).get("byCategory") or []:
         cat = bc.get("category", "")
@@ -611,8 +609,7 @@ def list_athletes():
     """Every athlete on the account, as (id, name) pairs.
 
     athlete-summary.json can return up to two rows per athlete_id with
-    different fields populated — the same quirk already fixed in
-    intervals_export.py. Rows are merged the same way: the row with the
+    different fields populated. Rows are merged: the row with the
     higher fitness value is primary, the other fills only what the primary
     is missing. The merged row is cached per id so fetch_profile() can read
     eFTP-by-category from it without a second API call."""

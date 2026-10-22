@@ -4,6 +4,32 @@ Newest first. One entry per version. The full handoff documents of each version
 (`RESTORE_POINT_v*.md`) and every earlier prompt live in the git history:
 `git log --all -- archive/` lists them, and `git show <commit>:<path>` prints one.
 
+## v7.49 (2026-10-22)
+
+Documentation brought in line with the code. No behaviour changed.
+
+- **`mcp_server/README.md`**: the tool table lists all 21 tools (4 were missing:
+  `get_reference`, `get_knowledge`, `save_declared_profile`, `save_training_age`);
+  `save_block`'s file name is the per-week one; the setup section points to
+  `manual/GUIDE.md` instead of a second, incomplete copy (it lacked `PYTHONPATH`);
+  references to the retired `IMPROVEMENT_BACKLOG.md` go to `ROADMAP.md`. It no longer
+  says the live upload was never run against a real account: it has run since
+  21 September 2026.
+- **`push_block`'s own docstring** said the prompt never calls it and that the live path
+  was never exercised; both stopped being true at prompt v7.3.
+- **`README.md`**: 21 tools (was 20), 12 methodologies plus Friel's running zones as
+  reference (was "13 methodologies"), and `Prompt/` no longer claims to hold the two
+  previous prompts. The stale `Prompt/archive/` copies (v7.30, v7.31) were removed;
+  every prompt is in the git history.
+- **`manual/GUIDE.md`**: the PC's paths and why `PYTHONPATH` is required; "Updating the
+  code" describes the current flow (pull in GitHub Desktop, restart, paste the prompt
+  when the restore point says it changed).
+- **`ROADMAP.md`** open items: Palladino's KB has no catalog and uses the old format;
+  sessions uploaded before v7.47 are read from their text until they age out.
+- `fetch_athlete_data.py` no longer describes itself as a companion to the retired
+  Excel export.
+- Tests: 946/946 (engine), 228/228 (server).
+
 ## v7.48 (2026-10-22)
 
 Cleanup: every key in `config/decision_thresholds.yaml` is now read by code, so changing a
